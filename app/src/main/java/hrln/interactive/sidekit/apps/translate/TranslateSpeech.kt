@@ -57,16 +57,27 @@ class TranslateSpeech(
     }
 
     fun speak(request: SpeechRequest) {
+        pendingSpeech = request
         val engine = tts ?: try {
             TextToSpeech(context) { status ->
                 ttsReady = status == TextToSpeech.SUCCESS
-                if (!ttsReady) onError("Text-to-speech isn't installed on this phone")
+                if (ttsReady) pendingSpeech?.let(::speakNow)
+                else onError("Text-to-speech isn't installed on this phone")
             }.also { tts = it }
         } catch (_: Exception) {
             onError("Text-to-speech isn't installed on this phone")
             return
         }
-        if (!ttsReady) return
+        if (ttsReady) speakNow(engine, request)
+    }
+
+    private fun speakNow(request: SpeechRequest) {
+        val engine = tts ?: return
+        speakNow(engine, request)
+    }
+
+    private fun speakNow(engine: TextToSpeech, request: SpeechRequest) {
+        pendingSpeech = null
         val locale = Locale.forLanguageTag(request.language.speechCode)
         if (engine.setLanguage(locale) == TextToSpeech.LANG_MISSING_DATA) {
             onError("No speech voice for ${request.language.label}")
@@ -81,6 +92,7 @@ class TranslateSpeech(
         tts?.shutdown()
         tts = null
         ttsReady = false
+        pendingSpeech = null
     }
 
     private fun releaseRecognizer() {
