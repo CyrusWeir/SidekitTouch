@@ -70,16 +70,18 @@ class NavigationUiTest {
     @Test fun sidemessageConversationRoundTrip() {
         launch()
         openFromDock(SubApp.Sidemessage)
-        compose.onNodeWithText("Amelie").performClick()
-        compose.onNodeWithText("Im free tn").assertIsDisplayed()
-        compose.onNodeWithText("Back").performClick()
-        compose.onNodeWithText("New Message").assertIsDisplayed()
+        compose.onNodeWithContentDescription("New Message").performClick()
+        compose.onNodeWithTag(hrln.interactive.sidekit.apps.sidemessage.SidemessageTags.TO).performTextInput("0412345678")
+        compose.onNodeWithContentDescription("Text 0412345678").performClick()
+        compose.onNodeWithTag(hrln.interactive.sidekit.apps.sidemessage.SidemessageTags.CONVERSATION).assertIsDisplayed()
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithTag(hrln.interactive.sidekit.apps.sidemessage.SidemessageTags.INBOX).assertIsDisplayed()
     }
 
     @Test fun undesignedAppsOpenThePlaceholderAndGoHome() {
         launch()
-        openFromDock(SubApp.Phonebook)
-        compose.onNodeWithText("Phonebook").assertIsDisplayed()
+        compose.runOnIdle { nav.navigate(SubApp.Clock.route) }
+        compose.onNodeWithText("Clock").assertIsDisplayed()
         compose.onNodeWithText("Home").performClick()
         compose.onNodeWithTag(LauncherTags.GRID).assertIsDisplayed()
     }

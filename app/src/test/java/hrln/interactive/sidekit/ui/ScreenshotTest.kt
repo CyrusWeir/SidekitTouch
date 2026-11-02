@@ -7,7 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import hrln.interactive.sidekit.apps.sidemessage.ConversationScreen
 import hrln.interactive.sidekit.apps.sidemessage.SidemessageInboxScreen
-import hrln.interactive.sidekit.apps.sidemessage.SidemessageUiState
+import hrln.interactive.sidekit.apps.sidemessage.SidemessageSampleData
 import hrln.interactive.sidekit.apps.sidenotes.NoteEditorScreen
 import hrln.interactive.sidekit.apps.sidenotes.SidenotesListScreen
 import hrln.interactive.sidekit.apps.sidenotes.SidenotesSampleData
@@ -57,9 +57,9 @@ class ScreenshotTest {
     @Test fun note() = shoot("note_1-312") { NoteEditorScreen(SidenotesSampleData.notes.first().body, isNew = false, canDelete = true, {}, {}, {}) }
     @Test fun sideticks() = shoot("sideticks_1-564") { SideticksScreen(SideticksUiState(showTicked = true), {}, {}, {}, {}, {}, {}) }
     @Test fun sidemessage() = shoot("sidemessage_35-98") {
-        val s = SidemessageUiState(); SidemessageInboxScreen(s.pinned, s.threads, {}, {})
+        SidemessageInboxScreen(SidemessageSampleData.inbox, true, {}, {}, {}, {}, {})
     }
     @Test fun conversation() = shoot("conversation_35-145") {
-        ConversationScreen(SidemessageUiState().conversation("Amelie"), null, {}, {}, {}, {})
+        ConversationScreen(SidemessageSampleData.conversation, true, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
     }
 }
