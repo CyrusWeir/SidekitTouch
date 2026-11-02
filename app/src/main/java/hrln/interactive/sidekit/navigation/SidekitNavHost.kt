@@ -18,9 +18,11 @@ import hrln.interactive.sidekit.apps.health.healthGraph
 import hrln.interactive.sidekit.apps.mail.mailGraph
 import hrln.interactive.sidekit.apps.maps.mapsGraph
 import hrln.interactive.sidekit.apps.music.musicGraph
+import hrln.interactive.sidekit.apps.phonebook.phonebookGraph
 import hrln.interactive.sidekit.apps.photos.photosGraph
 import hrln.interactive.sidekit.apps.placeholder.PlaceholderAppScreen
 import hrln.interactive.sidekit.apps.settings.settingsGraph
+import hrln.interactive.sidekit.apps.sidemessage.IncomingLinks
 import hrln.interactive.sidekit.apps.sidemessage.sidemessageGraph
 import hrln.interactive.sidekit.apps.sidenotes.sidenotesGraph
 import hrln.interactive.sidekit.apps.sideticks.sideticksGraph
@@ -42,6 +44,8 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
     LaunchedEffect(homeRequests) {
         if (homeRequests > 0) navController.popBackStack(LAUNCHER_ROUTE, inclusive = false)
     }
+    // sms:/smsto: links and message notifications open a Sidemessage conversation.
+    IncomingLinks.Follow(navController)
     // No screen transition. Every screen is the same frame (title, body, action bar) and the
     // title and bar are shared chrome that morph on their own, so navigating swaps only the body,
     // which plays its own entrance (rows rising in). Nothing moves as a whole screen, and only one
@@ -61,6 +65,7 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
         sidemessageGraph(navController)
         sidenotesGraph(navController)
         sideticksGraph(navController)
+        phonebookGraph(navController)
         photosGraph(navController)
         translateGraph(navController)
         calculatorGraph(navController)

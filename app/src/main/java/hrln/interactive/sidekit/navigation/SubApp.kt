@@ -13,7 +13,7 @@ enum class SubApp(val label: String, val icon: SidekitIcon, val designed: Boolea
     Sidemessage("Sidemessage", SidekitIcon.Chat),
     Sidenotes("Sidenotes", SidekitIcon.Docs),
     Sideticks("Sideticks", SidekitIcon.Checklist),
-    Phonebook("Phonebook", SidekitIcon.CallLog, designed = false),
+    Phonebook("Phonebook", SidekitIcon.CallLog),
     Photos("Photos", SidekitIcon.PhotoLibrary),
     Translate("Translate", SidekitIcon.Translate),
     Calculator("Calculator", SidekitIcon.Calculate),
