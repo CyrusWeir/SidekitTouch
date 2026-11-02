@@ -8,6 +8,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import hrln.interactive.sidekit.apps.apps.appsGraph
+import hrln.interactive.sidekit.apps.vault.vaultGraph
 import hrln.interactive.sidekit.apps.banking.bankingGraph
 import hrln.interactive.sidekit.apps.calculator.calculatorGraph
 import hrln.interactive.sidekit.apps.calendar.calendarGraph
@@ -76,6 +78,8 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
         healthGraph(navController)
         webBrowserGraph(navController)
         settingsGraph(navController)
+        appsGraph(navController)
+        vaultGraph(navController)
         bankingGraph(navController)
         tripPlanningGraph(navController)
         // Launcher tiles without an app mock
