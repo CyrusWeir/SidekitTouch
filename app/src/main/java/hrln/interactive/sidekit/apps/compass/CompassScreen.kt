@@ -45,7 +45,8 @@ object CompassSampleData {
 
 @Suppress("UNUSED_PARAMETER")
 fun NavGraphBuilder.compassGraph(nav: NavHostController) {
-    composable(SubApp.Compass.route) { CompassScreen(CompassSampleData.reading) }
+    composable(SubApp.Compass.route) { LiveCompass { nav.navigate("${SubApp.Compass.route}/bookmarks") } }
+    composable("${SubApp.Compass.route}/bookmarks") { CompassBookmarks { nav.popBackStack() } }
 }
 
 /** "Compass / Home" (96:629). "← Calibrate" and "Save →" have no mocked destination. */
@@ -58,7 +59,7 @@ fun CompassScreen(reading: CompassReading, onCalibrate: () -> Unit = {}, onSave:
         EverydayContent(padding) {
             // "Compass dial" (96:682): 460 x 278, the 268 dial inset 5 from the top.
             Box(Modifier.fillMaxWidth().height(278.dp), contentAlignment = Alignment.TopCenter) {
-                CompassDial(reading.degrees, Modifier.padding(top = 5.dp))
+                CompassDial({ reading.degrees }, Modifier.padding(top = 5.dp))
             }
             // "Bearing" (96:693).
             SidekitTile(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
@@ -82,7 +83,7 @@ private val BearingLabels = listOf("N" to Offset(133.5f, 41.5f), "E" to Offset(2
 
 /** "Vector compass needle and bearings" (96:683), redrawn from its geometry. */
 @Composable
-private fun CompassDial(degrees: Float, modifier: Modifier = Modifier) {
+internal fun CompassDial(degrees: () -> Float, modifier: Modifier = Modifier) {
     val colors = SidekitTheme.colors
     Box(modifier.size(DialSize).semantics { contentDescription = "Compass dial" }) {
         Canvas(Modifier.fillMaxSize()) {
@@ -94,7 +95,7 @@ private fun CompassDial(degrees: Float, modifier: Modifier = Modifier) {
                 val dir = Offset(sin(a).toFloat(), -cos(a).toFloat())
                 drawLine(colors.surfaceA6, c + dir * (104 * u), c + dir * (122 * u), strokeWidth = 3 * u)
             }
-            rotate(-degrees, pivot = c) {
+            rotate(-degrees(), pivot = c) {
                 val north = Path().apply {
                     moveTo(134 * u, 53 * u); lineTo(153 * u, 134 * u); lineTo(115 * u, 134 * u); close()
                 }
