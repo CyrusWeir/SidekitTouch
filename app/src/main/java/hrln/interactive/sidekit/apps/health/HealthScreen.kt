@@ -57,7 +57,10 @@ object HealthSampleData {
 
 @Suppress("UNUSED_PARAMETER")
 fun NavGraphBuilder.healthGraph(nav: NavHostController) {
-    composable(SubApp.Health.route) { HealthScreen(HealthSampleData.summary) }
+    val root = SubApp.Health.route
+    composable(root) { LiveHealth("home", { nav.navigate("$root/history") }, { nav.navigate("$root/goals") }, { nav.popBackStack() }) }
+    composable("$root/history") { LiveHealth("history", {}, {}, { nav.popBackStack() }) }
+    composable("$root/goals") { LiveHealth("goals", {}, {}, { nav.popBackStack() }) }
 }
 
 /** "Health / Home" (96:764). "← History" and "Goals →" have no mocked destination. */
@@ -76,7 +79,7 @@ fun HealthScreen(summary: HealthSummary, onHistory: () -> Unit = {}, onGoals: ()
 
 /** "Daily steps and goal" (96:817): 171 high, a 400 x 10 goal bar at y 137. */
 @Composable
-private fun StepsCard(steps: StepsToday) {
+internal fun StepsCard(steps: StepsToday) {
     val colors = SidekitTheme.colors
     SidekitTile(Modifier.fillMaxWidth().height(171.dp), contentAlignment = Alignment.TopStart) {
         Column(

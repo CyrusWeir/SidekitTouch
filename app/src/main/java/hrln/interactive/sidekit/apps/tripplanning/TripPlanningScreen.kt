@@ -32,7 +32,7 @@ object TripPlanningSampleData {
 
 @Suppress("UNUSED_PARAMETER")
 fun NavGraphBuilder.tripPlanningGraph(nav: NavHostController) {
-    composable(SubApp.TripPlanning.route) { TripPlanningScreen(TripPlanningSampleData.stop, TripPlanningSampleData.departures) }
+    liveTripsGraph(nav)
 }
 
 /** "Trip Planning / Home" (96:1022): 99-high departure rows. "← Saved" and "Plan →" aren't mocked. */

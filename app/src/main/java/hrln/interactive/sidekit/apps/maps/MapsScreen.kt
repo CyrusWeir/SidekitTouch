@@ -44,7 +44,7 @@ object MapsSampleData {
 
 @Suppress("UNUSED_PARAMETER")
 fun NavGraphBuilder.mapsGraph(nav: NavHostController) {
-    composable(SubApp.Maps.route) { MapsScreen(MapsSampleData.destination) }
+    liveMapsGraph(nav)
 }
 
 /** "Maps / Home" (96:563). "← Search" and "Go" have no mocked destination. */
