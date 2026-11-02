@@ -22,11 +22,14 @@ class TranslateScreenshotTest {
         compose.onRoot().captureRoboImage("screenshots/$name.png")
     }
 
-    @Test fun base() = shoot("translate_1-910") { TranslateScreen(TranslateUiState(), {}) }
+    @Test fun base() = shoot("translate_1-910") { TranslateScreen(TranslateSampleData.state(), {}) }
 
-    @Test fun talking() = shoot("translate_talking_1-837") { TranslateScreen(TranslateUiState(talking = TranslateSide.Target), {}) }
+    @Test fun talking() = shoot("translate_talking_1-837") { TranslateScreen(TranslateSampleData.state(TranslateSide.Target), {}) }
 
     @Test fun largePrompt() = shoot("translate_large_1-872") {
-        TranslateScreen(TranslateUiState().toggleMic(TranslateSide.Source).toggleMic(TranslateSide.Source), {})
+        TranslateScreen(TranslateSampleData.state().copy(
+            source = TranslatePane("English", TranslateSampleData.heard.first),
+            target = TranslatePane("Chinese", TranslateSampleData.heard.second),
+        ), {})
     }
 }

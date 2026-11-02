@@ -15,6 +15,13 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <!-- Media apps (Photos, Camera, Music, Video). Storage reads are asked for in context. -->
+    <!-- WebView, MyMemory translation and DownloadManager network requests. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Translate: requested only after the user taps a microphone. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Banking: ask for the screen lock (platform BiometricPrompt) before showing the tracker. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Files: list shared media. Asked in context, only when the user opens media in Files. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -22,7 +29,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Music keeps playing outside SideKit: a media-playback foreground service, CPU awake with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -31,7 +37,6 @@
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -40,7 +45,6 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <queries>
