@@ -60,7 +60,9 @@ fun SidekitHeader(
  * A SideKit screen: title at the top, body in the middle, action bar at the bottom.
  *
  * Only [content] (the body) is drawn here. [title] and [actions] are published to the system
- * chrome, which morphs them from the previous screen's, while the body rises in. Passing a
+ * chrome, which morphs them from the previous screen's, while the body rises in. [options] are
+ * what the keypad's Options key (top right) shows in the action bar: settings and less common
+ * actions that don't earn a permanent button. Passing a
  * [header] replaces the shared title with custom content drawn in the body (e.g. a search field).
  *
  * [content] receives padding that keeps its last item clear of the action bar.
@@ -70,6 +72,7 @@ fun SidekitScaffold(
     title: String?,
     modifier: Modifier = Modifier,
     actions: List<SideAction> = emptyList(),
+    options: List<SideAction> = emptyList(),
     titleAlign: TextAlign = TextAlign.Start,
     titleModifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
@@ -77,7 +80,7 @@ fun SidekitScaffold(
 ) {
     val spacing = SidekitTheme.spacing
     val spec = if (header == null && title != null) HeaderSpec(title, titleAlign, titleModifier) else null
-    PublishChrome(spec, actions)
+    PublishChrome(spec, actions, options)
 
     // Previews and screenshots show the arrived state; on device the body plays its entrance.
     val inspection = LocalInspectionMode.current

@@ -262,10 +262,11 @@ int id title 0x7f060065
 int id topToBottom 0x7f060066
 int id view_tree_disjoint_parent 0x7f060067
 int id view_tree_lifecycle_owner 0x7f060068
-int id view_tree_on_back_pressed_dispatcher_owner 0x7f060069
-int id view_tree_saved_state_registry_owner 0x7f06006a
-int id view_tree_view_model_store_owner 0x7f06006b
-int id wrapped_composition_tag 0x7f06006c
+int id view_tree_navigation_event_dispatcher_owner 0x7f060069
+int id view_tree_on_back_pressed_dispatcher_owner 0x7f06006a
+int id view_tree_saved_state_registry_owner 0x7f06006b
+int id view_tree_view_model_store_owner 0x7f06006c
+int id wrapped_composition_tag 0x7f06006d
 int integer m3c_window_layout_in_display_cutout_mode 0x7f070000
 int integer status_bar_notification_info_maxnum 0x7f070001
 int layout custom_dialog 0x7f080000

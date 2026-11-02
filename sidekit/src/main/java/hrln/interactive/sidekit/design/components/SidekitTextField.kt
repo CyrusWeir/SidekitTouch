@@ -111,6 +111,20 @@ fun SidekitTextField(
                     keyboard?.show()
                 },
             ),
+            // The Options key while typing picks the input mode directly.
+            options = T9Mode.entries.map { mode ->
+                val label = when (mode) {
+                    T9Mode.Predictive -> "T9"
+                    T9Mode.MultiTap -> "abc"
+                    T9Mode.Numeric -> "123"
+                }
+                SideAction(
+                    "mode.${mode.name}",
+                    label,
+                    tone = if (keypad.engine.mode == mode) ActionTone.Primary else ActionTone.Muted,
+                    contentDescription = "Input mode $label",
+                ) { session.setMode(mode) }
+            },
         )
     }
 

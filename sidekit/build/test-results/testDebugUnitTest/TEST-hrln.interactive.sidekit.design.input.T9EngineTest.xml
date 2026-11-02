@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="hrln.interactive.sidekit.design.input.T9EngineTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-02T10:01:16.963Z" hostname="Mac" time="0.053">
+<testsuite name="hrln.interactive.sidekit.design.input.T9EngineTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-02T10:21:37.084Z" hostname="Mac" time="0.034">
   <properties/>
-  <testcase name="dictionary lookup ranks exact matches by frequency then completions" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.031"/>
-  <testcase name="delete removes keys while composing then characters" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.016"/>
+  <testcase name="dictionary lookup ranks exact matches by frequency then completions" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.016"/>
+  <testcase name="delete removes keys while composing then characters" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.011"/>
   <testcase name="moving the cursor by touch ends the composition without changing text" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
-  <testcase name="pound cycles to multi-tap where repeated presses step through letters" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.001"/>
-  <testcase name="apostrophes are typed on one inside a word" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
+  <testcase name="pound cycles to multi-tap where repeated presses step through letters" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
+  <testcase name="apostrophes are typed on one inside a word" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.001"/>
   <testcase name="numeric mode types digits and long press types a digit in any mode" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
   <testcase name="star changes case when idle" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
-  <testcase name="typing composes the best word inline and highlights it" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.001"/>
-  <testcase name="picking a suggestion commits it and learns it above the dictionary" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
+  <testcase name="typing composes the best word inline and highlights it" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
+  <testcase name="picking a suggestion commits it and learns it above the dictionary" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.002"/>
   <testcase name="star cycles alternatives and zero commits with a space" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
-  <testcase name="unknown sequences fall back to letters and are not learned" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.002"/>
-  <testcase name="one gives punctuation attached to the previous word, repeated presses cycle it" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.001"/>
+  <testcase name="unknown sequences fall back to letters and are not learned" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.003"/>
+  <testcase name="one gives punctuation attached to the previous word, repeated presses cycle it" classname="hrln.interactive.sidekit.design.input.T9EngineTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

@@ -36,7 +36,6 @@ import hrln.interactive.sidekit.design.action.ActionMotion
 import hrln.interactive.sidekit.design.action.ActionTone
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.SidekitCard
-import hrln.interactive.sidekit.design.components.SidekitHeader
 import hrln.interactive.sidekit.design.components.SidekitItem
 import hrln.interactive.sidekit.design.components.SidekitList
 import hrln.interactive.sidekit.design.components.SidekitScaffold
@@ -197,10 +196,15 @@ fun NoteEditorScreen(
 
     val title = remember(saved, isNew) { if (saved.isBlank()) "New Sidenote" else Note(0, saved, 0).title }
     SidekitScaffold(
-        title = title,
-        // On a 640 px panel the keyboard leaves little room; the title gives way to the text.
-        header = { if (!keyboardOpen) SidekitHeader(title) },
+        // On a 640 px panel a touch keyboard leaves little room; the title gives way to the text.
+        title = if (keyboardOpen) null else title,
         actions = actions,
+        // Keypad Options key: delete without hunting for the bin button (it may be hidden while editing).
+        options = if (canDelete && mode != EditorMode.ConfirmDelete) {
+            listOf(SideAction("delete", "Delete note", SidekitIcon.DeleteForever, tone = ActionTone.Destructive) { focusManager.clearFocus(); confirmingDelete = true })
+        } else {
+            emptyList()
+        },
     ) { padding ->
         SidekitCard(Modifier.fillMaxSize().padding(padding)) {
             // With the T9 keypad attached the action bar becomes word suggestions while typing.

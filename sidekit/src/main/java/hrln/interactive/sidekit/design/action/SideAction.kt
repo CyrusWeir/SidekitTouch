@@ -1,5 +1,7 @@
 package hrln.interactive.sidekit.design.action
 
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -149,9 +151,54 @@ class ChromeState {
 
     internal val top: ChromePublisher? get() = publishers.lastOrNull()
 
-    /** Actions to show: the latest override, else the latest screen's. */
+    /** Whose options are showing in the bar, if any (see [toggleOptions]). */
+    private var optionsOwner: ChromePublisher? by mutableStateOf(null)
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
+    private val autoClose = Runnable { closeOptions() }
+
+    /** The publisher the Options key talks to: the typing override if it has options, else the screen. */
+    private val optionsSource: ChromePublisher?
+        get() = overrides.lastOrNull()?.takeIf { it.options.isNotEmpty() } ?: top
+
+    /** True while the bar shows the current screen's options instead of its actions. */
+    val optionsOpen: Boolean
+        get() = optionsOwner.let { it != null && it === optionsSource }
+
+    /**
+     * The Options key (the keypad's top-right key): every screen's universal "more" button. Swaps
+     * the action bar to the screen's [ChromePublisher.options] (plus a close button) and back. A
+     * screen without options briefly says so instead of doing nothing.
+     */
+    fun toggleOptions() {
+        handler.removeCallbacks(autoClose)
+        if (optionsOpen) {
+            optionsOwner = null
+        } else {
+            val source = optionsSource ?: return
+            optionsOwner = source
+            if (source.options.isEmpty()) handler.postDelayed(autoClose, NO_OPTIONS_MS)
+        }
+        onChange?.invoke()
+    }
+
+    fun closeOptions() {
+        handler.removeCallbacks(autoClose)
+        if (optionsOwner == null) return
+        optionsOwner = null
+        onChange?.invoke()
+    }
+
+    internal fun detached(publisher: ChromePublisher) {
+        if (optionsOwner === publisher) optionsOwner = null
+    }
+
+    /** Actions to show: open options, else the latest override, else the latest screen's. */
     internal val actions: List<SideAction>
-        get() = (overrides.lastOrNull() ?: publishers.lastOrNull())?.actions.orEmpty()
+        get() {
+            val owner = optionsOwner
+            if (owner != null && owner === optionsSource) return owner.optionsBar(::closeOptions)
+            return (overrides.lastOrNull() ?: publishers.lastOrNull())?.actions.orEmpty()
+        }
 
     /**
      * Set by the action bar host. Publishers call it from their apply-phase effects so the bar
@@ -164,6 +211,10 @@ class ChromeState {
      * state through it rather than animating towards "nothing".
      */
     internal val hasOwner: Boolean get() = publishers.isNotEmpty() || overrides.isNotEmpty()
+
+    private companion object {
+        const val NO_OPTIONS_MS = 1_200L
+    }
 }
 
 internal class ChromePublisher {
@@ -171,6 +222,35 @@ internal class ChromePublisher {
     // are fresh. The host itself only animates when visible content differs.
     var actions: List<SideAction> by mutableStateOf(emptyList(), referentialEqualityPolicy())
     var header: HeaderSpec? by mutableStateOf(null, referentialEqualityPolicy())
+    var options: List<SideAction> by mutableStateOf(emptyList(), referentialEqualityPolicy())
+
+    private var bar: List<SideAction>? = null
+    private var barFor: List<SideAction>? = null
+
+    /**
+     * The options as an action bar: each option closes the bar after running, and a square close
+     * button ends it. Cached per options list so the bar host sees a stable list while open.
+     */
+    fun optionsBar(close: () -> Unit): List<SideAction> {
+        val opts = options
+        if (barFor === opts) bar?.let { return it }
+        val built = if (opts.isEmpty()) {
+            listOf(SideAction("options.none", "No options here", tone = ActionTone.Muted, motion = ActionMotion.Up, onClick = close))
+        } else {
+            opts.map { o ->
+                SideAction(
+                    "options.${o.key}", o.label, o.icon, o.iconAtEnd, o.tone, o.weight, o.square,
+                    ActionMotion.Up, o.contentDescription, dense = o.dense || opts.size > 2, artKey = o.artKey, art = o.art,
+                ) {
+                    close()
+                    o.onClick()
+                }
+            } + SideAction.square("options.close", SidekitIcon.Close, "Close options", close, tone = ActionTone.Muted)
+        }
+        bar = built
+        barFor = opts
+        return built
+    }
 }
 
 val LocalChrome = staticCompositionLocalOf<ChromeState?> { null }
@@ -182,19 +262,26 @@ val LocalChrome = staticCompositionLocalOf<ChromeState?> { null }
  * still composed while leaving keeps updating its own entry without taking the chrome back.
  */
 @Composable
-fun PublishChrome(header: HeaderSpec?, actions: List<SideAction>) {
+fun PublishChrome(header: HeaderSpec?, actions: List<SideAction>, options: List<SideAction> = emptyList()) {
     val chrome = LocalChrome.current ?: return
     Publish(chrome, chrome.publishers) {
         it.header = header
         it.actions = actions
+        it.options = options
     }
 }
 
-/** Shows [actions] in place of the screen's while composed (used by T9 typing). */
+/**
+ * Shows [actions] in place of the screen's while composed (used by T9 typing). [options], if
+ * any, replace the screen's options for the Options key too.
+ */
 @Composable
-fun PublishActionOverride(actions: List<SideAction>) {
+fun PublishActionOverride(actions: List<SideAction>, options: List<SideAction> = emptyList()) {
     val chrome = LocalChrome.current ?: return
-    Publish(chrome, chrome.overrides) { it.actions = actions }
+    Publish(chrome, chrome.overrides) {
+        it.actions = actions
+        it.options = options
+    }
 }
 
 @Composable
@@ -208,6 +295,7 @@ private fun Publish(chrome: ChromeState, into: MutableList<ChromePublisher>, upd
         chrome.onChange?.invoke()
         onDispose {
             into.remove(publisher)
+            chrome.detached(publisher)
             chrome.onChange?.invoke()
         }
     }

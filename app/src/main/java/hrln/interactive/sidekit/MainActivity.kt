@@ -3,7 +3,9 @@ package hrln.interactive.sidekit
 import android.content.Intent
 import android.view.KeyEvent
 import androidx.lifecycle.lifecycleScope
+import hrln.interactive.sidekit.design.action.ChromeState
 import hrln.interactive.sidekit.design.input.Keypad
+import hrln.interactive.sidekit.design.input.SystemKeys
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +25,9 @@ class MainActivity : ComponentActivity() {
     /** The swappable keypad. T9 typing and its dictionary only load once T9 is actually used. */
     private val keypad by lazy { Keypad.create(this, lifecycleScope) }
 
+    /** The shared title + action bar; held here so hardware keys (Options) can reach it. */
+    private val chrome = ChromeState()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -33,7 +38,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             SidekitTheme {
-                SidekitCanvas(keypad = keypad) {
+                SidekitCanvas(chrome = chrome, keypad = keypad) {
                     SidekitNavHost(homeRequests = homeRequests.intValue)
                 }
             }
@@ -44,8 +49,24 @@ class MainActivity : ComponentActivity() {
         window.decorView.post { window.setBackgroundDrawable(null) }
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        keypad.dispatch(event) || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        when {
+            // Keypad top-right: the universal Options key. Acts on release; the press is consumed
+            // so the system's end-call handling never sees it.
+            SystemKeys.isOptions(event) -> {
+                if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
+                    keypad.finishTyping()
+                    chrome.toggleOptions()
+                }
+                return true
+            }
+            // Keypad top-left (CALL) is turned into Back by KeypadAccessibilityService before the
+            // system can open the dialer. Without the service only its release reaches us, after
+            // the dialer has launched: swallow it so nothing happens twice.
+            SystemKeys.isBack(event) -> return true
+        }
+        return keypad.dispatch(event) || super.dispatchKeyEvent(event)
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

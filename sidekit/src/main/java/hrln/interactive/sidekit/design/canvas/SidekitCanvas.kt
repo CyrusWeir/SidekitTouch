@@ -1,5 +1,6 @@
 package hrln.interactive.sidekit.design.canvas
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -78,6 +79,8 @@ fun SidekitCanvas(
                     .background(SidekitTheme.colors.surfaceA1),
             ) {
                 content()
+                // Back closes the options bar before it goes back a screen.
+                BackHandler(enabled = chrome.optionsOpen) { chrome.closeOptions() }
                 HeaderHost(
                     state = chrome,
                     modifier = Modifier

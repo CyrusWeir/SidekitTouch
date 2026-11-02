@@ -3,20 +3,20 @@
 3    package="hrln.interactive.sidekit.design.test" >
 4
 5    <uses-sdk
-5-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:5:5-74
+5-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:5:5-74
 6        android:minSdkVersion="31"
-6-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:5:15-41
+6-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:5:15-41
 7        android:targetSdkVersion="37" />
-7-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:5:42-71
+7-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:5:42-71
 8
 9    <instrumentation
-9-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:9:5-11:86
+9-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:9:5-11:86
 10        android:name="androidx.test.runner.AndroidJUnitRunner"
-10-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:9:22-76
+10-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:9:22-76
 11        android:label="Tests for hrln.interactive.sidekit.design.test"
-11-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:11:22-84
+11-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:11:22-84
 12        android:targetPackage="hrln.interactive.sidekit.design.test" />
-12-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:10:22-82
+12-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:10:22-82
 13
 14    <permission
 14-->[androidx.core:core:1.16.0] /Users/harlenpostill/.gradle/caches/9.5.0/transforms/2c9567dd2ab59477f9f439328fecb0d2/transformed/core-1.16.0/AndroidManifest.xml:22:5-24:47
@@ -30,11 +30,11 @@
 18-->[androidx.core:core:1.16.0] /Users/harlenpostill/.gradle/caches/9.5.0/transforms/2c9567dd2ab59477f9f439328fecb0d2/transformed/core-1.16.0/AndroidManifest.xml:26:22-94
 19
 20    <application
-20-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:7:5-46
+20-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:7:5-46
 21        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 21-->[androidx.core:core:1.16.0] /Users/harlenpostill/.gradle/caches/9.5.0/transforms/2c9567dd2ab59477f9f439328fecb0d2/transformed/core-1.16.0/AndroidManifest.xml:28:18-86
 22        android:debuggable="true" >
-22-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest12420898936210104296.xml:7:18-43
+22-->/Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/tmp/manifest/test/debug/tempFile1ProcessTestManifest9948237918287417374.xml:7:18-43
 23        <activity
 23-->[androidx.compose.ui:ui-tooling-android:1.12.1] /Users/harlenpostill/.gradle/caches/9.5.0/transforms/4fb67d804d4f081d459fa9fa7f4a4581/transformed/ui-tooling/AndroidManifest.xml:23:9-25:39
 24            android:name="androidx.compose.ui.tooling.PreviewActivity"

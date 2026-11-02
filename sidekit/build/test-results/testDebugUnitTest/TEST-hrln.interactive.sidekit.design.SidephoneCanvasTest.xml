@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="hrln.interactive.sidekit.design.SidephoneCanvasTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-02T10:01:16.959Z" hostname="Mac" time="0.0">
+<testsuite name="hrln.interactive.sidekit.design.SidephoneCanvasTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-02T10:21:37.082Z" hostname="Mac" time="0.001">
   <properties/>
-  <testcase name="other aspect ratios letterbox to the smaller axis" classname="hrln.interactive.sidekit.design.SidephoneCanvasTest" time="0.0"/>
+  <testcase name="other aspect ratios letterbox to the smaller axis" classname="hrln.interactive.sidekit.design.SidephoneCanvasTest" time="0.001"/>
   <testcase name="sidephone panel maps one figma px to one physical px" classname="hrln.interactive.sidekit.design.SidephoneCanvasTest" time="0.0"/>
   <testcase name="higher resolution panels scale the canvas uniformly" classname="hrln.interactive.sidekit.design.SidephoneCanvasTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>

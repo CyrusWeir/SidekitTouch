@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Sidekit</string>
+    <string name="keypad_service_label">SideKit keypad</string>
+    <string name="keypad_service_summary">Makes the keypad\'s top-left key Back (hold it for the phone)</string>
+    <string name="keypad_service_description">Turns the top-left key of the Sidephone keypad into a Back key in every app. Holding it opens the phone app. SideKit only watches that one key; it does not read the screen or anything you type.</string>
 </resources>

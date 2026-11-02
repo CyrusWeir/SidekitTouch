@@ -75,6 +75,12 @@ fun LauncherScreen(
             // The dock is the launcher's action bar, so opening an app morphs the tapped dock button
             // into the app's first action. The control centre panel takes its place (53:642).
             actions = if (state.controlCentreOpen) emptyList() else dockActions(onOpenApp),
+            // Keypad Options key: the long-press gestures, as buttons.
+            options = listOf(
+                SideAction("layout", if (state.layout == LauncherLayout.Grid) "List" else "Grid", contentDescription = "Switch grid or list", onClick = onToggleLayout),
+                SideAction("controls", "Controls", contentDescription = "Open control centre") { onControlCentreOpenChange(true) },
+                SideAction("settings", icon = SubApp.Settings.icon, contentDescription = "Settings") { onOpenApp(SubApp.Settings) },
+            ),
         ) { padding ->
             when (state.layout) {
                 LauncherLayout.Grid -> AppGrid(SubApp.entries, padding, onOpenApp)

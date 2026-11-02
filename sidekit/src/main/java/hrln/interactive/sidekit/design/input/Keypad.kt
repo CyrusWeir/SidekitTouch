@@ -98,6 +98,11 @@ class Keypad internal constructor(
         if (t9) loadResources()
     }
 
+    /** Settles any word being typed (before the Options bar takes over, for example). */
+    fun finishTyping() {
+        session?.finish()
+    }
+
     internal fun registerFallback(focus: FocusRequester) { fallbacks.add(focus) }
     internal fun unregisterFallback(focus: FocusRequester) { fallbacks.remove(focus) }
 
