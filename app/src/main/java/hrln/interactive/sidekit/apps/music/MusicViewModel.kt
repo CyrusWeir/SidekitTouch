@@ -1,171 +1,93 @@
 package hrln.interactive.sidekit.apps.music
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-
-data class Artist(val id: Int, val name: String)
-data class Album(val id: Int, val title: String, val artistId: Int, val trackIds: List<Int>)
-data class Track(val id: Int, val title: String, val albumId: Int)
-data class Playlist(val id: Int, val name: String, val trackIds: List<Int>)
-
-/** A row in the home list or the search results. */
-sealed interface LibraryItem {
-    data class PlaylistItem(val playlist: Playlist) : LibraryItem
-    data class AlbumItem(val album: Album) : LibraryItem
-    data class ArtistItem(val artist: Artist) : LibraryItem
-    data class TrackItem(val track: Track) : LibraryItem
-}
-
-data class MusicLibrary(
-    val artists: List<Artist>,
-    val albums: List<Album>,
-    val tracks: List<Track>,
-    val playlists: List<Playlist>,
-) {
-    fun artist(id: Int): Artist? = artists.firstOrNull { it.id == id }
-    fun album(id: Int): Album? = albums.firstOrNull { it.id == id }
-    fun track(id: Int): Track? = tracks.firstOrNull { it.id == id }
-    fun playlist(id: Int): Playlist? = playlists.firstOrNull { it.id == id }
-    fun tracksOf(album: Album): List<Track> = album.trackIds.mapNotNull(::track)
-    fun albumsBy(artist: Artist): List<Album> = albums.filter { it.artistId == artist.id }
-    fun artistOf(album: Album): Artist? = artist(album.artistId)
-
-    /**
-     * Case-insensitive substring search over artists, albums, tracks and playlists (in that
-     * order). A blank query returns nothing ("Search blank", 71:1929).
-     */
-    fun search(query: String): List<LibraryItem> {
-        val q = query.trim()
-        if (q.isEmpty()) return emptyList()
-        fun String.matches() = contains(q, ignoreCase = true)
-        return artists.filter { it.name.matches() }.map(LibraryItem::ArtistItem) +
-            albums.filter { it.title.matches() }.map(LibraryItem::AlbumItem) +
-            tracks.filter { it.title.matches() }.map(LibraryItem::TrackItem) +
-            playlists.filter { it.name.matches() }.map(LibraryItem::PlaylistItem)
-    }
-}
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class MusicUiState(
-    val library: MusicLibrary = MusicSampleData.library,
-    val home: List<LibraryItem> = MusicSampleData.home,
-    /** Track ids of the album/playlist being played. */
-    val queue: List<Int> = MusicSampleData.initialQueue,
-    val queueIndex: Int = MusicSampleData.initialQueueIndex,
-    val isPlaying: Boolean = true,
+    val library: MusicLibrary = MusicLibrary.Empty,
+    val playback: PlaybackState = PlaybackState(),
+    val loaded: Boolean = false,
     val query: String = "",
-    val results: List<LibraryItem> = emptyList(),
 ) {
-    val nowPlaying: Track? get() = queue.getOrNull(queueIndex)?.let(library::track)
+    val home: List<LibraryItem> get() = library.home()
+    val results: List<LibraryItem> get() = library.search(query)
+    val nowPlaying: Track? get() = playback.track
 }
 
-/**
- * State for the whole Music app, shared by its screens. Playback is state only (no audio).
- *
- * Skipping wraps around the queue: next on the last track goes to the first, previous on the
- * first goes to the last. Skipping keeps the current play/pause state.
- */
-class MusicViewModel(initial: MusicUiState = MusicUiState()) : ViewModel() {
-    private val _state = MutableStateFlow(initial)
-    val state: StateFlow<MusicUiState> = _state.asStateFlow()
+/** Real MediaStore library and the process-wide player, shared by every Music screen. */
+class MusicViewModel(
+    private val source: MusicSource,
+    private val playlists: PlaylistRepository,
+    private val player: MusicPlayer,
+    private val io: CoroutineDispatcher = Dispatchers.IO,
+) : ViewModel() {
+    private val query = MutableStateFlow("")
+    private val loaded = MutableStateFlow(false)
 
-    fun togglePlayPause() = _state.update {
-        if (it.nowPlaying == null) it else it.copy(isPlaying = !it.isPlaying)
+    val state: StateFlow<MusicUiState> = combine(
+        sourceLibrary(),
+        player.state,
+        loaded,
+        query,
+        ::MusicUiState,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MusicUiState(playback = player.state.value))
+
+    private fun sourceLibrary() = combine(source.changes(), playlists.playlists) { _, saved ->
+        val tracks = withContext(io) { runCatching { source.tracks() }.getOrDefault(emptyList()) }
+        loaded.value = true
+        MusicLibrary.from(tracks, saved.orEmpty())
     }
 
-    fun skipNext() = skip(+1)
+    fun togglePlayPause() = player.togglePlayPause()
+    fun skipNext() = player.next()
+    fun skipPrevious() = player.previous()
+    fun seekTo(ms: Long) = player.seekTo(ms)
+    fun setShuffle(on: Boolean) = player.setShuffle(on)
+    fun cycleRepeat() = player.cycleRepeat()
 
-    fun skipPrevious() = skip(-1)
-
-    private fun skip(delta: Int) = _state.update {
-        if (it.queue.isEmpty()) it else it.copy(queueIndex = Math.floorMod(it.queueIndex + delta, it.queue.size))
+    fun playAlbum(albumId: Long, trackId: Long? = null) {
+        val album = state.value.library.album(albumId) ?: return
+        play(state.value.library.tracksOf(album), trackId)
     }
 
-    /** Plays [album] from [trackId] (or its first track). No-op for an album without tracks. */
-    fun playAlbum(albumId: Int, trackId: Int? = null) = _state.update { state ->
-        val album = state.library.album(albumId) ?: return@update state
-        state.play(album.trackIds, trackId)
+    fun playArtist(artistId: Long) {
+        val artist = state.value.library.artist(artistId) ?: return
+        play(state.value.library.tracksBy(artist))
     }
 
-    /** Plays every album by the artist in library order. */
-    fun playArtist(artistId: Int) = _state.update { state ->
-        val artist = state.library.artist(artistId) ?: return@update state
-        state.play(state.library.albumsBy(artist).flatMap { it.trackIds }, null)
+    fun playPlaylist(playlistId: Long) {
+        val playlist = state.value.library.playlist(playlistId) ?: return
+        play(state.value.library.tracksOf(playlist))
     }
 
-    fun playPlaylist(playlistId: Int) = _state.update { state ->
-        val playlist = state.library.playlist(playlistId) ?: return@update state
-        state.play(playlist.trackIds, null)
-    }
-
-    /** Plays a single track within its album. */
-    fun playTrack(trackId: Int) {
-        val track = _state.value.library.track(trackId) ?: return
+    fun playTrack(trackId: Long) {
+        val track = state.value.library.track(trackId) ?: return
         playAlbum(track.albumId, trackId)
     }
 
-    fun updateQuery(query: String) = _state.update {
-        it.copy(query = query, results = it.library.search(query))
+    private fun play(tracks: List<Track>, startId: Long? = null) {
+        if (tracks.isEmpty()) return
+        player.playQueue(tracks, startId?.let { id -> tracks.indexOfFirst { it.id == id } }?.takeIf { it >= 0 } ?: 0)
     }
 
-    fun clearSearch() = updateQuery("")
+    private fun List<Track>.indexOfFirstId(id: Long) = indexOfFirst { it.id == id }
 
-    private fun MusicUiState.play(trackIds: List<Int>, startId: Int?): MusicUiState {
-        if (trackIds.isEmpty()) return this
-        val index = startId?.let(trackIds::indexOf)?.takeIf { it >= 0 } ?: 0
-        return copy(queue = trackIds, queueIndex = index, isPlaying = true)
+    /** The bookmark tiles make a persistent playlist from the current album or track. */
+    fun saveTracks(name: String, tracks: List<Track>) {
+        if (tracks.isNotEmpty()) playlists.create(name, tracks.map { it.id })
     }
-}
 
-object MusicSampleData {
-    // Names copied from the Music mocks (71:1618, 71:1483, 71:1729, 71:1051, 71:1426, 71:759).
-    private const val TERUI = 3
-    private const val HIDDEN_INVENTORY = 1
-    private const val CULLING_GAMES = 2
-    private const val A_LITTLE_LESSON = 3
+    fun createPlaylist() = playlists.create("")
 
-    val artists = listOf(
-        Artist(1, "Steve Lacy"),
-        Artist(2, "Kevin Penkin"),
-        Artist(TERUI, "Yoshiruma Terui"),
-        Artist(4, "Clairo"),
-    )
-
-    val tracks = listOf(
-        Track(1, "Our Mission", HIDDEN_INVENTORY),
-        Track(2, "The Search For the Cursed Spirit", HIDDEN_INVENTORY),
-        Track(3, "A Little Lesson", HIDDEN_INVENTORY),
-        Track(4, "Daniel", HIDDEN_INVENTORY),
-        Track(5, "No Hesitation", HIDDEN_INVENTORY),
-    )
-
-    val albums = listOf(
-        Album(HIDDEN_INVENTORY, "Hidden Inventory / Premature Death", TERUI, listOf(1, 2, 3, 4, 5)),
-        Album(CULLING_GAMES, "The Culling Games Part 1", TERUI, emptyList()),
-        Album(A_LITTLE_LESSON, "A Little Lesson", TERUI, emptyList()),
-    )
-
-    val playlists = listOf(
-        Playlist(1, "Playlist 1", listOf(5, 1, 3)),
-        Playlist(2, "Playlist 2", listOf(2, 4)),
-        Playlist(3, "Playlist 3", listOf(1, 2, 3, 4, 5)),
-        Playlist(4, "Playlist 4", listOf(4, 5)),
-    )
-
-    val library = MusicLibrary(artists, albums, tracks, playlists)
-
-    /** Home list order from 71:1618: playlist, album, then more playlists. */
-    val home: List<LibraryItem> = listOf(
-        LibraryItem.PlaylistItem(playlists[0]),
-        LibraryItem.AlbumItem(albums[0]),
-        LibraryItem.PlaylistItem(playlists[1]),
-        LibraryItem.PlaylistItem(playlists[2]),
-        LibraryItem.PlaylistItem(playlists[3]),
-    )
-
-    /** "No Hesitation" is playing in 71:759. */
-    val initialQueue: List<Int> = albums[0].trackIds
-    val initialQueueIndex: Int = initialQueue.indexOf(5)
+    fun updateQuery(value: String) { query.value = value }
+    fun clearSearch() { query.value = "" }
 }

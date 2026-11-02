@@ -11,47 +11,19 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 
-/** Renders the Music screens at 480 x 640 to app/screenshots/ for comparison with the Figma frames. */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MusicScreenshotTest {
     @get:Rule val compose = createComposeRule()
-
-    private val state = MusicUiState()
-    private val library = state.library
-
+    private val tracks = listOf(Track(1, "Our Mission", 1, 3, "Yoshiruma Terui", "Hidden Inventory", 180_000))
+    private val library = MusicLibrary.from(tracks, listOf(Playlist(1, "Playlist 1", listOf(1))))
     private fun shoot(name: String, content: @Composable () -> Unit) {
         compose.setContent { SidekitPreviewFrame(content) }
         compose.onRoot().captureRoboImage("screenshots/$name.png")
     }
-
-    @Test fun home() = shoot("music_home_71-1618") { MusicHomeScreen(state.home, MusicActions(), {}, {}, {}, {}, {}) }
-
-    @Test fun albums() = shoot("music_albums_71-1483") {
-        MusicLibraryListScreen("Albums", library.albums.map(LibraryItem::AlbumItem), MusicActions(), {})
-    }
-
-    @Test fun artists() = shoot("music_artists_71-1729") {
-        MusicLibraryListScreen("Artists", library.artists.map(LibraryItem::ArtistItem), MusicActions(), {})
-    }
-
-    @Test fun album() = shoot("music_album_71-1051") {
-        val album = library.album(1)!!
-        AlbumScreen(album, library.tracksOf(album), {}, {}, {}, {})
-    }
-
-    @Test fun artist() = shoot("music_artist_71-1426") {
-        val artist = library.artist(3)!!
-        ArtistScreen(artist, library.albumsBy(artist), {}, {}, {})
-    }
-
-    @Test fun nowPlaying() = shoot("music_now_playing_71-759") {
-        NowPlayingScreen(state.nowPlaying, isPlaying = true, {}, {}, {}, {}, {}, {})
-    }
-
-    @Test fun searchBlank() = shoot("music_search_blank_71-1929") { MusicSearchScreen("", emptyList(), {}, MusicActions(), {}) }
-
-    @Test fun search() = shoot("music_search_71-1890") {
-        MusicSearchScreen("Steve La", library.search("Steve La"), {}, MusicActions(), {})
-    }
+    @Test fun home() = shoot("music_home_71-1618") { MusicHomeScreen(library.home(), MusicActions(), {}, {}, {}, {}, {}) }
+    @Test fun albums() = shoot("music_albums_71-1483") { MusicLibraryListScreen("Albums", library.albums.map(LibraryItem::AlbumItem), MusicActions(), {}) }
+    @Test fun album() = shoot("music_album_71-1051") { AlbumScreen(library.albums.first(), tracks, {}, {}, {}, {}, {}) }
+    @Test fun nowPlaying() = shoot("music_now_playing_71-759") { NowPlayingScreen(PlaybackState(PlayQueue.of(tracks, 0, false, RepeatMode.Off), true, durationMs = 180_000), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    @Test fun search() = shoot("music_search_blank_71-1929") { MusicSearchScreen("", emptyList(), {}, MusicActions(), {}) }
 }

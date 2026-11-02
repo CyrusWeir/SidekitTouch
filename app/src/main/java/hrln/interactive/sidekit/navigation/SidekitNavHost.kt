@@ -27,6 +27,7 @@ import hrln.interactive.sidekit.apps.sideticks.sideticksGraph
 import hrln.interactive.sidekit.apps.sideweather.sideweatherGraph
 import hrln.interactive.sidekit.apps.translate.translateGraph
 import hrln.interactive.sidekit.apps.tripplanning.tripPlanningGraph
+import hrln.interactive.sidekit.apps.video.videoGraph
 import hrln.interactive.sidekit.apps.webbrowser.webBrowserGraph
 import hrln.interactive.sidekit.launcher.LauncherRoute
 
@@ -78,6 +79,7 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
         settingsGraph(navController)
         bankingGraph(navController)
         tripPlanningGraph(navController)
+        videoGraph(navController)
         // Launcher tiles without an app mock
         SubApp.entries.filterNot { it.designed }.forEach { app ->
             composable(app.route) { PlaceholderAppScreen(app = app, onBack = back) }

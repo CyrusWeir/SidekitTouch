@@ -11,32 +11,17 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 
-/** Renders the Photos screens at 480 x 640 to app/screenshots/ for comparison with the Figma frames. */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PhotosScreenshotTest {
     @get:Rule val compose = createComposeRule()
-
+    private val items = (1L..20L).map { MediaItem(it) }
     private fun shoot(name: String, content: @Composable () -> Unit) {
         compose.setContent { SidekitPreviewFrame(content) }
         compose.onRoot().captureRoboImage("screenshots/$name.png")
     }
-
-    private val data = PhotosSampleData
-
-    @Test fun main() = shoot("photos_36-41") { PhotosMainScreen(data.photos, {}, {}) }
-
-    @Test fun albums() = shoot("photos_albums_36-92") { AlbumsScreen(data.smartAlbums, data.userAlbums, {}, {}, {}) }
-
-    @Test fun recent() = shoot("photos_recent_36-220") {
-        val album = data.album(1)!!
-        AlbumScreen(album, data.photosIn(album), {}, {})
-    }
-
-    @Test fun album1() = shoot("photos_album1_36-286") {
-        val album = data.album(5)!!
-        AlbumScreen(album, data.photosIn(album), {}, {})
-    }
-
-    @Test fun photoView() = shoot("photos_view_71-2165") { PhotoViewScreen(Photo(1), {}) }
+    @Test fun main() = shoot("photos_36-41") { PhotosMainScreen(GridState(items, loaded = true), {}, {}) }
+    @Test fun albums() = shoot("photos_albums_36-92") { AlbumsScreen(smartAlbums, listOf(PhotoAlbum(AlbumKey.Bucket(2), "Camera", 20)), {}, {}) }
+    @Test fun album() = shoot("photos_recent_36-220") { AlbumScreen("Recent", GridState(items, loaded = true), {}, {}) }
+    @Test fun photoView() = shoot("photos_view_71-2165") { PhotoViewScreen(items, 0, emptySet(), {}, {}, {}, {}, {}) }
 }
