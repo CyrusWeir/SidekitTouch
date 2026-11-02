@@ -22,7 +22,7 @@ enum class SubApp(val label: String, val icon: SidekitIcon, val designed: Boolea
     Maps("Maps", SidekitIcon.Map),
     Music("Music", SidekitIcon.MusicNote2),
     Clock("Clock", SidekitIcon.Alarm, designed = false),
-    Video("Video", SidekitIcon.SmartDisplay, designed = false),
+    Video("Video", SidekitIcon.SmartDisplay),
     Vault("Vault", SidekitIcon.Encrypted, designed = false),
     TripPlanning("Trip Planning", SidekitIcon.BusMapPin),
     Banking("Banking", SidekitIcon.AccountBalanceWallet),
