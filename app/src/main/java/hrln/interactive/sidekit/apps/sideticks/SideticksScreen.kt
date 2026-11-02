@@ -1,6 +1,11 @@
 package hrln.interactive.sidekit.apps.sideticks
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import hrln.interactive.sidekit.design.components.SidekitSwipeRow
+import hrln.interactive.sidekit.design.components.rememberSwipeRevealGroup
+import java.time.Instant
+import java.time.ZoneId
 import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.action.ActionMotion
@@ -10,20 +15,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import hrln.interactive.sidekit.design.components.ItemColour
 import hrln.interactive.sidekit.design.components.SidekitCard
@@ -51,29 +49,53 @@ fun SideticksScreen(
     onNewTick: () -> Unit,
     onDraftChange: (String) -> Unit,
     onConfirmDraft: () -> Unit,
+    onDelete: (Tick) -> Unit = {},
+    onUndo: () -> Unit = {},
+    onDue: (String?) -> Unit = {},
+    onSort: () -> Unit = {},
+    onCancel: () -> Unit = {},
+    onNotifications: () -> Unit = {},
+    needsNotifications: Boolean = false,
 ) {
+    val screenFocus = remember { FocusRequester() }
     SidekitScaffold(
+        modifier = Modifier.focusRequester(screenFocus).focusable(),
         title = "My Sideticks",
-        actions = listOf(
+        actions = buildList {
+            add(
             if (state.draft != null) SideAction("main", "Confirm", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, onClick = onConfirmDraft)
-            else SideAction("main", "New Sidetick", SidekitIcon.Add, iconAtEnd = true, motion = ActionMotion.Up, onClick = onNewTick),
-        ),
+            else SideAction("main", "New Sidetick", SidekitIcon.Add, iconAtEnd = true, motion = ActionMotion.Up, onClick = onNewTick))
+            if (state.draft != null) add(SideAction("cancel", "Cancel", onClick = onCancel))
+            else if (state.recentlyDeleted.isNotEmpty()) add(SideAction("undo", "Undo", onClick = onUndo))
+            if (needsNotifications && state.dueText != null) add(SideAction("allow", "Allow", onClick = onNotifications))
+        },
+        options = if (state.draft != null) listOf(SideAction("due", if (state.dueText == null) "Due time" else "No due time") { onDue(if (state.dueText == null) "" else null) })
+        else listOf(SideAction("sort", if (state.byDue) "Newest first" else "Due first", onClick = onSort)),
     ) { padding ->
         val listState = rememberLazyListState()
+        val swipes = rememberSwipeRevealGroup()
         SidekitList(padding, state = listState) {
             var index = 0
             fun LazyListScope.row(key: Any, content: @Composable (Modifier) -> Unit) {
                 val i = index++
                 item(key) { content(Modifier.listFade(listState, i)) }
             }
-            if (state.draft != null) row("draft") { DraftRow(state.draft, onDraftChange, onConfirmDraft, it) }
-            state.open.forEach { tick -> row(tick.id) { TickRow(tick, { onToggle(tick) }, it) } }
+            state.error?.let { message -> row("error") { SidekitItem(message, it) } }
+            if (!state.loaded) row("loading") { SidekitItem("Loading reminders…", it) }
+            if (needsNotifications && state.dueText != null) row("permission") { SidekitItem("Allow notifications for due reminders", it) }
+            if (state.dueText != null) row("due") { modifier ->
+                SidekitCard(modifier.fillMaxWidth()) {
+                    SidekitTextField(state.dueText, { onDue(it) }, placeholder = "YYYY-MM-DD HH:mm", singleLine = true, onDone = { screenFocus.requestFocus() })
+                }
+            }
+            if (state.draft != null) row("draft") { DraftRow(state.draft, onDraftChange, { screenFocus.requestFocus() }, it) }
+            state.open.forEach { tick -> row(tick.id) { SidekitSwipeRow(tick.id, swipes, { onDelete(tick) }, it) { TickRow(tick, { onToggle(tick) }, Modifier) } } }
             if (state.ticked.isNotEmpty()) {
                 if (!state.showTicked) {
                     row("show") { SidekitItem("Show Ticked", it, onClick = { onShowTickedChange(true) }) }
                 } else {
                     row("hide") { SidekitItem("Hide Ticked", it, onClick = { onShowTickedChange(false) }) }
-                    state.ticked.forEach { tick -> row(tick.id) { TickRow(tick, { onToggle(tick) }, it) } }
+                    state.ticked.forEach { tick -> row(tick.id) { SidekitSwipeRow(tick.id, swipes, { onDelete(tick) }, it) { TickRow(tick, { onToggle(tick) }, Modifier) } } }
                     row("clear") { SidekitItem("Clear All Ticked", it, onClick = onClearTicked) }
                 }
             }
@@ -95,7 +117,7 @@ private fun TickRow(tick: Tick, onToggle: () -> Unit, modifier: Modifier) {
         ) {
             SidekitTickBox(checked = tick.ticked)
             SidekitText(
-                text = tick.title,
+                text = tick.title + (tick.dueAt?.let { "\n" + ReminderDateFormat.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())) } ?: ""),
                 maxLines = 2,
                 textDecoration = if (tick.ticked) TextDecoration.LineThrough else null,
             )
@@ -104,7 +126,7 @@ private fun TickRow(tick: Tick, onToggle: () -> Unit, modifier: Modifier) {
 }
 
 @Composable
-private fun DraftRow(text: String, onChange: (String) -> Unit, onConfirm: () -> Unit, modifier: Modifier) {
+private fun DraftRow(text: String, onChange: (String) -> Unit, onDone: () -> Unit, modifier: Modifier) {
     val focus = remember { FocusRequester() }
     SidekitCard(modifier.fillMaxWidth().heightIn(min = SidekitTheme.spacing.itemHeight)) {
         Row(
@@ -119,7 +141,7 @@ private fun DraftRow(text: String, onChange: (String) -> Unit, onConfirm: () -> 
                 focusRequester = focus,
                 focusOnKeypad = true,
                 singleLine = true,
-                onDone = onConfirm,
+                onDone = onDone,
                 autoFocus = true,
             )
         }

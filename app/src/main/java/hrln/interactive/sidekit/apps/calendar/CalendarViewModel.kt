@@ -1,41 +1,47 @@
 package hrln.interactive.sidekit.apps.calendar
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.time.*
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 
 data class CalendarDay(val weekday: String, val date: Int)
-
-data class CalendarEvent(val time: String, val title: String)
-
+enum class CalendarMode { Day, Month, Agenda }
 data class CalendarUiState(
-    val month: String = CalendarSampleData.month,
-    val week: List<CalendarDay> = CalendarSampleData.week,
-    val selectedIndex: Int = 0,
-    private val eventsByDate: Map<Int, List<CalendarEvent>> = CalendarSampleData.eventsByDate,
+    val date: LocalDate = LocalDate.now(), val mode: CalendarMode = CalendarMode.Day,
+    val events: List<CalendarEvent> = emptyList(), val loading: Boolean = false, val error: String? = null,
 ) {
-    val selectedDay: CalendarDay get() = week[selectedIndex]
-    val events: List<CalendarEvent> get() = eventsByDate[selectedDay.date].orEmpty()
+    val month: String get() = date.format(DateTimeFormatter.ofPattern("MMMM uuuu"))
+    val weekStart: LocalDate get() = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val week: List<CalendarDay> get() = (0..6).map { weekStart.plusDays(it.toLong()).let { d -> CalendarDay(d.dayOfWeek.name.take(1), d.dayOfMonth) } }
+    val selectedIndex: Int get() = date.dayOfWeek.value - 1
 }
 
-class CalendarViewModel : ViewModel() {
-    private val _state = MutableStateFlow(CalendarUiState())
-    val state: StateFlow<CalendarUiState> = _state.asStateFlow()
-
-    /** Selects a day of the shown week; out-of-range indices are ignored. */
-    fun selectDay(index: Int) = _state.update { if (index in it.week.indices) it.copy(selectedIndex = index) else it }
-}
-
-object CalendarSampleData {
-    // Placeholder content from "Calendar / Home" (96:420).
-    const val month = "November 2026"
-    val week = listOf(
-        CalendarDay("M", 2), CalendarDay("T", 3), CalendarDay("W", 4), CalendarDay("T", 5),
-        CalendarDay("F", 6), CalendarDay("S", 7), CalendarDay("S", 8),
-    )
-    val eventsByDate = mapOf(
-        2 to listOf(CalendarEvent("9:30", "Team catch-up"), CalendarEvent("12:00", "Lunch with Alex")),
-    )
+class CalendarViewModel(private val repository: CalendarRepository, today: LocalDate = LocalDate.now()) : ViewModel() {
+    private val mutable = MutableStateFlow(CalendarUiState(date = today))
+    val state = mutable.asStateFlow()
+    private var load: Job? = null
+    fun selectDay(index: Int) { if (index in 0..6) selectDate(mutable.value.weekStart.plusDays(index.toLong())) }
+    fun selectDate(date: LocalDate) { mutable.update { it.copy(date = date, mode = CalendarMode.Day) }; refresh() }
+    fun mode(mode: CalendarMode) { mutable.update { it.copy(mode = mode) }; refresh() }
+    fun move(delta: Long) { mutable.update { it.copy(date = if (it.mode == CalendarMode.Month) it.date.plusMonths(delta) else it.date.plusDays(delta)) }; refresh() }
+    fun refresh() {
+        load?.cancel()
+        load = viewModelScope.launch {
+            val current = mutable.value
+            mutable.update { it.copy(loading = true, error = null) }
+            val start = if (current.mode == CalendarMode.Month) current.date.withDayOfMonth(1) else current.date
+            val end = when (current.mode) { CalendarMode.Month -> start.plusMonths(1); CalendarMode.Agenda -> start.plusDays(7); CalendarMode.Day -> start.plusDays(1) }
+            try { val events = repository.events(start, end); mutable.update { it.copy(events = events, loading = false) } }
+            catch (e: CancellationException) { throw e }
+            catch (_: SecurityException) { mutable.update { it.copy(events = emptyList(), loading = false, error = "Calendar access was denied. Allow access to continue.") } }
+            catch (_: Exception) { mutable.update { it.copy(events = emptyList(), loading = false, error = "Could not read calendars. Try again.") } }
+        }
+    }
+    fun stop() { load?.cancel() }
 }
