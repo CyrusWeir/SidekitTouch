@@ -88,8 +88,10 @@ object CalculatorEngine {
 
     fun press(state: CalculatorState, keys: Iterable<CalcKey>): CalculatorState = keys.fold(state, ::press)
 
+    private fun freshEntry(state: CalculatorState) = if (state.pendingOp == null) CalculatorState() else state
+
     private fun digit(state: CalculatorState, d: Int): CalculatorState {
-        if (!state.entering) return state.copy(display = d.toString(), entering = true)
+        if (!state.entering) return freshEntry(state).copy(display = d.toString(), entering = true)
         val display = when (state.display) {
             "0" -> d.toString()
             "-0" -> "-$d"
@@ -99,7 +101,7 @@ object CalculatorEngine {
     }
 
     private fun decimal(state: CalculatorState): CalculatorState = when {
-        !state.entering -> state.copy(display = "0.", entering = true)
+        !state.entering -> freshEntry(state).copy(display = "0.", entering = true)
         '.' in state.display -> state
         else -> state.copy(display = state.display + ".")
     }

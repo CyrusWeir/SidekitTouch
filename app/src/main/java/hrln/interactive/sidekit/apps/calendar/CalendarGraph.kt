@@ -81,4 +81,3 @@ private fun CalendarPermission(write: Boolean, content: @Composable () -> Unit) 
         SidekitList(padding, state = list) { item { SidekitItem(if (write) "Allow calendar access to save and delete events." else "Allow calendar access to see your events.", Modifier.listFade(list, 0)) } }
     }
 }
-
