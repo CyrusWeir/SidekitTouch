@@ -78,11 +78,13 @@ class NavigationUiTest {
         compose.onNodeWithTag(hrln.interactive.sidekit.apps.sidemessage.SidemessageTags.INBOX).assertIsDisplayed()
     }
 
-    @Test fun undesignedAppsOpenThePlaceholderAndGoHome() {
+    @Test fun clockOpensItsToolsAndReturnsToLauncher() {
         launch()
         compose.runOnIdle { nav.navigate(SubApp.Clock.route) }
-        compose.onNodeWithText("Clock").assertIsDisplayed()
-        compose.onNodeWithText("Home").performClick()
+        compose.onNodeWithText("New alarm").assertIsDisplayed()
+        compose.onNodeWithText("Timer").assertIsDisplayed()
+        compose.onNodeWithText("Stopwatch").assertIsDisplayed()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.onNodeWithTag(LauncherTags.GRID).assertIsDisplayed()
     }
 
