@@ -220,7 +220,7 @@ class BankingRepository(
 
     fun addAccount(name: String, openingCents: Long): Long? {
         val trimmed = name.trim()
-        if (trimmed.isEmpty()) return null
+        if (trimmed.isEmpty() || book == null) return null
         val account = Account(nextId(), trimmed.take(NAME_MAX), openingCents, clock())
         mutate { it.copy(accounts = it.accounts + account, selectedAccountId = it.selectedAccountId ?: account.id) }
         return account.id

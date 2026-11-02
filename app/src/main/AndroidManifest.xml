@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- WebView, MyMemory translation and DownloadManager network requests. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Translate: requested only after the user taps a microphone. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Banking: ask for the screen lock (platform BiometricPrompt) before showing the tracker. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Files: list shared media. Asked in context, only when the user opens media in Files. -->
