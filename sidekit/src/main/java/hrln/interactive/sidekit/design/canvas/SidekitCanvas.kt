@@ -1,0 +1,97 @@
+package hrln.interactive.sidekit.design.canvas
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import hrln.interactive.sidekit.design.action.ActionBarHost
+import hrln.interactive.sidekit.design.action.ChromeState
+import hrln.interactive.sidekit.design.action.HeaderHost
+import hrln.interactive.sidekit.design.action.LocalChrome
+import hrln.interactive.sidekit.design.input.Keypad
+import hrln.interactive.sidekit.design.input.LocalKeypad
+import hrln.interactive.sidekit.design.theme.SidekitTheme
+
+/** The Sidephone display, and the size of every frame in the SideKit Figma file. */
+object SidephoneCanvas {
+    const val WIDTH = 480
+    const val HEIGHT = 640
+
+    /**
+     * Density that makes the 480 x 640 canvas fill [widthPx] x [heightPx] (letterboxed if the
+     * aspect ratio differs), so 1.dp in SideKit code is exactly 1 Figma px.
+     */
+    fun density(widthPx: Int, heightPx: Int): Float =
+        minOf(widthPx / WIDTH.toFloat(), heightPx / HEIGHT.toFloat())
+}
+
+/**
+ * Lays [content] out on a fixed 480 x 640 canvas scaled to the screen. On the Sidephone this is
+ * a 1:1 mapping to physical pixels whatever density the system reports; on other screens the
+ * canvas is scaled to fit and centred. Font scale is pinned to 1 because the canvas is fixed.
+ *
+ * The canvas also owns the system chrome every screen shares: the title ([HeaderHost]) and the
+ * action bar ([ActionBarHost]), drawn above the screens so they morph between them instead of
+ * moving with them. The bar rides on top of the soft keyboard. [keypad] (T9 typing) is provided
+ * to text fields here.
+ *
+ * Overdraw: the activity drops its window background, so the canvas is the only full-screen
+ * fill. The black letterbox is only painted when there is a letterbox.
+ */
+@Composable
+fun SidekitCanvas(
+    modifier: Modifier = Modifier,
+    chrome: ChromeState = remember { ChromeState() },
+    keypad: Keypad? = null,
+    content: @Composable () -> Unit,
+) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        val scale = SidephoneCanvas.density(constraints.maxWidth, constraints.maxHeight)
+        val letterboxed = constraints.maxWidth - SidephoneCanvas.WIDTH * scale >= 1f ||
+            constraints.maxHeight - SidephoneCanvas.HEIGHT * scale >= 1f
+        if (letterboxed) Box(Modifier.fillMaxSize().background(SidekitTheme.colors.dark))
+        CompositionLocalProvider(
+            LocalDensity provides Density(density = scale, fontScale = 1f),
+            LocalChrome provides chrome,
+            LocalKeypad provides keypad,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(SidephoneCanvas.WIDTH.dp, SidephoneCanvas.HEIGHT.dp)
+                    // Screens slide during navigation; keep them inside the panel.
+                    .clipToBounds()
+                    .background(SidekitTheme.colors.surfaceA1),
+            ) {
+                content()
+                HeaderHost(
+                    state = chrome,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(start = SidekitTheme.spacing.pagePadding, end = SidekitTheme.spacing.pagePadding, top = SidekitTheme.spacing.pagePadding),
+                )
+                ActionBarHost(
+                    state = chrome,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .imePadding()
+                        .padding(SidekitTheme.spacing.pagePadding),
+                )
+            }
+        }
+    }
+}

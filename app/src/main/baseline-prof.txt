@@ -1,0 +1,7 @@
+# Baseline profile: compile SideKit's own code ahead of time at install, instead of interpreting
+# it and waiting for the JIT. On the MT8766's Cortex-A53 cores this removes the jank on the first
+# run of every animation and list (the action bar morph, swipe rows, screen slides) after each
+# install or update. Compose, foundation and navigation ship their own profiles; this covers ours.
+# Installed by androidx.profileinstaller (pulled in by Compose) on release builds.
+HSPLhrln/interactive/sidekit/**;->**(**)**
+Lhrln/interactive/sidekit/**;

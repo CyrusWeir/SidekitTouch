@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="hrln.interactive.sidekit.design.ListFadeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-02T10:01:16.955Z" hostname="Mac" time="0.003">
+  <properties/>
+  <testcase name="rows step down 0_2 per slot like the mocks" classname="hrln.interactive.sidekit.design.ListFadeTest" time="0.001"/>
+  <testcase name="rows scrolled above the top stay opaque and deep rows clamp" classname="hrln.interactive.sidekit.design.ListFadeTest" time="0.0"/>
+  <testcase name="alpha is continuous between slots while scrolling" classname="hrln.interactive.sidekit.design.ListFadeTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<resources>
+    <!-- Window theme only; all UI is drawn by Compose with SidekitTheme. -->
+    <style name="Theme.Sidekit" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <!-- No window transitions: SideKit animates everything itself on one surface. -->
+        <item name="android:windowActivityTransitions">false</item>
+        <item name="android:windowContentTransitions">false</item>
+        <!-- Android 12 always shows a splash on cold start. Make it a plain black frame with no
+             icon animation, so a launcher restart (e.g. after a low-memory kill) is just black. -->
+        <item name="android:windowSplashScreenBackground">@android:color/black</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/sk_splash_blank</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+</resources>
