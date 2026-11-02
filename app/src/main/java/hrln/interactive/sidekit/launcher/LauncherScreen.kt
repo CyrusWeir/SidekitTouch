@@ -36,6 +36,11 @@ const val GRID_COLUMNS = 4
 
 @Composable
 fun LauncherRoute(onOpenApp: (SubApp) -> Unit, viewModel: LauncherViewModel = viewModel()) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.lifecycle.compose.LifecycleResumeEffect(viewModel) {
+        viewModel.loadPreferences(context)
+        onPauseOrDispose {}
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     LauncherScreen(
         state = state,

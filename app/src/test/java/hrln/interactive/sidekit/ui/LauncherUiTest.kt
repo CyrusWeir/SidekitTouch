@@ -84,6 +84,8 @@ class LauncherUiTest {
         compose.onNodeWithTag(LauncherTags.CLOCK).performClick()
         compose.onNodeWithTag(LauncherTags.CONTROL_CENTRE).assertIsDisplayed()
         compose.onNodeWithText("Volume").assertIsDisplayed()
-        compose.onNodeWithContentDescription(QuickToggle.Wifi.label).assertIsOn().performClick().assertIsOff()
+        compose.onNodeWithContentDescription(QuickToggle.Wifi.label).assertIsOn().performClick().assertIsOn()
+        val application = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
+        assertEquals(android.provider.Settings.Panel.ACTION_WIFI, org.robolectric.Shadows.shadowOf(application).nextStartedActivity.action)
     }
 }

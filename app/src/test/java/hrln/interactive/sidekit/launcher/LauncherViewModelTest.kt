@@ -34,9 +34,9 @@ class LauncherViewModelTest {
         assertFalse(vm.state.value.controlCentreOpen)
     }
 
-    @Test fun `initial toggles match the control centre mock`() {
+    @Test fun `initial toggles do not invent system state`() {
         val on = vm().state.value.toggles.filterValues { it }.keys
-        assertEquals(setOf(QuickToggle.Wifi, QuickToggle.Silent, QuickToggle.MobileData, QuickToggle.Bluetooth), on)
+        assertTrue(on.isEmpty())
     }
 
     @Test fun `toggles flip independently`() {
@@ -45,7 +45,7 @@ class LauncherViewModelTest {
         vm.setToggle(QuickToggle.Wifi, false)
         assertTrue(vm.state.value.toggles.getValue(QuickToggle.Airplane))
         assertFalse(vm.state.value.toggles.getValue(QuickToggle.Wifi))
-        assertTrue(vm.state.value.toggles.getValue(QuickToggle.Bluetooth))
+        assertFalse(vm.state.value.toggles.containsKey(QuickToggle.Bluetooth))
     }
 
     @Test fun `levels are clamped to 0 to 1`() {
