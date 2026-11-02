@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import hrln.interactive.sidekit.apps.banking.bankingGraph
 import hrln.interactive.sidekit.apps.calculator.calculatorGraph
 import hrln.interactive.sidekit.apps.calendar.calendarGraph
+import hrln.interactive.sidekit.apps.clock.clockGraph
 import hrln.interactive.sidekit.apps.camera.cameraGraph
 import hrln.interactive.sidekit.apps.compass.compassGraph
 import hrln.interactive.sidekit.apps.files.filesGraph
@@ -69,6 +70,7 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
         sideweatherGraph(navController)
         // Sidephone everyday apps (96:419)
         calendarGraph(navController)
+        clockGraph(navController)
         mailGraph(navController)
         mapsGraph(navController)
         compassGraph(navController)
