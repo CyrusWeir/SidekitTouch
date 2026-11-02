@@ -1,31 +1,31 @@
 package hrln.interactive.sidekit.apps.settings
 
-import org.junit.Assert.assertEquals
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import hrln.interactive.sidekit.design.input.T9Mode
+import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [31])
 class SettingsViewModelTest {
-    private fun SettingsViewModel.value(key: SettingKey) = state.value.rows.first { it.key == key }.value
-
-    @Test fun `rows match the mock`() {
+    @Test fun `every system row has a settings destination`() {
         val rows = SettingsViewModel().state.value.rows
-        assertEquals(listOf("Wi-Fi", "Bluetooth", "Display", "Sounds", "Privacy"), rows.map { it.label })
-        assertEquals(listOf("Connected", "On", "Brightness", "Volume", "Permissions"), rows.map { it.value })
+        assertEquals(SettingKey.entries.toSet(), rows.map { it.key }.toSet())
+        rows.forEach { assertTrue(it.key.settingsAction().startsWith("android.settings.")) }
     }
-
-    @Test fun `wifi and bluetooth toggle`() {
-        val vm = SettingsViewModel()
-        vm.onRowClick(SettingKey.WiFi)
-        assertEquals("Off", vm.value(SettingKey.WiFi))
-        vm.onRowClick(SettingKey.WiFi)
-        assertEquals("Connected", vm.value(SettingKey.WiFi))
-        vm.onRowClick(SettingKey.Bluetooth)
-        assertEquals("Off", vm.value(SettingKey.Bluetooth))
-    }
-
-    @Test fun `link rows leave state unchanged`() {
-        val vm = SettingsViewModel()
-        val before = vm.state.value
-        SettingKey.entries.filter { it != SettingKey.WiFi && it != SettingKey.Bluetooth }.forEach(vm::onRowClick)
-        assertEquals(before, vm.state.value)
+    @Test fun `defaults and dock selection survive a new preferences instance`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = SidekitPreferences(context)
+        prefs.listLayout = true
+        prefs.inputMode = T9Mode.Numeric
+        prefs.dockComponent = "example/.Main"
+        val restored = SidekitPreferences(context)
+        assertTrue(restored.listLayout)
+        assertEquals(T9Mode.Numeric, restored.inputMode)
+        assertEquals("example/.Main", restored.dockComponent)
     }
 }

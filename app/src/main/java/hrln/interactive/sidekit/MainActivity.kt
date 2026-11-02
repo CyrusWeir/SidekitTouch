@@ -49,6 +49,11 @@ class MainActivity : ComponentActivity() {
         window.decorView.post { window.setBackgroundDrawable(null) }
     }
 
+    override fun onResume() {
+        super.onResume()
+        hrln.interactive.sidekit.apps.settings.SidekitPreferences(this).applyInputDefault(keypad)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         when {
             // Keypad top-right: the universal Options key. Acts on release; the press is consumed
