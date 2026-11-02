@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import hrln.interactive.sidekit.design.components.listFade
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -41,19 +44,17 @@ fun SideweatherHomeScreen(
     summary: List<WeatherRow>,
     onHourly: () -> Unit,
     onFiveDay: () -> Unit,
+    options: List<SideAction> = emptyList(),
 ) {
     SidekitScaffold(
         title = "Sideweather",
+        options = options,
         actions = listOf(SideAction.back("back", "Hourly", onHourly), SideAction.forward("forward", "5 days", onFiveDay)),
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap),
-        ) {
-            ConditionsCard(current)
-            summary.forEach { SidekitItem(title = it.label, secondary = it.detail) }
+        val list = rememberLazyListState()
+        SidekitList(padding, state = list) {
+            item { Box(Modifier.listFade(list, 0)) { ConditionsCard(current) } }
+            itemsIndexed(summary) { i, row -> SidekitItem(title = row.label, secondary = row.detail, modifier = Modifier.listFade(list, i + 1)) }
         }
     }
 }
@@ -92,8 +93,9 @@ fun ForecastScreen(title: String, rows: List<WeatherRow>, onBack: () -> Unit, on
         title = title,
         actions = listOf(SideAction.back("back", "Back", onBack), SideAction.forward("forward", "Locations", onLocations)),
     ) { padding ->
-        SidekitList(padding) {
-            items(rows) { SidekitItem(title = it.label, secondary = it.detail, modifier = Modifier.height(ForecastRowHeight)) }
+        val list = rememberLazyListState()
+        SidekitList(padding, state = list) {
+            itemsIndexed(rows) { i, row -> SidekitItem(title = row.label, secondary = row.detail, modifier = Modifier.height(ForecastRowHeight).listFade(list, i)) }
         }
     }
 }
