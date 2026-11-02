@@ -55,8 +55,9 @@ class KeypadKeysTest {
     }
 
     @Test fun screensWithoutOptionsSaySo() {
-        // Open an app with no options (the Phonebook placeholder) from the dock.
+        // The dial pad has no options until a number is entered.
         compose.onAllNodes(hasContentDescription("Phonebook")).onLast().performClick()
+        compose.onNodeWithContentDescription("Dial pad").performClick()
         press(KeyEvent.KEYCODE_MENU)
         compose.onNodeWithText("No options here").assertIsDisplayed()
     }

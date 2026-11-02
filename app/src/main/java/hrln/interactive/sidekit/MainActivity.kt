@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import hrln.interactive.sidekit.design.canvas.SidekitCanvas
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import hrln.interactive.sidekit.navigation.SidekitNavHost
+import hrln.interactive.sidekit.apps.sidemessage.IncomingLinks
 
 class MainActivity : ComponentActivity() {
     /** Bumped when Home is pressed while SideKit is already in front; the nav host returns to the launcher. */
@@ -30,6 +31,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Opened from an sms: link or a message notification: go to that conversation.
+        if (savedInstanceState == null) IncomingLinks.handle(intent)
         enableEdgeToEdge()
         // The mocks use the whole 480 x 640 display; the launcher header carries the clock.
         WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -72,5 +75,6 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         // singleTask: pressing Home while an app is open delivers the HOME intent here.
         if (intent.hasCategory(Intent.CATEGORY_HOME)) homeRequests.intValue++
+        else IncomingLinks.handle(intent)
     }
 }
