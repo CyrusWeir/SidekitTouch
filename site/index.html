@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidekit Setup Guide</title>
+<meta name="description" content="Install Sidekit on your Sidephone and make it home: the launcher and its 24 apps, set up in about ten minutes.">
+<meta name="theme-color" content="#fbfbfd">
+<meta property="og:title" content="Sidekit Setup Guide">
+<meta property="og:description" content="Install Sidekit on your Sidephone and make it home.">
+<meta property="og:image" content="https://sidekit-setup.vercel.app/assets/film/hero.jpg">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="image" href="assets/film/hero.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0&amp;icon_names=account_balance_wallet,alarm,calculate,calendar_month,call_log,chat,checklist,deployed_code,directions_bus,docs,ecg_heart,encrypted,explore,folder_copy,mail,map,music_note,partly_cloudy_day,photo_camera,photo_library,settings,smart_display,translate,travel_explore&amp;display=block">
+<style>
+/* Layout idea: an Apple-style product page that turns into a working checklist.
+   One sticky Sidephone mirrors whichever step you are on. */
+:root {
+  color-scheme: light;
+  --paper: #fbfbfd;        /* page */
+  --void: #f4f4f4;         /* the render's white cyc, so films sit seamlessly */
+  --ink: #1d1d1f;          /* text */
+  --ink-2: #6e6e73;        /* secondary text */
+  --rule: #e3e3e8;         /* hairlines */
+  --blue: #2c65e0;         /* Sidekit primaryA1 */
+  --blue-ink: #1f50c0;     /* blue text on white, AA */
+  --green: #22946e;        /* Sidekit successA1, fills */
+  --green-ink: #17775a;    /* green text and white-on-green, AA */
+  --keys: #3a3a3c;         /* keypad */
+  --card: #ffffff;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r-lg: 28px;
+  --r-md: 18px;
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 72px; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 17px/1.47 var(--font-body); letter-spacing: -0.022em;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+img, video { max-width: 100%; display: block; }
+a { color: var(--blue-ink); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 55%, transparent); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+p { margin: 0; }
+code, kbd { font-family: var(--font-mono); font-size: .88em; }
+.wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+.eyebrow { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--blue-ink); }
+.lede { font-size: clamp(19px, 2.2vw, 24px); line-height: 1.35; color: var(--ink-2); letter-spacing: -0.015em; max-width: 36ch; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 22px;
+  border-radius: 999px; font: 600 17px/1 var(--font-body); letter-spacing: -0.01em;
+  border: 0; cursor: pointer; transition: background .2s, transform .2s var(--ease);
+}
+.btn:hover { text-decoration: none; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #2457c8; }
+.btn-quiet { background: transparent; color: var(--blue-ink); padding-inline: 4px; }
+.btn-quiet:hover { text-decoration: underline; }
+.btn svg { width: 16px; height: 16px; }
+
+/* Nav */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 70%, transparent);
+}
+.nav .wrap { display: flex; align-items: center; gap: 28px; height: 52px; }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; font-size: 17px; }
+.brand:hover { text-decoration: none; }
+.brand .tag { color: var(--ink-2); font-weight: 400; }
+.nav-links { display: flex; gap: 24px; margin-left: auto; font-size: 13px; }
+.nav-links a { color: var(--ink); opacity: .8; }
+.nav-links a:hover { opacity: 1; text-decoration: none; }
+.nav .btn { min-height: 30px; padding: 0 14px; font-size: 13px; }
+@media (max-width: 760px) { .nav-links { display: none; } .nav .btn { margin-left: auto; } }
+
+/* Hero */
+.hero { padding: clamp(56px, 9vw, 104px) 0 0; text-align: center; }
+.hero h1 { font-size: clamp(44px, 7.4vw, 88px); line-height: 1.03; letter-spacing: -0.03em; font-weight: 600; margin: 10px auto 20px; max-width: 14ch; }
+.hero .lede { margin-inline: auto; }
+.hero-actions { display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 30px; }
+.hero-film {
+  position: relative; margin: clamp(32px, 5vw, 56px) auto 0; width: min(1240px, 100%);
+  aspect-ratio: 1600 / 750; overflow: hidden; background: var(--void);
+}
+.hero-film video, .hero-film img { width: 100%; height: 100%; object-fit: cover; }
+.hero-film::after { /* fade the cyc into the page so the film has no hard edge */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, var(--paper) 0%, transparent 14%, transparent 80%, var(--paper) 100%),
+              linear-gradient(to right, var(--paper) 0%, transparent 6%, transparent 94%, var(--paper) 100%);
+}
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 860px; margin: 12px auto 0; padding: 0 0 clamp(48px, 6vw, 72px); }
+.fact { text-align: center; }
+.fact b { display: block; font: 600 clamp(28px, 3.6vw, 40px)/1.1 var(--font-display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.fact span { font-size: 14px; color: var(--ink-2); letter-spacing: -0.01em; }
+@media (max-width: 560px) { .facts { grid-template-columns: 1fr; gap: 18px; } .hero-film { aspect-ratio: 1 / 1; } }
+
+/* Section heads */
+.section { padding: clamp(72px, 10vw, 128px) 0; }
+.section + .section { border-top: 1px solid var(--rule); }
+.head { display: grid; gap: 14px; margin-bottom: clamp(36px, 5vw, 56px); }
+.head h2 { font-size: clamp(36px, 5vw, 56px); line-height: 1.07; letter-spacing: -0.026em; font-weight: 600; max-width: 18ch; }
+
+/* Guide: steps + sticky phone */
+.guide { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: clamp(32px, 6vw, 88px); align-items: start; }
+.progress { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; font-size: 14px; color: var(--ink-2); }
+.bar { flex: 1; height: 4px; border-radius: 4px; background: var(--rule); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--green-ink); border-radius: 4px; transition: width .5s var(--ease); }
+.progress b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.reset { background: none; border: 0; color: var(--blue-ink); font: inherit; cursor: pointer; padding: 4px; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.step { background: var(--card); border-radius: var(--r-md); box-shadow: 0 0 0 1px var(--rule); transition: box-shadow .3s var(--ease); }
+.step.is-open { box-shadow: 0 0 0 1px var(--rule), 0 18px 40px -18px rgba(0,0,0,.18); }
+.step-head { display: flex; align-items: center; gap: 16px; padding: 18px 20px; }
+.step-toggle {
+  flex: 1; display: flex; align-items: center; gap: 16px; background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 44px;
+}
+.num { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 600 15px/1 var(--font-display); background: #f2f2f5; color: var(--ink-2); font-variant-numeric: tabular-nums; transition: background .25s, color .25s; }
+.step.is-open .num { background: var(--blue); color: #fff; }
+.step.is-done .num { background: var(--green-ink); color: #fff; }
+.num svg { width: 14px; height: 14px; }
+.step-title { display: grid; gap: 2px; }
+.step-title strong { font: 600 19px/1.25 var(--font-display); letter-spacing: -0.02em; }
+.step-title small { font-size: 14px; color: var(--ink-2); }
+.chev { margin-left: auto; width: 18px; height: 18px; color: var(--ink-2); transition: transform .3s var(--ease); flex: none; }
+.step.is-open .chev { transform: rotate(180deg); }
+.done-toggle {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 10px; border-radius: 999px;
+  border: 1px solid var(--rule); background: #fff; color: var(--ink-2); font: 500 14px/1 var(--font-body); cursor: pointer; transition: all .2s;
+}
+.done-toggle:hover { border-color: #c9c9cf; color: var(--ink); }
+.done-toggle .tick { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #8e8e93; display: grid; place-items: center; transition: all .2s; }
+.done-toggle .tick svg { width: 11px; height: 11px; opacity: 0; color: #fff; }
+.done-toggle[aria-pressed="true"] { border-color: color-mix(in srgb, var(--green) 35%, white); color: var(--green-ink); background: color-mix(in srgb, var(--green) 7%, white); }
+.done-toggle[aria-pressed="true"] .tick { background: var(--green-ink); border-color: var(--green-ink); }
+.done-toggle[aria-pressed="true"] .tick svg { opacity: 1; }
+.step-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .4s var(--ease); }
+.step.is-open .step-body { grid-template-rows: 1fr; }
+.step-body > div { overflow: hidden; }
+.step:not(.is-open) .step-body > div { visibility: hidden; transition: visibility 0s .4s; }
+.step-inner { padding: 0 20px 24px 70px; display: grid; gap: 16px; max-width: 640px; }
+.step-inner p { color: #424245; }
+.step-inner ol, .step-inner ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: #424245; }
+.step-inner li::marker { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.path { font-weight: 600; color: var(--ink); }
+.note { font-size: 15px; color: var(--ink-2); padding: 12px 14px; background: #f5f5f7; border-radius: 12px; }
+.note b { color: var(--ink); font-weight: 600; }
+.dev { font-size: 15px; color: var(--ink-2); }
+.dev summary { cursor: pointer; color: var(--blue-ink); font-weight: 500; min-height: 32px; display: flex; align-items: center; }
+.dev[open] { display: grid; gap: 10px; }
+.progress.all-set span, .progress.all-set b { color: var(--green-ink); }
+@media (max-width: 560px) {
+  .step-head { flex-wrap: wrap; padding: 16px; row-gap: 10px; }
+  .step-toggle { flex: 1 0 100%; min-width: 0; }
+  .step-title { min-width: 0; }
+  .step-inner { padding: 0 16px 22px; }
+  .done-toggle { margin-left: 50px; }
+}
+
+/* Tabs */
+.tabs { display: inline-flex; padding: 3px; background: #ececf0; border-radius: 10px; gap: 2px; justify-self: start; }
+.tabs button { border: 0; background: transparent; padding: 7px 14px; border-radius: 8px; font: 500 14px/1.2 var(--font-body); color: var(--ink); cursor: pointer; min-height: 34px; }
+.tabs button[aria-selected="true"] { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); font-weight: 600; }
+[role="tabpanel"] { display: grid; gap: 14px; }
+[role="tabpanel"][hidden] { display: none; }
+
+/* Code */
+.cmd { display: flex; align-items: stretch; background: #1d1d1f; color: #f5f5f7; border-radius: 12px; overflow: hidden; }
+.cmd pre { margin: 0; padding: 13px 16px; overflow-x: auto; flex: 1; font: 14px/1.5 var(--font-mono); }
+.cmd pre .dim { color: #8e8e93; }
+.copy { flex: none; border: 0; border-left: 1px solid #3a3a3c; background: transparent; color: #d1d1d6; font: 500 13px/1 var(--font-body); padding: 0 14px; cursor: pointer; min-width: 74px; }
+.copy:hover { color: #fff; background: #2c2c2e; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Sidephone (CSS model of the real device) */
+.stage { position: sticky; top: 76px; display: grid; justify-items: center; gap: 18px; }
+.sidephone {
+  --w: clamp(220px, calc((100vh - 240px) * .5), 300px);
+  width: var(--w); padding: calc(var(--w) * .047) calc(var(--w) * .047) calc(var(--w) * .053); border-radius: calc(var(--w) * .147);
+  background: linear-gradient(145deg, #f7f7f8, #dcdde0 55%, #c9cacd);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), inset 0 -2px 3px rgba(0,0,0,.08), 0 1px 0 1px #b9babd, 0 40px 60px -30px rgba(0,0,0,.35), 0 12px 24px -12px rgba(0,0,0,.18);
+}
+.screen { position: relative; aspect-ratio: 3 / 4; border-radius: calc(var(--w) * .1); overflow: hidden; background: #000; box-shadow: 0 0 0 3px #111; }
+.screen video, .screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .35s; }
+.screen .fade { opacity: 0; }
+.latches { display: flex; justify-content: space-between; padding: 0 34px; height: 8px; margin-top: 8px; }
+.latches i { width: 18px; height: 6px; border-radius: 2px; background: #2c2c2e; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; background: #2a2a2c; padding: 4px; border-radius: 18px; }
+.key { height: calc(var(--w) * .1); border-radius: 8px; background: var(--keys); color: #d1d1d6; display: flex; align-items: center; justify-content: center; gap: 4px; font: 500 13px/1 var(--font-body); letter-spacing: 0; position: relative; transition: background .2s, box-shadow .2s; }
+.key small { font-size: 7px; letter-spacing: .04em; color: #98989d; }
+.key svg { width: 13px; height: 13px; }
+.key.dpad { grid-row: span 2; height: auto; background: #2f2f31; }
+.key.dpad::after { content: ""; width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f2f2f2, #a9a9ad); }
+.key.lit { background: var(--blue); color: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 40%, transparent), 0 0 18px color-mix(in srgb, var(--blue) 70%, transparent); }
+.key.lit small { color: #dfe7fb; }
+@media (prefers-reduced-motion: no-preference) { .key.lit { animation: press 1.6s var(--ease) infinite; } }
+@keyframes press { 0%, 55%, 100% { transform: none; } 65% { transform: scale(.92); } 80% { transform: none; } }
+.caption { text-align: center; font-size: 14px; color: var(--ink-2); max-width: 30ch; min-height: 3em; }
+.caption b { color: var(--ink); font-weight: 600; display: block; }
+@media (max-width: 920px) {
+  .guide { grid-template-columns: 1fr; }
+  .guide > .stage { display: none; }
+  .step-inner > .stage { position: static; justify-self: center; gap: 12px; margin: 4px 0 6px; }
+  .step-inner > .stage .sidephone { --w: 210px; }
+}
+
+/* Extras */
+.extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 56px; }
+.extra { background: var(--card); border-radius: var(--r-md); padding: 24px; box-shadow: 0 0 0 1px var(--rule); display: grid; gap: 10px; align-content: start; }
+.extra h3 { font-size: 19px; letter-spacing: -0.02em; }
+.extra p { font-size: 15px; color: #424245; }
+.extra .where { font-size: 13px; color: var(--ink-2); }
+.extras-head { margin-top: 72px; display: grid; gap: 8px; }
+.extras-head h3 { font-size: 28px; letter-spacing: -0.03em; }
+.extras-head p { color: var(--ink-2); max-width: 60ch; }
+
+/* Keypads film */
+.film-band { background: var(--void); padding: clamp(72px, 10vw, 120px) 0 0; overflow: hidden; }
+.film-band .head { text-align: center; justify-items: center; }
+.film-band .lede { margin-inline: auto; }
+.film { width: min(1240px, 100%); margin: 0 auto; aspect-ratio: 16 / 8; overflow: hidden; }
+.film { position: relative; }
+.film-toggle { position: absolute; right: max(16px, calc((100% - 1120px) / 2)); bottom: 20px; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer; background: rgba(29,29,31,.72); color: #fff; font: 500 13px/1 var(--font-body); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.film-toggle svg { width: 12px; height: 12px; }
+.film video, .film img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+.keyfacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; padding: 8px 0 clamp(72px, 9vw, 112px); }
+.keyfacts div { display: grid; gap: 6px; }
+.keyfacts b { font: 600 19px/1.25 var(--font-display); letter-spacing: -0.02em; }
+.keyfacts p { font-size: 15px; color: #424245; }
+@media (max-width: 720px) { .keyfacts { grid-template-columns: 1fr; gap: 22px; } .film { aspect-ratio: 4 / 3; } }
+
+/* App gallery */
+.gallery { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: clamp(32px, 6vw, 80px); align-items: center; }
+.app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.app {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 48px; border-radius: 14px; border: 0;
+  background: transparent; font: 500 15px/1.2 var(--font-body); letter-spacing: -0.01em; color: var(--ink); cursor: pointer; text-align: left;
+  transition: background .2s;
+}
+.app:hover { background: #f0f0f3; }
+.app[aria-pressed="true"] { background: #e8effc; color: var(--blue-ink); font-weight: 600; }
+.app .dot { width: 30px; height: 30px; border-radius: 9px; background: #2c2c2e; flex: none; display: grid; place-items: center; color: #fff; overflow: hidden; }
+.app .dot .ms { font-family: "Material Symbols Rounded"; font-size: 18px; line-height: 1; font-weight: normal; font-style: normal; letter-spacing: normal; font-feature-settings: "liga"; white-space: nowrap; }
+.app[aria-pressed="true"] .dot { background: var(--blue); }
+.app-desc { margin-top: 24px; min-height: 3.2em; color: var(--ink-2); max-width: 52ch; }
+.app-desc b { color: var(--ink); }
+@media (max-width: 920px) { .gallery { grid-template-columns: 1fr; } .gallery .stage-lite { order: -1; } .stage-lite .sidephone { --w: 220px !important; } }
+.stage-lite { display: grid; justify-items: center; }
+
+/* Troubleshooting */
+.faq { display: grid; max-width: 820px; }
+.faq details { border-bottom: 1px solid var(--rule); }
+.faq details:first-child { border-top: 1px solid var(--rule); }
+.faq summary { list-style: none; cursor: pointer; padding: 22px 0; display: flex; justify-content: space-between; align-items: center; gap: 24px; font: 600 19px/1.3 var(--font-display); letter-spacing: -0.02em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-weight: 300; font-size: 28px; color: var(--ink-2); transition: transform .25s var(--ease); line-height: 1; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq .answer { padding: 0 0 24px; display: grid; gap: 12px; color: #424245; max-width: 64ch; }
+
+/* Footer */
+footer { padding: 40px 0 56px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 32px; justify-content: space-between; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Sidekit setup guide, back to top">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="3" fill="#1d1d1f"/><rect x="12" y="1" width="9" height="9" rx="3" fill="#1d1d1f"/><rect x="1" y="12" width="9" height="9" rx="3" fill="#1d1d1f"/><rect x="12" y="12" width="9" height="9" rx="4.5" fill="#2c65e0"/></svg>
+      Sidekit <span class="tag">Setup Guide</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#setup">Set up</a>
+      <a href="#keypad">Keypad</a>
+      <a href="#apps">Apps</a>
+      <a href="#help">Help</a>
+    </nav>
+    <a class="btn btn-primary" href="https://github.com/HarlenPostill/Sidekit/releases/latest">Download</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Sidekit 1.0 for Sidephone</p>
+      <h1>Your Sidephone, finally at home.</h1>
+      <p class="lede">One install puts <strong>the launcher and all 24 apps</strong> on your phone, built for the keypad. This guide takes about ten minutes.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#setup">Start setup</a>
+        <a class="btn btn-quiet" href="https://github.com/HarlenPostill/Sidekit/releases/latest">Download the APK ›</a>
+      </div>
+    </div>
+    <div class="hero-film">
+      <video id="heroFilm" muted playsinline preload="auto" poster="assets/film/hero.jpg" aria-label="A Sidephone turns on and opens the Sidekit launcher">
+        <source src="assets/film/hero.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="wrap">
+      <div class="facts">
+        <div class="fact"><b>10 min</b><span>from download to home screen</span></div>
+        <div class="fact"><b>24 apps</b><span>in one download</span></div>
+        <div class="fact"><b>Android 12+</b><span>runs on the Sidephone’s own OS</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="setup" aria-labelledby="setup-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Setup</p>
+        <h2 id="setup-title">Six steps to a phone that feels like yours.</h2>
+        <p class="lede">Open a step, follow it on your phone, then mark it done. Your progress is saved in this browser.</p>
+      </div>
+
+      <div class="guide">
+        <div>
+          <div class="progress" aria-live="polite">
+            <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+            <span><b id="doneCount">0</b> of 6 done</span>
+            <button class="reset" id="reset" type="button">Reset</button>
+          </div>
+
+          <ol class="steps" id="steps">
+            <li class="step" data-step="1" data-video="launcher" data-key="" data-cap="Where you’re headed|The Sidekit home screen, with the dock at the bottom.">
+              <div class="step-head">
+                <button class="step-toggle" type="button" aria-expanded="false" aria-controls="s1">
+                  <span class="num">1</span>
+                  <span class="step-title"><strong>Check your Sidephone</strong><small>Android version and free space</small></span>
+                  <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+                </button>
+                <button class="done-toggle" type="button" aria-pressed="false"><span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>Done</button>
+              </div>
+              <div class="step-body" id="s1" inert><div><div class="step-inner">
+                <p>Sidekit needs <b>Android 12 or later</b>. To check, open <span class="path">Settings › About phone › Android version</span>.</p>
+                <ul>
+                  <li>About <b>50 MB</b> of free storage.</li>
+                  <li>Battery above 30%, or the phone on its charger.</li>
+                  <li>A USB‑C cable, only if you plan to install from a computer.</li>
+                </ul>
+                <p class="note">Your existing apps, contacts and texts stay where they are. Sidekit is added alongside them, and you can switch back at any time.</p>
+              </div></div></div>
+            </li>
+
+            <li class="step" data-step="2" data-video="launcher" data-key="" data-cap="Where you’re headed|One download gives you the launcher and every app.">
+              <div class="step-head">
+                <button class="step-toggle" type="button" aria-expanded="false" aria-controls="s2">
+                  <span class="num">2</span>
+                  <span class="step-title"><strong>Download Sidekit</strong><small>One APK, about 50 MB</small></span>
+                  <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+                </button>
+                <button class="done-toggle" type="button" aria-pressed="false"><span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>Done</button>
+              </div>
+              <div class="step-body" id="s2" inert><div><div class="step-inner">
+                <p>Sidekit comes as an <b>APK</b>, the file Android uses to install apps from outside the Play Store. On your Sidephone, open this page and download it:</p>
+                <ol>
+                  <li>Tap <span class="path">Download Sidekit</span> below. It opens the latest release.</li>
+                  <li>Scroll to <span class="path">Assets</span> and tap the file ending in <span class="path">.apk</span>.</li>
+                  <li>If the browser warns that the file might be harmful, tap <span class="path">Download anyway</span>. It saves to <span class="path">Files › Downloads</span>.</li>
+                </ol>
+                <a class="btn btn-primary" style="justify-self:start" href="https://github.com/HarlenPostill/Sidekit/releases/latest">Download Sidekit</a>
+                <details class="dev">
+                  <summary>For developers: build it yourself</summary>
+                  <p>From a clone of the repository:</p>
+                  <div class="cmd"><pre><code>./gradlew :app:assembleDebug</code></pre><button class="copy" type="button">Copy</button></div>
+                  <p>The APK is written to <code>app/build/outputs/apk/debug/app-debug.apk</code>.</p>
+                </details>
+              </div></div></div>
+            </li>
+
+            <li class="step" data-step="3" data-video="apps" data-key="" data-cap="After installing|Sidekit’s Apps list also shows everything else on your phone.">
+              <div class="step-head">
+                <button class="step-toggle" type="button" aria-expanded="false" aria-controls="s3">
+                  <span class="num">3</span>
+                  <span class="step-title"><strong>Install it</strong><small>On the phone, or with a computer</small></span>
+                  <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+                </button>
+                <button class="done-toggle" type="button" aria-pressed="false"><span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>Done</button>
+              </div>
+              <div class="step-body" id="s3" inert><div><div class="step-inner">
+                <div class="tabs" role="tablist" aria-label="Install method">
+                  <button role="tab" id="tab-phone" aria-controls="panel-phone" aria-selected="true" type="button">On the phone</button>
+                  <button role="tab" id="tab-adb" aria-controls="panel-adb" aria-selected="false" tabindex="-1" type="button">With a computer</button>
+                </div>
+                <div role="tabpanel" id="panel-phone" aria-labelledby="tab-phone">
+                  <ol>
+                    <li>Open <span class="path">Files › Downloads</span> and choose the Sidekit APK.</li>
+                    <li>If Android asks, choose <span class="path">Settings</span> and turn on <span class="path">Allow from this source</span> for your Files or browser app.</li>
+                    <li>Go back and choose <span class="path">Install</span>. When it finishes, choose <span class="path">Done</span>.</li>
+                  </ol>
+                </div>
+                <div role="tabpanel" id="panel-adb" aria-labelledby="tab-adb" hidden>
+                  <ol>
+                    <li>On your computer, install Google’s <a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform-Tools</a>, which include <code>adb</code>. Download the APK to the computer too.</li>
+                    <li>On the phone, open <span class="path">Settings › About phone</span> and tap <span class="path">Build number</span> seven times to turn on Developer options.</li>
+                    <li>Open <span class="path">Settings › System › Developer options</span> and turn on <span class="path">USB debugging</span>.</li>
+                    <li>Connect the cable. On the phone, tap <span class="path">Allow</span> when it asks to allow USB debugging.</li>
+                    <li>Open a terminal in your Downloads folder and run this, using your APK’s file name:</li>
+                  </ol>
+                  <div class="cmd"><pre><code><span class="dim">$</span> adb install -r Sidekit.apk</code></pre><button class="copy" type="button" data-copy="adb install -r Sidekit.apk">Copy</button></div>
+                  <p class="note"><b>Success</b> in the terminal means it’s installed. You can turn USB debugging off again afterwards.</p>
+                </div>
+              </div></div></div>
+            </li>
+
+            <li class="step" data-step="4" data-video="launcher" data-key="" data-cap="Make it home|Press Home, choose Sidekit, then Always.">
+              <div class="step-head">
+                <button class="step-toggle" type="button" aria-expanded="false" aria-controls="s4">
+                  <span class="num">4</span>
+                  <span class="step-title"><strong>Make Sidekit your Home app</strong><small>So it opens every time you go home</small></span>
+                  <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+                </button>
+                <button class="done-toggle" type="button" aria-pressed="false"><span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>Done</button>
+              </div>
+              <div class="step-body" id="s4" inert><div><div class="step-inner">
+                <ol>
+                  <li>Go to the home screen. Android asks which Home app to use.</li>
+                  <li>Choose <span class="path">Sidekit</span>, then <span class="path">Always</span>.</li>
+                </ol>
+                <p>No prompt? Open Sidekit, then <span class="path">Settings › Home app</span>. It shows <b>Choose</b> until Sidekit is your Home app, and <b>Sidekit</b> once it is. You can also use <span class="path">Settings › Apps › Default apps › Home app</span> in Android.</p>
+                <p class="note">Your four favourite apps sit in the blue dock at the bottom. Scroll the grid for the rest.</p>
+              </div></div></div>
+            </li>
+
+            <li class="step" data-step="5" data-video="settings" data-key="back" data-cap="Top-left key is Back|Press for Back in any app. Hold it to open the dialer.">
+              <div class="step-head">
+                <button class="step-toggle" type="button" aria-expanded="false" aria-controls="s5">
+                  <span class="num">5</span>
+                  <span class="step-title"><strong>Turn on the keypad Back key</strong><small>The top-left key becomes Back</small></span>
+                  <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+                </button>
+                <button class="done-toggle" type="button" aria-pressed="false"><span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>Done</button>
+              </div>
+              <div class="step-body" id="s5" inert><div><div class="step-inner">
+                <p>Out of the box, the Sidephone’s top-left key opens the dialer. Sidekit can turn it into a Back key that works in every app. Holding it still opens the dialer.</p>
+                <ol>
+                  <li>In Sidekit, open <span class="path">Settings › Keypad Back key</span>.</li>
+                  <li>In the Accessibility list, choose <span class="path">SideKit keypad</span> and turn it on.</li>
+                  <li>Confirm with <span class="path">Allow</span>. Back in Sidekit, the row now reads <b>Enabled</b>.</li>
+                </ol>
+                <p class="note"><b>What it can see:</b> only that one key. It doesn’t read the screen or anything you type.</p>
+              </div></div></div>
+            </li>
+
+            <li class="step" data-step="6" data-video="sidemessage" data-key="" data-cap="Sidemessage|Make it the default so new texts arrive here first.">
+              <div class="step-head">
+                <button class="step-toggle" type="button" aria-expanded="false" aria-controls="s6">
+                  <span class="num">6</span>
+                  <span class="step-title"><strong>Use Sidemessage for texts</strong><small>Default SMS app, plus app permissions</small></span>
+                  <svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+                </button>
+                <button class="done-toggle" type="button" aria-pressed="false"><span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>Done</button>
+              </div>
+              <div class="step-body" id="s6" inert><div><div class="step-inner">
+                <ol>
+                  <li>Open <span class="path">Sidemessage</span> from the dock and allow access to your texts.</li>
+                  <li>Choose <span class="path">Make default</span>, then confirm Sidemessage in Android’s prompt.</li>
+                </ol>
+                <p>Without this, reading and sending still work, but new texts go to your old app first. Picture messages also need mobile data turned on.</p>
+                <p>Other apps ask for access the first time you open them: Photos for your pictures, Camera for the camera, Phonebook for contacts, Maps and Sideweather for your location. Each app explains what it needs.</p>
+              </div></div></div>
+            </li>
+          </ol>
+
+          <div class="extras-head">
+            <h3>Optional: connect your accounts</h3>
+            <p>Every app works without an account. Add these only if you want them.</p>
+          </div>
+          <div class="extras" style="margin-top:24px">
+            <article class="extra">
+              <h3>Mail</h3>
+              <p>Add one email account with your provider’s incoming (IMAP) and outgoing (SMTP) server details. For Gmail, iCloud or Outlook, create an app password in your account’s security settings first.</p>
+              <span class="where">Mail › Options › Account</span>
+            </article>
+            <article class="extra">
+              <h3>Banking</h3>
+              <p>See your Up balances and transactions, read-only. Paste a personal access token from Up.</p>
+              <span class="where">Banking › Options › Up · read-only</span>
+            </article>
+            <article class="extra">
+              <h3>Sideport</h3>
+              <p>Open other Android apps in Sidekit’s design. Turn on Projection, and Chats & media for their messages.</p>
+              <span class="where">Sideport › Projection</span>
+            </article>
+          </div>
+        </div>
+
+        <aside class="stage" aria-label="Sidephone preview">
+          <div class="sidephone">
+            <div class="screen">
+              <img id="stagePoster" src="assets/apps/launcher.jpg" alt="">
+              <video id="stageVideo" muted playsinline loop preload="none" aria-hidden="true"></video>
+            </div>
+            <div class="latches" aria-hidden="true"><i></i><i></i></div>
+            <div class="keypad" aria-hidden="true"></div>
+          </div>
+          <p class="caption" id="stageCap" aria-live="polite"><b>Where you’re headed</b>The Sidekit home screen, with the dock at the bottom.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="film-band" id="keypad" aria-labelledby="keypad-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">The keypad</p>
+        <h2 id="keypad-title">Built for keys, not glass.</h2>
+        <p class="lede">Sidekit puts the keypad first. Big targets, a two-button action bar, and typing that never covers the screen.</p>
+      </div>
+    </div>
+    <div class="film">
+      <video id="keyFilm" muted playsinline loop preload="none" poster="assets/film/keypads.jpg" aria-label="The Sidephone's swappable keypads circle the phone and snap in one by one">
+        <source src="assets/film/keypads.mp4" type="video/mp4">
+      </video>
+      <button class="film-toggle" id="filmToggle" type="button" aria-label="Play keypad film" hidden><span>Play</span></button>
+    </div>
+    <div class="wrap">
+      <div class="keyfacts">
+        <div><b>T9 that predicts</b><p>Type with the number keys in every Sidekit field. Suggestions appear above the action bar.</p></div>
+        <div><b>Options on the right</b><p>The top-right key opens each app’s options, like Make default in Sidemessage or Account in Mail.</p></div>
+        <div><b>Back is one press</b><p>With step 5 done, the top-left key goes back from anywhere, even outside Sidekit.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="apps" aria-labelledby="apps-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">What you get</p>
+        <h2 id="apps-title">24 apps, already on the home screen.</h2>
+        <p class="lede">Choose an app to see it running on a Sidephone.</p>
+        <p class="sr-only" id="copyStatus" role="status"></p>
+      </div>
+      <div class="gallery">
+        <div>
+          <div class="app-grid" id="appGrid" role="group" aria-label="Sidekit apps"></div>
+          <p class="app-desc" id="appDesc" aria-live="polite"></p>
+        </div>
+        <div class="stage-lite">
+          <div class="sidephone" style="--w:280px">
+            <div class="screen">
+              <img id="galleryPoster" src="assets/apps/sidenotes.jpg" alt="">
+              <video id="galleryVideo" muted playsinline loop preload="none" aria-hidden="true"></video>
+            </div>
+            <div class="latches" aria-hidden="true"><i></i><i></i></div>
+            <div class="keypad" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="help" aria-labelledby="help-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Help</p>
+        <h2 id="help-title">If something doesn’t look right.</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>“App not installed” appears during install</summary>
+          <div class="answer">
+            <p>An older Sidekit signed with a different key is probably on the phone. Uninstall it from <span class="path">Settings › Apps › Sidekit</span>, then install again.</p>
+            <p>If you used a computer, <code>adb install -r</code> shows the exact reason in the terminal.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Home still opens my old launcher</summary>
+          <div class="answer">
+            <p>Android remembers your earlier choice. Open <span class="path">Settings › Apps › Default apps › Home app</span> and choose Sidekit.</p>
+          </div>
+        </details>
+        <details>
+          <summary>The top-left key still opens the dialer</summary>
+          <div class="answer">
+            <p>The keypad service is off. Open <span class="path">Settings › Accessibility › SideKit keypad</span> and turn it on. Android sometimes turns accessibility services off after an update. If so, turn it back on.</p>
+          </div>
+        </details>
+        <details>
+          <summary>New texts don’t show up in Sidemessage</summary>
+          <div class="answer">
+            <p>Sidemessage only receives texts directly when it’s the default SMS app. Open Sidemessage, choose <span class="path">Options › Make default</span>, and confirm.</p>
+            <p>Picture messages also need mobile data and a SIM your carrier has set up for MMS. A picture message that failed to download shows <b>Tap to retry</b>.</p>
+          </div>
+        </details>
+        <details>
+          <summary>How do I go back to my old home screen?</summary>
+          <div class="answer">
+            <p>Choose your old launcher in <span class="path">Settings › Apps › Default apps › Home app</span>. To remove Sidekit completely, uninstall it from <span class="path">Settings › Apps › Sidekit</span>. Your contacts and texts stay on the phone.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Sidekit 1.0 · Setup guide for Sidephone</span>
+    <span>Phone footage shows made-up sample content. <a href="https://github.com/HarlenPostill/Sidekit">Source on GitHub</a></span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const mqReduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const mqNarrow = matchMedia('(max-width: 920px)');
+  let reduce = mqReduce.matches;
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const TICK = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>';
+  const PLAY = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M3 1.5v9l7.5-4.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z"/></svg>';
+
+  /* Keypad model, shared by both phones */
+  const CALL = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4.2 2.3c.6-.4 1.4-.3 1.8.3l1.2 1.9c.3.5.3 1.2-.2 1.6l-.9.8c.6 1.3 1.6 2.4 2.9 3l.8-.9c.4-.5 1.1-.5 1.6-.2l1.9 1.2c.6.4.8 1.2.4 1.8l-.7 1c-.6.9-1.8 1.3-2.8.9C6.6 12.3 3.7 9.4 2.4 5.8c-.4-1 0-2.2.9-2.8z"/></svg>';
+  const END = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4v5"/></svg>';
+  const digits = [['1','.,?!'],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ'],['*',''],['0','␣'],['#','']];
+  const keypadHTML =
+    `<div class="key" data-k="back">${CALL}</div><div class="key dpad"></div><div class="key">${END}</div>` +
+    `<div class="key">—</div><div class="key">—</div>` +
+    digits.map(([n, l]) => `<div class="key">${n}${l ? `<small>${l}</small>` : ''}</div>`).join('');
+  document.querySelectorAll('.keypad').forEach(k => { k.innerHTML = keypadHTML; });
+
+  /* Films */
+  const hero = document.getElementById('heroFilm');
+  const keyFilm = document.getElementById('keyFilm');
+  const filmToggle = document.getElementById('filmToggle');
+  let filmPausedByUser = reduce;
+  let heroPlayed = false;
+  const visible = new WeakMap();
+  function setToggle() {
+    const playing = !keyFilm.paused;
+    filmToggle.innerHTML = (playing ? PAUSE : PLAY) + `<span>${playing ? 'Pause' : 'Play'}</span>`;
+    filmToggle.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} keypad film`);
+  }
+  filmToggle.hidden = false;
+  filmToggle.addEventListener('click', () => {
+    if (keyFilm.paused) { filmPausedByUser = false; keyFilm.play().catch(() => {}); }
+    else { filmPausedByUser = true; keyFilm.pause(); }
+  });
+  keyFilm.addEventListener('play', setToggle);
+  keyFilm.addEventListener('pause', setToggle);
+  setToggle();
+
+  const stageVid = document.getElementById('stageVideo');
+  const gVid = document.getElementById('galleryVideo');
+  function wake(v) {
+    if (reduce) return;
+    if (v === hero) { if (!heroPlayed) { heroPlayed = true; v.play().catch(() => {}); } return; }
+    if (v === keyFilm) { if (!filmPausedByUser) v.play().catch(() => {}); return; }
+    if (v.getAttribute('src')) v.play().catch(() => {});
+  }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => entries.forEach(e => {
+      visible.set(e.target, e.isIntersecting);
+      if (e.isIntersecting) wake(e.target);
+      else if (e.target !== hero) e.target.pause();
+    }), { threshold: 0.3 });
+    [hero, keyFilm, stageVid, gVid].forEach(v => io.observe(v));
+  }
+  mqReduce.addEventListener?.('change', e => {
+    reduce = e.matches;
+    if (reduce) [hero, keyFilm, stageVid, gVid].forEach(v => v.pause());
+  });
+
+  /* Phone screens: poster first, then the looping recording */
+  function screenSwap(img, vid, name) {
+    img.src = `assets/apps/${name}.jpg`;
+    if (reduce) { vid.pause(); vid.removeAttribute('src'); vid.load(); return; }
+    vid.classList.add('fade');
+    vid.src = `assets/apps/${name}.mp4`;
+    vid.addEventListener('playing', () => vid.classList.remove('fade'), { once: true });
+    if (visible.get(vid) !== false) vid.play().catch(() => {});
+  }
+
+  /* Steps */
+  const guide = document.querySelector('.guide');
+  const stage = guide.querySelector('.stage');
+  const steps = [...document.querySelectorAll('.step')];
+  const stageImg = document.getElementById('stagePoster');
+  const stageCap = document.getElementById('stageCap');
+  const backKey = stage.querySelector('[data-k="back"]');
+  const progress = document.querySelector('.progress');
+  const progressLabel = progress.querySelector('span');
+  const titleOf = s => s.querySelector('.step-title strong').textContent;
+  let done = new Set(store.get('sidekit-guide-done', []));
+  let current = null;
+
+  function placeStage() {
+    if (mqNarrow.matches && current) current.querySelector('.step-inner').prepend(stage);
+    else if (stage.parentElement !== guide) guide.appendChild(stage);
+  }
+  function showOnPhone(video, title, text, lit) {
+    stageCap.innerHTML = `<b>${title}</b>${text}`;
+    backKey.classList.toggle('lit', !!lit);
+    screenSwap(stageImg, stageVid, video);
+  }
+  function open(step) {
+    current = step;
+    steps.forEach(s => {
+      const on = s === step;
+      s.classList.toggle('is-open', on);
+      s.querySelector('.step-toggle').setAttribute('aria-expanded', on);
+      s.querySelector('.step-body').inert = !on;
+    });
+    placeStage();
+    if (!step) return;
+    const [title, text] = step.dataset.cap.split('|');
+    showOnPhone(step.dataset.video, title, text, step.dataset.key === 'back');
+  }
+  function render() {
+    steps.forEach(s => {
+      const d = done.has(s.dataset.step);
+      s.classList.toggle('is-done', d);
+      const t = s.querySelector('.done-toggle');
+      t.setAttribute('aria-pressed', d);
+      t.setAttribute('aria-label', `Mark step ${s.dataset.step}, ${titleOf(s)}, as done`);
+      s.querySelector('.num').innerHTML = d ? TICK : s.dataset.step;
+    });
+    const all = done.size === steps.length;
+    document.getElementById('barFill').style.width = (done.size / steps.length * 100) + '%';
+    progress.classList.toggle('all-set', all);
+    progressLabel.innerHTML = all ? '<b>All set.</b> Press Home to start using Sidekit.' : `<b>${done.size}</b> of ${steps.length} done`;
+    store.set('sidekit-guide-done', [...done]);
+    return all;
+  }
+  function finish() {
+    open(null);
+    showOnPhone('launcher', 'You’re all set', 'Sidekit is your Home app. Press Home to start.', false);
+  }
+  steps.forEach((s, i) => {
+    s.querySelector('.step-toggle').addEventListener('click', () => open(s.classList.contains('is-open') ? null : s));
+    s.querySelector('.done-toggle').addEventListener('click', () => {
+      const id = s.dataset.step;
+      if (done.has(id)) { done.delete(id); render(); return; }
+      done.add(id);
+      if (render()) { finish(); return; }
+      const next = steps.slice(i + 1).find(n => !done.has(n.dataset.step)) || steps.find(n => !done.has(n.dataset.step));
+      if (!next) return;
+      open(next);
+      const toggle = next.querySelector('.step-toggle');
+      toggle.focus({ preventScroll: true });
+      setTimeout(() => next.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' }), 420);
+    });
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    done.clear(); render(); open(steps[0]); steps[0].querySelector('.step-toggle').focus();
+  });
+  mqNarrow.addEventListener?.('change', placeStage);
+  if (render()) finish();
+  else open(steps.find(s => !done.has(s.dataset.step)));
+
+  /* Tabs */
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  function selectTab(t) {
+    tabs.forEach(x => {
+      const on = x === t;
+      x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+    });
+    store.set('sidekit-guide-method', t.id);
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => selectTab(t));
+    t.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      selectTab(n); n.focus();
+    });
+  });
+  const savedTab = document.getElementById(store.get('sidekit-guide-method', 'tab-phone'));
+  if (savedTab) selectTab(savedTab);
+
+  /* Copy buttons */
+  const status = document.getElementById('copyStatus');
+  document.querySelectorAll('.copy').forEach(b => b.addEventListener('click', async () => {
+    const code = b.previousElementSibling;
+    const text = b.dataset.copy || code.textContent.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      b.textContent = 'Copied'; status.textContent = 'Command copied.';
+    } catch {
+      const range = document.createRange(); range.selectNodeContents(code.querySelector('code') || code);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      b.textContent = 'Selected'; status.textContent = 'Couldn’t copy. The command is selected: press Ctrl+C, or Command+C on a Mac.';
+    }
+    setTimeout(() => { b.textContent = 'Copy'; }, 1800);
+  }));
+
+  /* App gallery */
+  const apps = [
+    ['sidemessage', 'Sidemessage', 'chat', 'Texts and picture messages, typed with T9.'],
+    ['sidenotes', 'Sidenotes', 'docs', 'Quick notes that save as you type.'],
+    ['sideticks', 'Sideticks', 'checklist', 'A to-do list with reminders.'],
+    ['phonebook', 'Phonebook', 'call_log', 'Your contacts and recent calls, with a dial pad.'],
+    ['photos', 'Photos', 'photo_library', 'Every picture on the phone, in a grid and full screen.'],
+    ['translate', 'Translate', 'translate', 'Type or speak, and translate between two languages.'],
+    ['calculator', 'Calculator', 'calculate', 'Big keys for quick sums.'],
+    ['mail', 'Mail', 'mail', 'One email account: read, reply and send.'],
+    ['files', 'Files', 'folder_copy', 'Recents, documents, downloads, photos and videos.'],
+    ['maps', 'Maps', 'map', 'Find a place and see where you are.'],
+    ['music', 'Music', 'music_note', 'Plays the music on your phone, with a now-playing screen.'],
+    ['clock', 'Clock', 'alarm', 'Alarms, a timer and a stopwatch.'],
+    ['video', 'Video', 'smart_display', 'Watch the videos saved on your phone.'],
+    ['vault', 'Vault', 'encrypted', 'Private notes behind your screen lock. It locks itself after a minute.'],
+    ['trip', 'Trip Planning', 'directions_bus', 'Plan journeys and check departures on NSW transport.'],
+    ['banking', 'Banking', 'account_balance_wallet', 'A locked money tracker, with read-only Up balances.'],
+    ['settings', 'Settings', 'settings', 'Layout, T9, the keypad Back key and your Home app.'],
+    ['web', 'Web browser', 'travel_explore', 'A quieter web. Search with the keypad.'],
+    ['apps', 'Apps', 'deployed_code', 'Everything else installed on your phone.'],
+    ['camera', 'Camera', 'photo_camera', 'Take photos and record video.'],
+    ['weather', 'Sideweather', 'partly_cloudy_day', 'Today, the next few hours and five days ahead.'],
+    ['calendar', 'Calendar', 'calendar_month', 'Your month at a glance, and new events.'],
+    ['compass', 'Compass', 'explore', 'A heading you can calibrate and save.'],
+    ['health', 'Health', 'ecg_heart', 'Daily steps against a goal you set.']
+  ];
+  const grid = document.getElementById('appGrid');
+  const gImg = document.getElementById('galleryPoster');
+  const gPhone = document.querySelector('.stage-lite .sidephone');
+  const desc = document.getElementById('appDesc');
+  const buttons = apps.map(([id, name, icon]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'app'; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `<span class="dot" aria-hidden="true"><span class="ms">${icon}</span></span>${name}`;
+    b.addEventListener('click', () => {
+      pick(id);
+      const r = gPhone.getBoundingClientRect();
+      if (mqNarrow.matches && (r.bottom < 60 || r.top > innerHeight)) gPhone.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+    });
+    grid.appendChild(b);
+    return b;
+  });
+  function pick(id) {
+    const i = apps.findIndex(a => a[0] === id);
+    buttons.forEach((b, j) => b.setAttribute('aria-pressed', j === i));
+    desc.innerHTML = `<b>${apps[i][1]}.</b> ${apps[i][3]}`;
+    screenSwap(gImg, gVid, id);
+  }
+  pick('sidenotes');
+})();
+</script>
+</body>
+</html>
