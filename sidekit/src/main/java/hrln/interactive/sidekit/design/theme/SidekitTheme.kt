@@ -26,7 +26,7 @@ fun SidekitTheme(
         LocalSidekitTypography provides typography,
         LocalSidekitSpacing provides spacing,
         LocalSidekitShapes provides shapes,
-        LocalIndication provides SidekitPressIndication,
+        LocalIndication provides SidekitIndication,
         LocalTextSelectionColors provides TextSelectionColors(colors.primaryA2, colors.primaryA2.copy(alpha = 0.4f)),
         content = content,
     )

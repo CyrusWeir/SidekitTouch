@@ -1,5 +1,8 @@
 package hrln.interactive.sidekit.design.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,7 +11,12 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -46,7 +54,9 @@ object ListFade {
 @Composable
 fun Modifier.listFade(state: LazyListState, index: Int): Modifier {
     val entrance = LocalBodyEntrance.current
-    return graphicsLayer {
+    // A row holding D-pad focus is never faded: it is what OK will open.
+    val focused = remember { mutableStateOf(false) }
+    return onFocusChanged { focused.value = it.hasFocus }.graphicsLayer {
         val info = state.layoutInfo
         val visible = info.visibleItemsInfo
         // Visible items are contiguous and ordered, so look the row up directly instead of scanning.
@@ -65,12 +75,13 @@ fun Modifier.listFade(state: LazyListState, index: Int): Modifier {
             a *= p
             translationY = (1f - p) * BodyEntrance.RISE_DP.dp.toPx()
         }
-        alpha = a
+        alpha = if (focused.value) maxOf(a, entrance?.row(slot) ?: 1f) else a
         compositingStrategy = CompositingStrategy.ModulateAlpha
     }
 }
 
 /** Vertical SideKit list: rows separated by `item-outer-gap`, with content padding from the scaffold. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SidekitList(
     contentPadding: PaddingValues,
@@ -80,11 +91,39 @@ fun SidekitList(
 ) {
     // Rows stagger their own entrance (see listFade), so the body shouldn't also fade as a block.
     LocalBodyEntrance.current?.listDriven = true
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        state = state,
-        contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap),
-        content = content,
-    )
+    val density = LocalDensity.current
+    val spacing = SidekitTheme.spacing
+    val focusScroll = remember(contentPadding, density, spacing) {
+        with(density) {
+            FocusBand(
+                top = contentPadding.calculateTopPadding().toPx(),
+                pitch = (spacing.itemHeight + spacing.itemOuterGap).toPx(),
+            )
+        }
+    }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides focusScroll) {
+        LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            state = state,
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(spacing.itemOuterGap),
+            content = content,
+        )
+    }
+}
+
+/**
+ * Where D-pad focus scrolls a list to: the focused row is kept in the top two slots under the
+ * title, where the list fade is lightest and the action bar is far away. Moving down a long list
+ * scrolls it a row at a time, like a wheel menu.
+ */
+private class FocusBand(private val top: Float, private val pitch: Float) : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        val bandEnd = top + pitch
+        return when {
+            offset < top -> offset - top
+            offset > bandEnd -> offset - bandEnd
+            else -> 0f
+        }
+    }
 }

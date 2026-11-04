@@ -19,16 +19,26 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
+/** The Sidephone's swappable keypad modules. */
+enum class KeypadModule(val label: String, val typesOnKeypad: Boolean) {
+    /** Phone keypad with D-pad, OK and call keys. */
+    T9("T9", true),
+    /** Two letters per key, 20 keys. */
+    Qwerty("Mini QWERTY", true),
+    /** Click wheel with a centre button. */
+    Sundial("Sundial", false),
+    /** D-pad, A / B / X / Y and a shoulder key. */
+    GamePad("Game controller", false),
+}
+
 /**
  * The Sidephone's swappable keypad, as seen by text input.
  *
- * Every keypad module (T9, click wheel, game pad...) is the same input device (`gxa535_keyboard`)
- * reporting the union of all modules' keys, so which module is attached can't be read from the
- * device. It is inferred from use instead: a digit, `*` or `#` press from hardware means T9, and
- * T9 stays on (remembered across restarts) until a game-pad button shows another module is in.
- *
- * While [t9] is on, text fields don't open the virtual keyboard; keypad presses are typed by the
- * shared [engine] and its word suggestions take over the action bar.
+ * The attached [module] is inferred from the keys it sends (see [observe]) and remembered across
+ * restarts. Modules with letters ([KeypadModule.typesOnKeypad]: T9, mini QWERTY) never open the
+ * virtual keyboard: their presses are typed by the shared [engine] with multi-tap, and its word
+ * completions take over the action bar. The Sundial and game controller have no letters, so text
+ * fields open the virtual keyboard as usual.
  */
 @Stable
 class Keypad internal constructor(
@@ -36,11 +46,14 @@ class Keypad internal constructor(
     private val userWordsFile: File?,
     private val scope: CoroutineScope,
     private val loadWords: (suspend () -> T9Words)?,
-    initialT9: Boolean,
+    initialModule: KeypadModule,
     val longPressMs: Long = DEFAULT_LONG_PRESS_MS,
 ) {
-    var t9: Boolean by mutableStateOf(initialT9)
+    var module: KeypadModule by mutableStateOf(initialModule)
         private set
+
+    /** True when text is typed on the keypad itself, so the virtual keyboard never opens. */
+    val typing: Boolean get() = module.typesOnKeypad
 
     @Volatile private var words: T9Words = T9Words.Empty
     private var wordsJob: Job? = null
@@ -55,14 +68,15 @@ class Keypad internal constructor(
     private val fallbacks = ArrayList<FocusRequester>()
 
     init {
-        if (initialT9) loadResources()
+        if (typing) loadResources()
     }
 
-    fun enableT9(on: Boolean) {
-        if (t9 == on) return
-        t9 = on
-        prefs?.edit()?.putBoolean(PREF_T9, on)?.apply()
-        if (on) loadResources()
+    fun useModule(next: KeypadModule) {
+        if (module == next) return
+        session?.finish()
+        module = next
+        prefs?.edit()?.putString(PREF_MODULE, next.name)?.apply()
+        if (typing) loadResources()
     }
 
     /**
@@ -71,7 +85,7 @@ class Keypad internal constructor(
      */
     fun dispatch(event: KeyEvent): Boolean {
         observe(event)
-        if (!t9) return false
+        if (!typing) return false
         session?.let { return it.onKeyEvent(event) }
         val target = fallbacks.lastOrNull()
         if (target != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && isTypingKey(event.keyCode)) {
@@ -87,15 +101,13 @@ class Keypad internal constructor(
         // source isn't checked: remapping tools (e.g. Key Mapper) and injected events can arrive
         // with source 0, while the keypad itself reports keyboard|gamepad.
         if (event.flags and KeyEvent.FLAG_SOFT_KEYBOARD != 0) return
-        when {
-            isTypingKey(event.keyCode) && event.keyCode != KeyEvent.KEYCODE_DEL -> enableT9(true)
-            KeyEvent.isGamepadButton(event.keyCode) -> enableT9(false)
-        }
+        if (event.action != KeyEvent.ACTION_DOWN) return
+        KeypadDetector.moduleFor(event)?.let(::useModule)
     }
 
     /** Starts loading the dictionary early (a field gained focus) so the first key is predicted. */
     internal fun prepare() {
-        if (t9) loadResources()
+        if (typing) loadResources()
     }
 
     /** Settles any word being typed (before the Options bar takes over, for example). */
@@ -152,11 +164,13 @@ class Keypad internal constructor(
 
     companion object {
         private const val PREF_T9 = "t9"
+        private const val PREF_MODULE = "module"
         private const val SAVE_DELAY_MS = 2_000L
         private const val DEFAULT_LONG_PRESS_MS = 450L
 
         fun isTypingKey(code: Int) = code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ||
-            code == KeyEvent.KEYCODE_STAR || code == KeyEvent.KEYCODE_POUND || code == KeyEvent.KEYCODE_DEL
+            code == KeyEvent.KEYCODE_STAR || code == KeyEvent.KEYCODE_POUND || code == KeyEvent.KEYCODE_DEL ||
+            code in QwertyLayout.letters || code == KeyEvent.KEYCODE_SPACE
 
         /** The keypad for this app. The dictionary loads off the main thread the first time T9 is used. */
         fun create(context: Context, scope: CoroutineScope): Keypad {
@@ -167,14 +181,17 @@ class Keypad internal constructor(
                 userWordsFile = File(app.filesDir, "t9_user_words.txt"),
                 scope = scope,
                 loadWords = { app.assets.open("t9/en_words.txt").bufferedReader().use { T9Words.parse(it.readText()) } },
-                initialT9 = prefs.getBoolean(PREF_T9, false),
+                initialModule = prefs.getString(PREF_MODULE, null)
+                    ?.let { name -> KeypadModule.entries.firstOrNull { it.name == name } }
+                    // Before modules were told apart, T9 was the only one that typed.
+                    ?: if (prefs.getBoolean(PREF_T9, true)) KeypadModule.T9 else KeypadModule.Sundial,
                 longPressMs = ViewConfiguration.getLongPressTimeout().toLong(),
             )
         }
 
         /** A keypad for previews and tests, with an in-memory dictionary. */
-        fun forTesting(scope: CoroutineScope, words: T9Words, t9: Boolean = true) =
-            Keypad(null, null, scope, null, t9).also { it.words = words }
+        fun forTesting(scope: CoroutineScope, words: T9Words, module: KeypadModule = KeypadModule.T9) =
+            Keypad(null, null, scope, null, module).also { it.words = words }
     }
 }
 

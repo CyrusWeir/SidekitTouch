@@ -38,7 +38,7 @@ class ScreenshotTest {
     }
 
     private fun launcher(state: LauncherUiState) =
-        @Composable { LauncherScreen(state, {}, {}, {}, { _, _ -> }, {}, {}) }
+        @Composable { LauncherScreen(state, {}, {}) }
 
     @Test fun launcherGrid() = shoot("launcher_grid_53-1129", launcher(LauncherUiState()))
     /**
@@ -49,7 +49,6 @@ class ScreenshotTest {
     @Test fun launcherGridAtSidephoneAvdDensity() = shoot("launcher_grid_avd_320dpi", launcher(LauncherUiState()))
 
     @Test fun launcherList() = shoot("launcher_list_36-2", launcher(LauncherUiState(layout = LauncherLayout.List)))
-    @Test fun controlCentre() = shoot("control_centre_53-642", launcher(LauncherUiState(layout = LauncherLayout.List, controlCentreOpen = true)))
     @Test fun sidenotes() = shoot("sidenotes_1-278") { SidenotesListScreen(SidenotesUiState(SidenotesSampleData.notes), {}, {}, {}, {}) }
     @Test fun sidenotesUndo() = shoot("sidenotes_undo") {
         SidenotesListScreen(SidenotesUiState(SidenotesSampleData.notes.drop(1), recentlyDeleted = SidenotesSampleData.notes.first()), {}, {}, {}, {})

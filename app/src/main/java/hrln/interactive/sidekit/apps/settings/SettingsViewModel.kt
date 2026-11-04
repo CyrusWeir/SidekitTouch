@@ -14,7 +14,7 @@ class SidekitPreferences(context: Context) {
         get() = prefs.getBoolean("list_layout", false)
         set(value) { prefs.edit().putBoolean("list_layout", value).apply() }
     var inputMode: T9Mode
-        get() = T9Mode.entries.firstOrNull { it.name == prefs.getString("input_mode", null) } ?: T9Mode.Predictive
+        get() = T9Mode.entries.firstOrNull { it.name == prefs.getString("input_mode", null) } ?: T9Mode.MultiTap
         set(value) { prefs.edit().putString("input_mode", value.name).apply() }
     fun applyInputDefault(keypad: hrln.interactive.sidekit.design.input.Keypad) {
         keypad.finishTyping()

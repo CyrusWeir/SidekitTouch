@@ -6,6 +6,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.tween
+import hrln.interactive.sidekit.design.theme.SidekitIndication
+import hrln.interactive.sidekit.design.theme.drawFocusRing
+import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -341,11 +345,15 @@ private fun SlotSurface(slot: ActionSlot, model: ActionBarModel) {
     val interaction = remember { MutableInteractionSource() }
     val view = LocalView.current
 
+    // D-pad focus: the same ring as every other SideKit surface, following the button's shape.
+    val focus = remember { Animatable(0f) }
     LaunchedEffect(interaction) {
         interaction.interactions.collect {
             when (it) {
                 is PressInteraction.Press -> launch { slot.press.animateTo(1f, SidekitMotion.press) }
                 is PressInteraction.Release, is PressInteraction.Cancel -> launch { slot.press.animateTo(0f, SidekitMotion.press) }
+                is FocusInteraction.Focus -> launch { focus.animateTo(1f, tween(SidekitIndication.FOCUS_MS)) }
+                is FocusInteraction.Unfocus -> launch { focus.animateTo(0f, tween(SidekitIndication.FOCUS_MS)) }
             }
         }
     }
@@ -361,7 +369,13 @@ private fun SlotSurface(slot: ActionSlot, model: ActionBarModel) {
             .drawWithCache {
                 // Rebuilt only when the size changes; the colour is read at draw time.
                 val outline = shape.createOutline(size, layoutDirection, this)
-                onDrawBehind { drawOutline(outline, color) }
+                val ringRadius = ACTION_RADIUS.toPx()
+                onDrawWithContent {
+                    drawOutline(outline, color)
+                    drawContent()
+                    val f = focus.value
+                    if (f > 0f) drawFocusRing(f, cornerRadius = ringRadius)
+                }
             }
             .semantics { action.description?.let { contentDescription = it } }
             .clickable(
@@ -483,3 +497,6 @@ private fun ActionContent(action: SideAction, modifier: Modifier) {
         if (icon != null && action.iconAtEnd) SidekitIconImage(icon)
     }
 }
+
+/** Corner radius of [hrln.interactive.sidekit.design.theme.SidekitShapes.actionButton], for its focus ring. */
+private val ACTION_RADIUS = 48.dp
