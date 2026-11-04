@@ -1,14 +1,9 @@
 package hrln.interactive.sidekit.launcher
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -54,90 +49,56 @@ fun LauncherRoute(
         state = state,
         onOpenApp = onOpenApp,
         onToggleLayout = viewModel::toggleLayout,
-        onControlCentreOpenChange = viewModel::setControlCentreOpen,
-        onToggle = viewModel::setToggle,
-        onVolumeChange = viewModel::setVolume,
-        onBrightnessChange = viewModel::setBrightness,
         ported = ported,
         onOpenPorted = onOpenPorted,
     )
 }
 
 /**
- * The SideKit home screen. Header = clock (tap or swipe down for the control centre,
- * long-press to switch grid/list), body = all apps, bottom = the blue dock.
+ * The SideKit home screen. Header = clock (long-press to switch grid/list), body = all apps,
+ * bottom = the blue dock. With a D-pad, focus starts on the first app: the clock isn't a stop.
  */
 @Composable
 fun LauncherScreen(
     state: LauncherUiState,
     onOpenApp: (SubApp) -> Unit,
     onToggleLayout: () -> Unit,
-    onControlCentreOpenChange: (Boolean) -> Unit,
-    onToggle: (QuickToggle, Boolean) -> Unit,
-    onVolumeChange: (Float) -> Unit,
-    onBrightnessChange: (Float) -> Unit,
     ported: List<PortedApp> = emptyList(),
     onOpenPorted: (PortedApp) -> Unit = {},
 ) {
-    // Home never exits on back; back only closes the control centre.
-    BackHandler { onControlCentreOpenChange(false) }
+    // Home never exits on back.
+    BackHandler {}
 
-    Box(Modifier.fillMaxSize()) {
-        SidekitScaffold(
-            title = state.time,
-            titleModifier = clockGestures(
-                onOpenControlCentre = { onControlCentreOpenChange(true) },
-                onToggleLayout = onToggleLayout,
-            ),
-            // The dock is the launcher's action bar, so opening an app morphs the tapped dock button
-            // into the app's first action. The control centre panel takes its place (53:642).
-            actions = if (state.controlCentreOpen) emptyList() else dockActions(onOpenApp),
-            // Keypad Options key: the long-press gestures, as buttons.
-            options = listOf(
-                SideAction("layout", if (state.layout == LauncherLayout.Grid) "List" else "Grid", contentDescription = "Switch grid or list", onClick = onToggleLayout),
-                SideAction("controls", "Controls", contentDescription = "Open control centre") { onControlCentreOpenChange(true) },
-                SideAction("settings", icon = SubApp.Settings.icon, contentDescription = "Settings") { onOpenApp(SubApp.Settings) },
-            ),
-        ) { padding ->
-            when (state.layout) {
-                LauncherLayout.Grid -> AppGrid(SubApp.entries, ported, padding, onOpenApp, onOpenPorted)
-                LauncherLayout.List -> AppList(SubApp.listOrder, ported, padding, onOpenApp, onOpenPorted)
-            }
-        }
-        if (state.controlCentreOpen) {
-            ControlCentre(
-                state = state,
-                onDismiss = { onControlCentreOpenChange(false) },
-                onToggle = onToggle,
-                onVolumeChange = onVolumeChange,
-                onBrightnessChange = onBrightnessChange,
-                modifier = Modifier.padding(top = SidekitTheme.spacing.pagePadding + SidekitTheme.spacing.headerHeight),
-            )
+    SidekitScaffold(
+        title = state.time,
+        titleModifier = clockGestures(onToggleLayout),
+        // The dock is the launcher's action bar, so opening an app morphs the tapped dock button
+        // into the app's first action.
+        actions = dockActions(onOpenApp),
+        // Keypad Options key: the long-press gesture, as a button.
+        options = listOf(
+            SideAction("layout", if (state.layout == LauncherLayout.Grid) "List" else "Grid", contentDescription = "Switch grid or list", onClick = onToggleLayout),
+            SideAction("settings", icon = SubApp.Settings.icon, contentDescription = "Settings") { onOpenApp(SubApp.Settings) },
+        ),
+    ) { padding ->
+        when (state.layout) {
+            LauncherLayout.Grid -> AppGrid(SubApp.entries, ported, padding, onOpenApp, onOpenPorted)
+            LauncherLayout.List -> AppList(SubApp.listOrder, ported, padding, onOpenApp, onOpenPorted)
         }
     }
 }
 
-/** The clock title: tap or pull down for the control centre, long-press to switch grid/list. */
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * The clock title: long-press to switch grid/list. A touch gesture only, not a clickable, so it
+ * takes no D-pad focus (the Options key has the same switch).
+ */
 @Composable
-private fun clockGestures(onOpenControlCentre: () -> Unit, onToggleLayout: () -> Unit): Modifier {
-    val open by rememberUpdatedState(onOpenControlCentre)
+private fun clockGestures(onToggleLayout: () -> Unit): Modifier {
     val toggle by rememberUpdatedState(onToggleLayout)
-    val interaction = remember { MutableInteractionSource() }
     return remember {
         Modifier
             .testTag(LauncherTags.CLOCK)
-            .combinedClickable(
-                interactionSource = interaction,
-                indication = null,
-                onClickLabel = "Open control centre",
-                onLongClickLabel = "Switch grid or list",
-                onLongClick = { toggle() },
-                onClick = { open() },
-            )
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount -> if (dragAmount > 8f) open() }
-            }
+            .pointerInput(Unit) { detectTapGestures(onLongPress = { toggle() }) }
     }
 }
 
@@ -206,23 +167,16 @@ object LauncherTags {
     const val CLOCK = "launcher_clock"
     const val GRID = "launcher_grid"
     const val LIST = "launcher_list"
-    const val CONTROL_CENTRE = "control_centre"
 }
 
 @SidephonePreview
 @Composable
 private fun LauncherGridPreview() = SidekitPreviewFrame {
-    LauncherScreen(LauncherUiState(), {}, {}, {}, { _, _ -> }, {}, {})
+    LauncherScreen(LauncherUiState(), {}, {})
 }
 
 @SidephonePreview
 @Composable
 private fun LauncherListPreview() = SidekitPreviewFrame {
-    LauncherScreen(LauncherUiState(layout = LauncherLayout.List), {}, {}, {}, { _, _ -> }, {}, {})
-}
-
-@SidephonePreview
-@Composable
-private fun ControlCentrePreview() = SidekitPreviewFrame {
-    LauncherScreen(LauncherUiState(layout = LauncherLayout.List, controlCentreOpen = true), {}, {}, {}, { _, _ -> }, {}, {})
+    LauncherScreen(LauncherUiState(layout = LauncherLayout.List), {}, {})
 }

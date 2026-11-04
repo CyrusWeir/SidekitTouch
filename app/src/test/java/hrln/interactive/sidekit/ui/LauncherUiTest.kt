@@ -21,7 +21,6 @@ import hrln.interactive.sidekit.launcher.LauncherLayout
 import hrln.interactive.sidekit.launcher.LauncherScreen
 import hrln.interactive.sidekit.launcher.LauncherTags
 import hrln.interactive.sidekit.launcher.LauncherUiState
-import hrln.interactive.sidekit.launcher.QuickToggle
 import hrln.interactive.sidekit.navigation.SubApp
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -43,10 +42,6 @@ class LauncherUiTest {
                 onToggleLayout = {
                     state = state.copy(layout = if (state.layout == LauncherLayout.Grid) LauncherLayout.List else LauncherLayout.Grid)
                 },
-                onControlCentreOpenChange = { state = state.copy(controlCentreOpen = it) },
-                onToggle = { t, on -> state = state.copy(toggles = state.toggles + (t to on)) },
-                onVolumeChange = { state = state.copy(volume = it) },
-                onBrightnessChange = { state = state.copy(brightness = it) },
             )
         }
     }
@@ -77,15 +72,5 @@ class LauncherUiTest {
         compose.onNodeWithTag(LauncherTags.LIST).assertIsDisplayed()
         compose.onNodeWithText("Sideticks").performClick()
         assertEquals(listOf(SubApp.Sideticks), opened)
-    }
-
-    @Test fun tappingTheClockOpensTheControlCentre() {
-        launch()
-        compose.onNodeWithTag(LauncherTags.CLOCK).performClick()
-        compose.onNodeWithTag(LauncherTags.CONTROL_CENTRE).assertIsDisplayed()
-        compose.onNodeWithText("Volume").assertIsDisplayed()
-        compose.onNodeWithContentDescription(QuickToggle.Wifi.label).assertIsOn().performClick().assertIsOn()
-        val application = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
-        assertEquals(android.provider.Settings.Panel.ACTION_WIFI, org.robolectric.Shadows.shadowOf(application).nextStartedActivity.action)
     }
 }

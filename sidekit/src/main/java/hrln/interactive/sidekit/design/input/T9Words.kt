@@ -26,18 +26,17 @@ fun t9Key(word: String): String? {
 }
 
 /**
- * The prediction dictionary: words in frequency order, indexed by keypad sequence.
+ * The completion dictionary: words in frequency order, indexed alphabetically for prefix search.
  *
  * Memory layout is chosen for a 4 GB phone: all words live in one [String] (ASCII, so ART stores
  * it at one byte per char, ~320 KB for 40k words) with an [IntArray] of start offsets, and the
- * key index is one more [IntArray] of word numbers sorted by digit sequence then frequency.
- * About 0.65 MB in total, no per-word objects, and digit keys are computed on the fly during
- * binary search rather than stored.
+ * prefix index is one more [IntArray] of word numbers in alphabetical order. About 0.65 MB in
+ * total, with no per-word objects.
  */
 class T9Words private constructor(
     private val blob: String,
     private val starts: IntArray,
-    private val byKey: IntArray,
+    private val sorted: IntArray,
 ) {
     val size: Int get() = starts.size - 1
 
@@ -46,73 +45,66 @@ class T9Words private constructor(
 
     private fun length(rank: Int) = starts[rank + 1] - 1 - starts[rank]
 
-    /**
-     * Compares a word's digit sequence with [digits]: 0 when equal, negative when it sorts before,
-     * positive after. A word whose sequence *starts with* [digits] but is longer sorts after.
-     */
-    private fun compare(rank: Int, digits: CharSequence): Int {
+    /** Compares the first `prefix.length` letters of a word with [prefix] (a word shorter than it sorts first). */
+    private fun comparePrefix(rank: Int, prefix: String): Int {
         val start = starts[rank]
         val len = length(rank)
-        val n = minOf(len, digits.length)
+        val n = minOf(len, prefix.length)
         for (i in 0 until n) {
-            val d = t9Digit(blob[start + i])
-            if (d != digits[i]) return d - digits[i]
+            val c = blob[start + i]
+            if (c != prefix[i]) return c - prefix[i]
         }
-        return len - digits.length
-    }
-
-    private fun hasPrefix(rank: Int, digits: CharSequence): Boolean {
-        if (length(rank) < digits.length) return false
-        val start = starts[rank]
-        for (i in digits.indices) if (t9Digit(blob[start + i]) != digits[i]) return false
-        return true
+        return if (len < prefix.length) -1 else 0
     }
 
     /**
-     * Words for [digits]: exact-length matches most frequent first, then (if fewer than [limit])
-     * the most frequent longer words that start with the sequence.
+     * The [limit] most frequent words starting with [prefix] (lowercase letters), the word itself
+     * included when it is one. Results are in frequency order.
      */
-    fun lookup(digits: CharSequence, limit: Int): List<String> {
-        if (digits.isEmpty() || size == 0) return emptyList()
+    fun complete(prefix: String, limit: Int): List<String> {
+        if (prefix.isEmpty() || size == 0 || limit <= 0) return emptyList()
         var lo = 0
-        var hi = byKey.size
+        var hi = sorted.size
         while (lo < hi) {
             val mid = (lo + hi) ushr 1
-            if (compare(byKey[mid], digits) < 0) lo = mid + 1 else hi = mid
+            if (comparePrefix(sorted[mid], prefix) < 0) lo = mid + 1 else hi = mid
         }
-        val out = ArrayList<String>(limit)
+        // Keep the best-ranked few. Every word with the prefix is contiguous from `lo`; even a
+        // single letter is at most a few thousand words, so a full scan of the run is cheap.
+        val best = IntArray(limit) { Int.MAX_VALUE }
         var i = lo
-        while (i < byKey.size && out.size < limit && compare(byKey[i], digits) == 0) {
-            out.add(word(byKey[i]))
+        while (i < sorted.size && comparePrefix(sorted[i], prefix) == 0) {
+            val rank = sorted[i]
+            if (rank < best[limit - 1]) {
+                var j = limit - 1
+                while (j > 0 && best[j - 1] > rank) { best[j] = best[j - 1]; j-- }
+                best[j] = rank
+            }
             i++
         }
-        if (out.size < limit) {
-            // Completions: keep the best-ranked few. The scan is capped so a one-digit prefix (which
-            // matches thousands of words) costs a bounded amount of work per key press.
-            val want = limit - out.size
-            val best = IntArray(want) { Int.MAX_VALUE }
-            var scanned = 0
-            while (i < byKey.size && scanned < COMPLETION_SCAN && hasPrefix(byKey[i], digits)) {
-                val rank = byKey[i]
-                if (rank < best[want - 1]) {
-                    var j = want - 1
-                    while (j > 0 && best[j - 1] > rank) { best[j] = best[j - 1]; j-- }
-                    best[j] = rank
-                }
-                i++
-                scanned++
-            }
-            for (rank in best) if (rank != Int.MAX_VALUE) out.add(word(rank))
+        return best.filter { it != Int.MAX_VALUE }.map(::word)
+    }
+
+    /** Frequency rank of [word] (0 = most frequent), or -1 if it isn't in the dictionary. */
+    fun rank(word: String): Int {
+        var lo = 0
+        var hi = sorted.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            val c = comparePrefix(sorted[mid], word)
+            if (c < 0) lo = mid + 1 else hi = mid
         }
-        return out
+        while (lo < sorted.size && comparePrefix(sorted[lo], word) == 0) {
+            if (length(sorted[lo]) == word.length) return sorted[lo]
+            lo++
+        }
+        return -1
     }
 
     companion object {
-        private const val COMPLETION_SCAN = 4000
-
         val Empty = T9Words("", intArrayOf(0), IntArray(0))
 
-        /** Builds the index from newline-separated words in frequency order. */
+        /** Builds the index from newline-separated lowercase words in frequency order. */
         fun parse(text: String): T9Words {
             val blob = if (text.endsWith('\n')) text else "$text\n"
             var count = 0
@@ -128,17 +120,15 @@ class T9Words private constructor(
             }
             starts[count] = blob.length
             val words = T9Words(blob, starts, IntArray(0))
-            // Sort ranks by (digit sequence, rank). Keys are computed once here for the sort only.
-            val keys = Array(count) { r -> t9Key(words.word(r)) ?: "" }
-            val order = (0 until count).sortedWith(compareBy<Int>({ keys[it] }, { it })).toIntArray()
+            val order = (0 until count).sortedWith(compareBy<Int>({ words.word(it) }, { it })).toIntArray()
             return T9Words(blob, starts, order)
         }
     }
 }
 
 /**
- * Words the user has typed, with how often. Ranked above the dictionary for the same keys, and
- * the only way words outside the dictionary (names, slang) become predictable.
+ * Words the user has typed, with how often. Ranked above the dictionary, and the only way words
+ * outside it (names, slang) get suggested.
  */
 class T9UserWords(initial: Map<String, Int> = emptyMap()) {
     private val counts = HashMap(initial)
@@ -147,7 +137,7 @@ class T9UserWords(initial: Map<String, Int> = emptyMap()) {
 
     fun learn(word: String) {
         val w = word.lowercase()
-        if (w.length < 2 || t9Key(w) == null) return
+        if (w.length < 2 || w.any { !it.isLetter() && it != '\'' }) return
         counts[w] = (counts[w] ?: 0) + 1
         version++
     }
@@ -158,15 +148,14 @@ class T9UserWords(initial: Map<String, Int> = emptyMap()) {
 
     fun snapshot(): Map<String, Int> = HashMap(counts)
 
-    /** Exact matches for [digits], most used first. The map is small, so a scan is fine. */
-    fun lookup(digits: CharSequence): List<String> {
-        if (counts.isEmpty()) return emptyList()
-        val d = digits.toString()
-        return counts.entries.filter { it.key.length == d.length && t9Key(it.key) == d }
+    /** Learned words starting with [prefix] (lowercase, apostrophes ignored), most used first. */
+    fun complete(prefix: String): List<String> {
+        if (counts.isEmpty() || prefix.isEmpty()) return emptyList()
+        return counts.entries.filter { it.key.replace("'", "").startsWith(prefix) }
             .sortedByDescending { it.value }
             .map { it.key }
     }
 
-    /** Whether [word] is known well enough to rank above the dictionary's own order. */
+    /** How many times [word] has been typed. */
     fun count(word: String): Int = counts[word.lowercase()] ?: 0
 }

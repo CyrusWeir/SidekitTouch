@@ -10,10 +10,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
+import android.view.ViewTreeObserver
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -71,9 +79,11 @@ fun SidekitCanvas(
             LocalChrome provides chrome,
             LocalKeypad provides keypad,
         ) {
+            val hasFocus = revealFocusOnKeys()
             Box(
                 modifier = Modifier
                     .size(SidephoneCanvas.WIDTH.dp, SidephoneCanvas.HEIGHT.dp)
+                    .onFocusChanged { hasFocus.value = it.hasFocus }
                     // Screens slide during navigation; keep them inside the panel.
                     .clipToBounds()
                     .background(SidekitTheme.colors.surfaceA1),
@@ -97,4 +107,25 @@ fun SidekitCanvas(
             }
         }
     }
+}
+
+/**
+ * Android swallows the first D-pad press after a touch: it only takes the window out of touch
+ * mode. With nothing focused that press would show nothing, so when touch mode ends this focuses
+ * the top item, and the first press already shows where you are. Returns the state the canvas
+ * keeps up to date with whether anything inside it is focused.
+ */
+@Composable
+private fun revealFocusOnKeys(): MutableState<Boolean> {
+    val hasFocus = remember { mutableStateOf(false) }
+    val view = LocalView.current
+    val focusManager = LocalFocusManager.current
+    DisposableEffect(view) {
+        val listener = ViewTreeObserver.OnTouchModeChangeListener { inTouchMode ->
+            if (!inTouchMode && !hasFocus.value) focusManager.moveFocus(FocusDirection.Down)
+        }
+        view.viewTreeObserver.addOnTouchModeChangeListener(listener)
+        onDispose { view.viewTreeObserver.removeOnTouchModeChangeListener(listener) }
+    }
+    return hasFocus
 }

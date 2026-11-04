@@ -47,13 +47,14 @@ import hrln.interactive.sidekit.design.input.TextFieldT9Buffer
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 
 /**
- * The SideKit text field. With a touch keyboard it behaves like any text field. With the T9
- * keypad module attached it never opens the virtual keyboard: keypad presses are typed with T9
- * prediction, the word being formed is highlighted inline, and the action bar turns into the
- * suggestion strip (tap a word to take it, `*` to step through them, `0` for a space).
+ * The SideKit text field. With the Sundial or game controller attached it behaves like any text
+ * field, using the virtual keyboard. With a keypad that has letters (T9, mini QWERTY) the virtual
+ * keyboard never opens: keys are typed by multi-tap (the letter still cycling is highlighted
+ * inline) and the action bar turns into word completions for the letters so far (tap one, or
+ * D-pad left / right and OK, to finish the word).
  *
- * When not composing a word the bar shows the input mode (tap to switch: T9, multi-tap, numbers,
- * touch keyboard) and Done, which ends typing and gives the screen its own actions back.
+ * When no word is being typed the bar shows the input mode (tap to switch letters / numbers) and
+ * Done, which ends typing and gives the screen its own actions back.
  *
  * @param focusOnKeypad make this the screen's main field: typing on the keypad while nothing is
  *   focused starts typing here.
@@ -81,7 +82,7 @@ fun SidekitTextField(
     var awaitingFocus by remember { mutableStateOf(autoFocus) }
     if (autoFocus) LaunchedEffect(Unit) { focusRequester.requestFocus() }
     val session = remember(keypad, state) { keypad?.let { T9Session(it, TextFieldT9Buffer(state), scope) } }
-    val t9 = keypad?.t9 == true
+    val t9 = keypad?.typing == true
 
     if (focusOnKeypad && keypad != null) {
         DisposableEffect(keypad, focusRequester) {
@@ -92,8 +93,14 @@ fun SidekitTextField(
     DisposableEffect(keypad, session) {
         onDispose { if (keypad?.session === session) keypad?.session = null }
     }
-    // The keypad was picked up mid-edit: put the virtual keyboard away.
-    LaunchedEffect(t9, focused) { if (t9 && focused) keyboard?.hide() }
+    // The module was swapped mid-edit: put the virtual keyboard away for a keypad with letters,
+    // bring it up for one without (Sundial, game controller).
+    var lastT9 by remember { mutableStateOf(t9) }
+    LaunchedEffect(t9, focused) {
+        if (focused && t9) keyboard?.hide()
+        else if (focused && lastT9) keyboard?.show()
+        lastT9 = t9
+    }
 
     if (focused && t9 && keypad != null && session != null) {
         PublishActionOverride(
@@ -105,16 +112,10 @@ fun SidekitTextField(
                     focusManager.clearFocus()
                     onDone?.invoke()
                 },
-                onTouchKeyboard = {
-                    session.finish()
-                    keypad.enableT9(false)
-                    keyboard?.show()
-                },
             ),
             // The Options key while typing picks the input mode directly.
             options = T9Mode.entries.map { mode ->
                 val label = when (mode) {
-                    T9Mode.Predictive -> "T9"
                     T9Mode.MultiTap -> "abc"
                     T9Mode.Numeric -> "123"
                 }
@@ -158,9 +159,11 @@ fun SidekitTextField(
                 if (keypad == null || session == null) return@onInterceptKeyBeforeSoftKeyboard false
                 val native = event.nativeKeyEvent
                 keypad.observe(native)
-                if (!keypad.t9) return@onInterceptKeyBeforeSoftKeyboard false
+                if (!keypad.typing) return@onInterceptKeyBeforeSoftKeyboard false
                 val enter = native.keyCode == android.view.KeyEvent.KEYCODE_ENTER || native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER
                 if (enter && singleLine) {
+                    // OK takes a highlighted completion first; otherwise it submits.
+                    if (session.handleOk(native)) return@onInterceptKeyBeforeSoftKeyboard true
                     // A one-line field has no newline: Enter / OK submits it.
                     if (native.action == android.view.KeyEvent.ACTION_DOWN && native.repeatCount == 0) {
                         session.finish()
@@ -232,22 +235,13 @@ fun SidekitTextField(
 }
 
 /**
- * The T9 action bar. Keys are positional (`t9.0`, `t9.1`, `t9.2`) so the bar's buttons are reused
- * as the suggestions change: each key press swaps labels in place and the strip grows or shrinks
- * between one and three buttons, instead of rebuilding.
+ * The keypad typing action bar. Keys are positional (`t9.0`, `t9.1`, `t9.2`) so the bar's buttons
+ * are reused as the completions change: each key press swaps labels in place and the strip grows
+ * or shrinks between one and three buttons, instead of rebuilding.
  */
-private fun t9Actions(engine: T9Engine, session: T9Session, onDone: () -> Unit, onTouchKeyboard: () -> Unit): List<SideAction> {
+private fun t9Actions(engine: T9Engine, session: T9Session, onDone: () -> Unit): List<SideAction> {
     if (engine.composing) {
-        val candidates = engine.candidates
-        if (engine.unknown) {
-            return listOf(
-                SideAction("t9.0", candidates.firstOrNull() ?: "?", tone = ActionTone.Muted, dense = true, weight = 1.4f, contentDescription = "No match") {},
-                SideAction("t9.1", "Spell", tone = ActionTone.Primary, dense = true, motion = ActionMotion.Up, contentDescription = "Spell with multi-tap") {
-                    session.setMode(T9Mode.MultiTap)
-                },
-            )
-        }
-        return candidates.take(MAX_SHOWN).mapIndexed { i, word ->
+        return engine.candidates.take(MAX_SHOWN).mapIndexed { i, word ->
             val chosen = i == engine.selected
             SideAction(
                 key = "t9.$i",
@@ -262,14 +256,7 @@ private fun t9Actions(engine: T9Engine, session: T9Session, onDone: () -> Unit, 
     }
     return listOf(
         SideAction("t9.0", engine.modeLabel, tone = ActionTone.Muted, weight = 0.8f, dense = true, motion = ActionMotion.Up, contentDescription = "Input mode ${engine.modeLabel}") {
-            when (engine.mode) {
-                T9Mode.Predictive -> session.setMode(T9Mode.MultiTap)
-                T9Mode.MultiTap -> session.setMode(T9Mode.Numeric)
-                T9Mode.Numeric -> {
-                    session.setMode(T9Mode.Predictive)
-                    onTouchKeyboard()
-                }
-            }
+            session.setMode(if (engine.mode == T9Mode.MultiTap) T9Mode.Numeric else T9Mode.MultiTap)
         },
         SideAction("t9.1", "Done", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
     )
@@ -279,4 +266,4 @@ private const val MAX_SHOWN = 3
 
 /** Whether T9 typing is active anywhere (for screens that adapt, e.g. to keep their title visible). */
 @Composable
-fun rememberT9Active(): Boolean = LocalKeypad.current?.t9 == true
+fun rememberT9Active(): Boolean = LocalKeypad.current?.typing == true

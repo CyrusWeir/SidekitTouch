@@ -122,7 +122,8 @@ private fun VaultEditor(note: PrivateNote, onText: (String) -> Unit) {
     val text = remember(note.id) { androidx.compose.foundation.text.input.TextFieldState(note.body) }
     // This existing factory has neither preferences nor a user-word file. Learning stays in RAM.
     val privateKeypad = remember(note.id) {
-        hrln.interactive.sidekit.design.input.Keypad.forTesting(scope, hrln.interactive.sidekit.design.input.T9Words.Empty, globalKeypad?.t9 == true).also {
+        hrln.interactive.sidekit.design.input.Keypad.forTesting(scope, hrln.interactive.sidekit.design.input.T9Words.Empty,
+            globalKeypad?.module ?: hrln.interactive.sidekit.design.input.KeypadModule.T9).also {
             it.engine.setMode(hrln.interactive.sidekit.design.input.T9Mode.MultiTap,
                 object : hrln.interactive.sidekit.design.input.T9Buffer {
                     override val text: CharSequence = ""

@@ -31,7 +31,8 @@ internal class TextFieldT9Buffer(private val state: TextFieldState) : T9Buffer {
  * Turns keypad [KeyEvent]s for one focused text field into [T9Engine] calls.
  *
  * Digits act on release so a long press can type the digit itself instead (as on a Nokia);
- * delete acts on press and repeats while held.
+ * delete acts on press and repeats while held. While a word has suggestions, D-pad left / right
+ * move between them and OK takes one.
  */
 internal class T9Session(
     private val keypad: Keypad,
@@ -42,18 +43,31 @@ internal class T9Session(
     private var downKey: T9Key? = null
     private var longFired = false
     private var tickJob: Job? = null
+    private var acceptedOk = false
+    private var downCode = -1
 
     fun onKeyEvent(event: KeyEvent): Boolean {
+        val down = event.action == KeyEvent.ACTION_DOWN
         when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.KEYCODE_MOVE_END,
-            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                // While a word has suggestions, left / right pick among them (no touch needed).
+                if (engine.composing) {
+                    if (down) engine.moveSelection(if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
+                    return true
+                }
+                if (down) engine.finish(buffer)
+                return false
+            }
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
+            KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_BACK,
             -> {
                 // Settle the word, then let the field move the cursor / the screen go back.
-                if (event.action == KeyEvent.ACTION_DOWN) engine.finish(buffer)
+                if (down) engine.finish(buffer)
                 return false
             }
         }
+        if (handleOk(event)) return true
+        if (QwertyLayout.handles(event.keyCode)) return qwerty(event)
         val key = keyFor(event.keyCode) ?: return false
         val now = event.eventTime
         if (key == T9Key.Delete || key == T9Key.Enter) {
@@ -81,6 +95,67 @@ internal class T9Session(
         return true
     }
 
+    /**
+     * OK takes the highlighted suggestion; the rest of that press (repeats, release) is consumed.
+     * Returns false when OK should do its usual job (no suggestions, or the suggestion is just
+     * what's typed).
+     */
+    fun handleOk(event: KeyEvent): Boolean {
+        if (!isOk(event.keyCode)) return false
+        val down = event.action == KeyEvent.ACTION_DOWN
+        if (down && event.repeatCount == 0 && engine.composing) {
+            acceptedOk = engine.acceptSelected(buffer)
+            return acceptedOk
+        }
+        if (acceptedOk) {
+            if (!down) acceptedOk = false
+            return true
+        }
+        return false
+    }
+
+    /**
+     * The mini QWERTY. Keys act on release, like T9 digits, so a long press can type the printed
+     * digit or symbol instead. The up / down key steps through suggestions (there is no D-pad).
+     */
+    private fun qwerty(event: KeyEvent): Boolean {
+        val code = event.keyCode
+        val now = event.eventTime
+        if (code == QwertyLayout.SUGGEST) {
+            if (event.action == KeyEvent.ACTION_DOWN) engine.moveSelection(1)
+            return true
+        }
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) {
+                downCode = code
+                longFired = false
+            } else if (downCode == code && !longFired && now - event.downTime >= keypad.longPressMs) {
+                longFired = true
+                when (code) {
+                    QwertyLayout.CASE -> engine.key(T9Key.Pound, buffer, now, long = true)
+                    else -> QwertyLayout.printed[code]?.let { engine.type(it, buffer) }
+                }
+            }
+            KeyEvent.ACTION_UP -> {
+                if (downCode == code && !longFired) {
+                    when (code) {
+                        QwertyLayout.CASE -> engine.key(T9Key.Pound, buffer, now)
+                        QwertyLayout.SYM -> engine.tap(SYM_ID, QwertyLayout.SYMBOLS, buffer, now)
+                        KeyEvent.KEYCODE_SPACE -> engine.type(if (engine.mode == T9Mode.Numeric) "0" else " ", buffer)
+                        else -> if (engine.mode == T9Mode.Numeric) {
+                            QwertyLayout.printed[code]?.let { engine.type(it, buffer) }
+                        } else {
+                            QwertyLayout.letters[code]?.let { engine.tap(code, it, buffer, now) }
+                        }
+                    }
+                    scheduleTick()
+                }
+                downCode = -1
+            }
+        }
+        return true
+    }
+
     fun pick(index: Int) = engine.pick(index, buffer)
 
     fun finish() {
@@ -100,6 +175,13 @@ internal class T9Session(
             engine.tick(buffer, SystemClock.uptimeMillis())
         }
     }
+
+    private companion object {
+        const val SYM_ID = 200
+    }
+
+    private fun isOk(code: Int) = code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_DPAD_CENTER ||
+        code == KeyEvent.KEYCODE_NUMPAD_ENTER
 
     private fun keyFor(code: Int): T9Key? = when (code) {
         in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> T9Key.entries[code - KeyEvent.KEYCODE_0]
