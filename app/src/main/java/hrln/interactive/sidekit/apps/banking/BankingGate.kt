@@ -27,7 +27,7 @@ class BankingGate(private val context: Context) {
         val cancel = CancellationSignal()
         val prompt = BiometricPrompt.Builder(context)
             .setTitle("Unlock Banking")
-            .setSubtitle("Your money tracker is encrypted on this phone")
+            .setSubtitle("Your banking data is encrypted on this phone")
             .setAllowedAuthenticators(Authenticators.BIOMETRIC_WEAK or Authenticators.DEVICE_CREDENTIAL)
             .build()
         prompt.authenticate(

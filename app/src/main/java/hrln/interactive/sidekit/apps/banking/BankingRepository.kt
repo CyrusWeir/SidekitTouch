@@ -25,11 +25,8 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/**
- * The seam for a real bank feed (an Open Banking / CDR aggregator, say). There is no bank
- * backend behind Sidekit, so the only connector is [ManualTracker]: everything is entered by
- * the user and nothing leaves the phone.
- */
+/** Connector metadata for the editable manual book. Up bank snapshots use [UpBankConnector]
+ * separately so imported balances cannot be changed by local ledger entries. */
 interface BankConnector {
     val displayName: String
 

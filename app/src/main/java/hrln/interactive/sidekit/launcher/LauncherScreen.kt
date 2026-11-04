@@ -20,6 +20,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
+import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
+import hrln.interactive.sidekit.apps.sideport.ui.PortedTile
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.SidekitIconItem
 import hrln.interactive.sidekit.design.components.SidekitItem
@@ -35,8 +38,13 @@ import hrln.interactive.sidekit.ui.SidephonePreview
 const val GRID_COLUMNS = 4
 
 @Composable
-fun LauncherRoute(onOpenApp: (SubApp) -> Unit, viewModel: LauncherViewModel = viewModel()) {
+fun LauncherRoute(
+    onOpenApp: (SubApp) -> Unit,
+    onOpenPorted: (PortedApp) -> Unit = {},
+    viewModel: LauncherViewModel = viewModel(),
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val ported by remember { PortedApps.get(context).apps }.collectAsStateWithLifecycle()
     androidx.lifecycle.compose.LifecycleResumeEffect(viewModel) {
         viewModel.loadPreferences(context)
         onPauseOrDispose {}
@@ -50,6 +58,8 @@ fun LauncherRoute(onOpenApp: (SubApp) -> Unit, viewModel: LauncherViewModel = vi
         onToggle = viewModel::setToggle,
         onVolumeChange = viewModel::setVolume,
         onBrightnessChange = viewModel::setBrightness,
+        ported = ported,
+        onOpenPorted = onOpenPorted,
     )
 }
 
@@ -66,6 +76,8 @@ fun LauncherScreen(
     onToggle: (QuickToggle, Boolean) -> Unit,
     onVolumeChange: (Float) -> Unit,
     onBrightnessChange: (Float) -> Unit,
+    ported: List<PortedApp> = emptyList(),
+    onOpenPorted: (PortedApp) -> Unit = {},
 ) {
     // Home never exits on back; back only closes the control centre.
     BackHandler { onControlCentreOpenChange(false) }
@@ -88,8 +100,8 @@ fun LauncherScreen(
             ),
         ) { padding ->
             when (state.layout) {
-                LauncherLayout.Grid -> AppGrid(SubApp.entries, padding, onOpenApp)
-                LauncherLayout.List -> AppList(SubApp.listOrder, padding, onOpenApp)
+                LauncherLayout.Grid -> AppGrid(SubApp.entries, ported, padding, onOpenApp, onOpenPorted)
+                LauncherLayout.List -> AppList(SubApp.listOrder, ported, padding, onOpenApp, onOpenPorted)
             }
         }
         if (state.controlCentreOpen) {
@@ -129,14 +141,26 @@ private fun clockGestures(onOpenControlCentre: () -> Unit, onToggleLayout: () ->
     }
 }
 
+/** Sidekit's own apps, then the Android apps added through Sideport. */
 @Composable
-private fun AppGrid(apps: List<SubApp>, padding: PaddingValues, onOpenApp: (SubApp) -> Unit) {
+private fun AppGrid(
+    apps: List<SubApp>,
+    ported: List<PortedApp>,
+    padding: PaddingValues,
+    onOpenApp: (SubApp) -> Unit,
+    onOpenPorted: (PortedApp) -> Unit,
+) {
     val listState = rememberLazyListState()
-    val rows = remember(apps) { apps.chunked(GRID_COLUMNS) }
+    val rows = remember(apps, ported) { (apps + ported).chunked(GRID_COLUMNS) }
     SidekitList(padding, Modifier.testTag(LauncherTags.GRID), state = listState) {
         itemsIndexed(rows) { index, row ->
             SidekitItemRow(Modifier.listFade(listState, index)) {
-                row.forEach { app -> AppTile(app, onOpenApp, Modifier.weight(1f)) }
+                row.forEach { entry ->
+                    when (entry) {
+                        is SubApp -> AppTile(entry, onOpenApp, Modifier.weight(1f))
+                        is PortedApp -> PortedTile(entry, onOpenPorted, Modifier.weight(1f))
+                    }
+                }
                 repeat(GRID_COLUMNS - row.size) { Box(Modifier.weight(1f)) }
             }
         }
@@ -144,11 +168,20 @@ private fun AppGrid(apps: List<SubApp>, padding: PaddingValues, onOpenApp: (SubA
 }
 
 @Composable
-private fun AppList(apps: List<SubApp>, padding: PaddingValues, onOpenApp: (SubApp) -> Unit) {
+private fun AppList(
+    apps: List<SubApp>,
+    ported: List<PortedApp>,
+    padding: PaddingValues,
+    onOpenApp: (SubApp) -> Unit,
+    onOpenPorted: (PortedApp) -> Unit,
+) {
     val listState = rememberLazyListState()
     SidekitList(padding, Modifier.testTag(LauncherTags.LIST), state = listState) {
         itemsIndexed(apps) { index, app ->
             SidekitItem(title = app.label, modifier = Modifier.listFade(listState, index), onClick = { onOpenApp(app) })
+        }
+        itemsIndexed(ported, key = { _, app -> "ported.${app.packageName}" }) { index, app ->
+            SidekitItem(title = app.label, modifier = Modifier.listFade(listState, apps.size + index), onClick = { onOpenPorted(app) })
         }
     }
 }

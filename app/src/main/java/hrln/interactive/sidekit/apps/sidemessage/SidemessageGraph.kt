@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -126,12 +128,30 @@ fun NavGraphBuilder.sidemessageGraph(nav: NavHostController) {
             }
             LaunchedEffect(threadId) { SidemessageNotifications.cancel(context, threadId, addresses) }
 
+            var attachment by remember { mutableStateOf<Uri?>(null) }
+            var mmsSending by remember { mutableStateOf(false) }
+            var mmsNotice by remember { mutableStateOf<String?>(null) }
+            val mmsScope = rememberCoroutineScope()
+            val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) { attachment = uri; vm.startTyping(); mmsNotice = "MMS attachment selected · Send submits through your carrier" }
+            }
+            fun sendMms() {
+                val selected = attachment ?: return
+                if (mmsSending) return
+                mmsSending = true
+                mmsScope.launch {
+                    try { MmsTransport.send(context.applicationContext, addresses, state.draft.orEmpty(), selected); attachment = null; vm.stopTyping(); mmsNotice = "MMS submitted to carrier" }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Exception) { mmsNotice = e.message ?: "MMS could not be sent" }
+                    finally { mmsSending = false }
+                }
+            }
             // Sending asks for SMS permission at the moment it's first needed.
             var sendAfterGrant by remember { mutableStateOf(false) }
-            val sendGate = rememberPermissionGate(Manifest.permission.SEND_SMS) { ok -> if (ok && sendAfterGrant) vm.send(); sendAfterGrant = false }
+            val sendGate = rememberPermissionGate(Manifest.permission.SEND_SMS) { ok -> if (ok && sendAfterGrant) { if (attachment != null) sendMms() else vm.send() }; sendAfterGrant = false }
 
             val leave = { vm.stopTyping(); nav.popFrom(entry) }
-            BackHandler(enabled = state.draft != null, onBack = vm::stopTyping)
+            BackHandler(enabled = state.draft != null) { vm.stopTyping(); attachment = null; mmsNotice = null }
             ConversationScreen(
                 state = state,
                 canBecomeDefault = access.roleAvailable,
@@ -140,9 +160,17 @@ fun NavGraphBuilder.sidemessageGraph(nav: NavHostController) {
                 onStartTyping = vm::startTyping,
                 onDraftChange = vm::updateDraft,
                 onSend = {
-                    if (sendGate.granted) vm.send() else { sendAfterGrant = true; sendGate.request() }
+                    if (sendGate.granted) { if (attachment != null) sendMms() else vm.send() } else { sendAfterGrant = true; sendGate.request() }
                 },
-                onRetry = vm::retry,
+                onRetry = { message ->
+                    if (message.key.startsWith("m")) mmsScope.launch {
+                        try { MmsTransport.resend(context.applicationContext, Uri.parse("content://mms/${message.rowId}")); mmsNotice = "MMS resubmitted to carrier" }
+                        catch (e: Exception) { mmsNotice = e.message ?: "MMS could not be retried" }
+                    }
+                    else vm.retry(message)
+                },
+                onAttach = { if (access.isDefault) picker.launch(arrayOf("image/*", "video/*", "audio/*")) else access.requestDefault() },
+                attachmentNotice = if (mmsSending) "Sending MMS…" else mmsNotice,
                 onLoadOlder = vm::loadOlder,
                 onLoadLatest = vm::loadLatest,
                 onTogglePin = if (addresses.size == 1) vm::togglePin else null,

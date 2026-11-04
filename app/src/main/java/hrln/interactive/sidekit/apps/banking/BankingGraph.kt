@@ -39,6 +39,7 @@ private fun payRoute(income: Boolean) = "$ROOT/pay?$ARG_INCOME=$income"
 
 fun NavGraphBuilder.bankingGraph(nav: NavHostController) {
     navigation(startDestination = HOME, route = ROOT) {
+        composable("$ROOT/up") { entry -> Unlocked(entry, nav) { _, _, _ -> UpBankScreen { nav.popFrom(entry) } } }
         composable(HOME) { entry ->
             Unlocked(entry, nav) { vm, state, book ->
                 BankingScreen(
@@ -50,6 +51,7 @@ fun NavGraphBuilder.bankingGraph(nav: NavHostController) {
                     undo = state.undo,
                     onUndo = vm::undo,
                     options = listOfNotNull(
+                        SideAction("up", "Up · read-only") { nav.navigateFrom(entry, "$ROOT/up") },
                         if (book.accounts.isNotEmpty()) SideAction("income", "Add income", SidekitIcon.Add) { nav.navigateFrom(entry, payRoute(true)) } else null,
                         SideAction("lock", "Lock", SidekitIcon.Encrypted) { vm.lock() },
                     ),

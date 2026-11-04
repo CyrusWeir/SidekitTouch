@@ -47,14 +47,14 @@ object SidemessageNotifications {
         }
     }
 
-    fun unsupportedMms(context: Context) {
+    fun mmsError(context: Context, message: String) {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
         ensureChannel(context)
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(SidekitIcon.Chat.drawable)
-            .setContentTitle("Picture message")
-            .setContentText("You've been sent an MMS. Sidemessage can't download MMS yet.")
+            .setContentTitle("Multimedia message")
+            .setContentText(message)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .build()

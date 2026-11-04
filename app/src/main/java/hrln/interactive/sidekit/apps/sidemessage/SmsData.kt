@@ -11,6 +11,8 @@ import hrln.interactive.sidekit.apps.phonebook.changes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.merge
 
+data class MmsAttachment(val uri: String, val mime: String, val name: String)
+
 /** What the user can see about a sent message. */
 enum class Delivery { None, Sending, Sent, Delivered, Failed }
 
@@ -25,9 +27,11 @@ data class Message(
     val date: Long = 0L,
     val delivery: Delivery = Delivery.None,
     val key: String = "",
-    /** The provider row (SMS only) this message lives in, or -1. */
+    /** The provider row this message lives in, or -1. [key] distinguishes SMS and MMS. */
     val rowId: Long = -1L,
     val address: String? = null,
+    val attachments: List<MmsAttachment> = emptyList(),
+    val pendingMms: String? = null,
 )
 
 /** A thread as the provider has it: addresses, no contact names yet. */
@@ -73,7 +77,7 @@ interface MessageSource {
 /**
  * The Telephony providers: threads from `content://mms-sms/conversations?simple=true` with
  * recipients resolved through `canonical-addresses`, SMS from [Telephony.Sms], and the text parts
- * of MMS from [Telephony.Mms] (pictures show as "[Picture]"; Sidemessage doesn't download MMS).
+ * of MMS from [Telephony.Mms] (pictures show as "[Picture]"; attachments can be viewed or opened after carrier download).
  */
 class AndroidMessageSource(private val resolver: ContentResolver) : MessageSource {
     override fun threads(): List<RawThread> {
@@ -121,16 +125,18 @@ class AndroidMessageSource(private val resolver: ContentResolver) : MessageSourc
     }
 
     private fun mms(threadId: Long, limit: Int, before: Message?): List<Message> {
+        val pendingIds = HashSet<Long>()
         val rows = ArrayList<Triple<Long, Long, Int>>() // id, date (ms), box
-        queryNewest(Telephony.Mms.CONTENT_URI, arrayOf(Telephony.Mms._ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX), "${Telephony.Mms.THREAD_ID}=?" + beforeClause(before, "m", 1000), arrayOf(threadId.toString()), Telephony.Mms.DATE, limit)?.use { c ->
-            while (rows.size < limit && c.moveToNext()) rows += Triple(c.getLong(0), c.getLong(1) * 1000L, c.getInt(2))
+        queryNewest(Telephony.Mms.CONTENT_URI, arrayOf(Telephony.Mms._ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX, "m_type"), "${Telephony.Mms.THREAD_ID}=?" + beforeClause(before, "m", 1000), arrayOf(threadId.toString()), Telephony.Mms.DATE, limit)?.use { c ->
+            while (rows.size < limit && c.moveToNext()) { rows += Triple(c.getLong(0), c.getLong(1) * 1000L, c.getInt(2)); if (c.getInt(3) == 130) pendingIds += c.getLong(0) }
         }
         if (rows.isEmpty()) return emptyList()
         // All parts of these messages in one query, not one per message.
         val texts = HashMap<Long, StringBuilder>()
         val media = HashSet<Long>()
+        val attachments = HashMap<Long, MutableList<MmsAttachment>>()
         val ids = rows.joinToString(",") { it.first.toString() }
-        query(MMS_PART, arrayOf(Telephony.Mms.Part.MSG_ID, Telephony.Mms.Part.CONTENT_TYPE, Telephony.Mms.Part.TEXT), "${Telephony.Mms.Part.MSG_ID} IN ($ids)", null, null)?.use { c ->
+        query(MMS_PART, arrayOf(Telephony.Mms.Part.MSG_ID, Telephony.Mms.Part.CONTENT_TYPE, Telephony.Mms.Part.TEXT, "_id", "cl"), "${Telephony.Mms.Part.MSG_ID} IN ($ids)", null, null)?.use { c ->
             while (c.moveToNext()) {
                 val id = c.getLong(0)
                 val type = c.getString(1).orEmpty()
@@ -139,7 +145,10 @@ class AndroidMessageSource(private val resolver: ContentResolver) : MessageSourc
                         if (sb.isNotEmpty()) sb.append('\n')
                         sb.append(c.getString(2).orEmpty())
                     }
-                    type.startsWith("image/") || type.startsWith("video/") || type.startsWith("audio/") -> media += id
+                    type.startsWith("image/") || type.startsWith("video/") || type.startsWith("audio/") -> {
+                        media += id
+                        attachments.getOrPut(id) { mutableListOf() }.add(MmsAttachment("content://mms/part/${c.getLong(3)}", type, c.getString(4) ?: "Attachment"))
+                    }
                 }
             }
         }
@@ -151,7 +160,7 @@ class AndroidMessageSource(private val resolver: ContentResolver) : MessageSourc
                 else -> text.ifEmpty { "[Message]" }
             }
             Message(
-                text = body,
+                text = if (id in pendingIds) "MMS pending · tap to download or retry" else body,
                 fromMe = box != Telephony.Mms.MESSAGE_BOX_INBOX,
                 date = date,
                 delivery = when (box) {
@@ -161,6 +170,7 @@ class AndroidMessageSource(private val resolver: ContentResolver) : MessageSourc
                     else -> Delivery.None
                 },
                 key = "m$id",
+                rowId = id, attachments = attachments[id].orEmpty(), pendingMms = if (id in pendingIds) "content://mms/$id" else null,
             )
         }
     }

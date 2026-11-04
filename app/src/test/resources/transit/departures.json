@@ -1,0 +1,59 @@
+{
+  "version": "10.6.21.17",
+  "stopEvents": [
+    {
+      "id": "0f5612061b19564e563346444741454d5658561011041506001d1a133500564e56464446425945455944402044454e44454e44442e565856181d1a11564e561a07034e4744474d464e544e264e071e46565856061105011107003a151911564e563346444741454d56585606111518001d19113d10564e5646474d424141455609",
+      "location": {
+        "id": "203519",
+        "name": "Monash Gardens, Bunnerong Rd, Pagewood",
+        "type": "platform"
+      },
+      "departureTimePlanned": "2026-11-04T01:01:00Z",
+      "transportation": {
+        "disassembledName": "392",
+        "number": "392",
+        "destination": {
+          "name": "Redfern Station - Gibbons St",
+          "type": "stop"
+        }
+      },
+      "isCancelled": false
+    },
+    {
+      "id": "0f5612061b19564e563346444741454d5658561011041506001d1a133500564e56464446425945455944402044454e444d4e44442e565856181d1a11564e561a07034e4744474d464e544e264e071e46565856061105011107003a151911564e563346444741454d56585606111518001d19113d10564e56464045444740465609",
+      "location": {
+        "id": "203519",
+        "name": "Monash Gardens, Bunnerong Rd, Pagewood",
+        "type": "platform"
+      },
+      "departureTimePlanned": "2026-11-04T01:09:00Z",
+      "transportation": {
+        "disassembledName": "392",
+        "number": "392",
+        "destination": {
+          "name": "Redfern Station - Gibbons St",
+          "type": "stop"
+        }
+      },
+      "isCancelled": false
+    },
+    {
+      "id": "0f5612061b19564e563346444741454d5658561011041506001d1a133500564e56464446425945455944402044454e45434e44442e565856181d1a11564e561a07034e4744474d464e544e264e071e46565856061105011107003a151911564e563346444741454d56585606111518001d19113d10564e56464045444740435609",
+      "location": {
+        "id": "203519",
+        "name": "Monash Gardens, Bunnerong Rd, Pagewood",
+        "type": "platform"
+      },
+      "departureTimePlanned": "2026-11-04T01:17:00Z",
+      "transportation": {
+        "disassembledName": "392",
+        "number": "392",
+        "destination": {
+          "name": "Redfern Station - Gibbons St",
+          "type": "stop"
+        }
+      },
+      "isCancelled": false
+    }
+  ]
+}

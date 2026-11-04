@@ -72,4 +72,24 @@ class MailViewModelTest {
         vm.undo()
         assertEquals(message, repository.messages.value!!.single())
     }
+    @Test fun `SMTP acceptance uses Sent while failed refresh preserves the inbox and drafts`() {
+        val inbox = MailMessage("sender@example.com", "Inbox", id=7, folder=MailFolder.Inbox, remoteKey="me|epoch|uid")
+        repository.replaceInbox(listOf(inbox))
+        val account = object : MailAccount {
+            override val configured = true
+            override suspend fun send(message: MailMessage) = MailSendResult.Sent
+            override suspend fun inbox(): List<MailMessage> = throw java.io.IOException("Offline")
+        }
+        val vm = MailViewModel(repository,account)
+        vm.send(null,"recipient@example.com","Sent subject","Body")
+        scope.testScheduler.runCurrent()
+        assertTrue(repository.messages.value!!.any { it.folder == MailFolder.Sent })
+        assertEquals("Accepted by your SMTP server", vm.notice.value)
+        val before = repository.messages.value
+        vm.refresh(); scope.testScheduler.runCurrent()
+        assertEquals(before,repository.messages.value)
+        assertTrue(vm.notice.value!!.contains("could not refresh"))
+        assertEquals(false, vm.busy.value)
+    }
+
 }

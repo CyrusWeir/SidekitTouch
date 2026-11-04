@@ -19,6 +19,7 @@ data class MailMessage(
     val id: Long = 0,
     val folder: MailFolder = MailFolder.Inbox,
     val updatedAt: Long = 0,
+    val remoteKey: String = "",
 )
 
 object MailSampleData {

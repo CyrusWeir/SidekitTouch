@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -167,6 +172,8 @@ fun ConversationScreen(
     onCall: (() -> Unit)?,
     onMakeDefault: () -> Unit,
     onLoadLatest: () -> Unit = {},
+    onAttach: (() -> Unit)? = null,
+    attachmentNotice: String? = null,
 ) {
     val draft = state.draft
     val actions = buildList {
@@ -182,12 +189,14 @@ fun ConversationScreen(
         )
     }
     val options = listOfNotNull(
+        onAttach?.let { SideAction("attachment", "Attach MMS", onClick = it) },
         onTogglePin?.let { SideAction("pin", if (state.pinned) "Unpin" else "Pin", onClick = it) },
         onCall?.let { SideAction("call", "Call", SidekitIcon.Call, onClick = it) },
         if (!state.access.isDefault && canBecomeDefault) SideAction("default", "Make default", onClick = onMakeDefault) else null,
     )
     SidekitScaffold(title = state.title, actions = actions, options = options) { padding ->
         Column(Modifier.fillMaxSize().padding(padding), verticalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap)) {
+            attachmentNotice?.let { SidekitText(it, maxLines = 3) }
             val listState = rememberLazyListState()
             val messages = state.messages
             // Status under the newest sent message, and under anything still sending or failed.
@@ -221,6 +230,15 @@ fun ConversationScreen(
 @Composable
 private fun Bubble(message: Message, showStatus: Boolean, onRetry: (Message) -> Unit, modifier: Modifier) {
     val failed = message.fromMe && message.delivery == Delivery.Failed
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    var mmsNotice by remember { mutableStateOf<String?>(null) }
+    fun retryMms() {
+        scope.launch {
+            try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MmsTransport.retry(context, android.net.Uri.parse(message.pendingMms)) }; mmsNotice = "Download requested" }
+            catch (_: Exception) { mmsNotice = "Could not retry MMS" }
+        }
+    }
     Column(modifier.fillMaxWidth(), horizontalAlignment = if (message.fromMe) Alignment.End else Alignment.Start) {
         SidekitCard(
             modifier = Modifier.widthIn(max = 400.dp),
@@ -229,9 +247,12 @@ private fun Bubble(message: Message, showStatus: Boolean, onRetry: (Message) -> 
                 message.fromMe -> ItemColour.Secondary.container()
                 else -> ItemColour.Primary.container()
             },
-            onClick = if (failed) ({ onRetry(message) }) else null,
+            onClick = if (message.pendingMms != null) ({ retryMms() }) else if (failed) ({ onRetry(message) }) else null,
         ) {
-            SidekitText(message.text, maxLines = Int.MAX_VALUE)
+            Column {
+                SidekitText(mmsNotice ?: message.text, maxLines = Int.MAX_VALUE)
+                message.attachments.forEach { MmsAttachmentView(it) }
+            }
         }
         if (showStatus && message.delivery != Delivery.None) {
             SidekitText(

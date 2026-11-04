@@ -1,9 +1,6 @@
 package hrln.interactive.sidekit.apps.mail
 
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.core.util.AtomicFile
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -15,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
@@ -23,33 +19,16 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.IOException
 
-/** No inbox is invented: these are only messages composed on this phone. */
-enum class MailFolder(val label: String) { Draft("Drafts"), Outbox("Outbox"), HandedOff("Handed off"), Inbox("Inbox") }
+/** Local folders and the latest IMAP inbox snapshot. */
+enum class MailFolder(val label: String) { Draft("Drafts"), Outbox("Outbox"), HandedOff("Handed off"), Inbox("Inbox"), Sent("Sent") }
 
-enum class MailSendResult { HandedOff, Unavailable }
+enum class MailSendResult { HandedOff, Unavailable, Sent }
 
-/** Seam for a real IMAP/SMTP account later. The platform implementation only opens a mail app. */
+/** Mail account transport; successful SMTP submission is distinct from delivery. */
 interface MailAccount {
     val configured: Boolean
     suspend fun send(message: MailMessage): MailSendResult
-}
-
-class IntentMailAccount(private val context: Context) : MailAccount {
-    override val configured = false
-    override suspend fun send(message: MailMessage): MailSendResult = withContext(Dispatchers.Main) {
-        val uri = Uri.Builder().scheme("mailto").path(message.to)
-            .appendQueryParameter("subject", message.subject)
-            .appendQueryParameter("body", message.body).build()
-        val intent = Intent(Intent.ACTION_SENDTO, uri)
-        try {
-            context.startActivity(intent)
-            MailSendResult.HandedOff
-        } catch (_: ActivityNotFoundException) {
-            MailSendResult.Unavailable
-        } catch (_: SecurityException) {
-            MailSendResult.Unavailable
-        }
-    }
+    suspend fun inbox(): List<MailMessage> = emptyList()
 }
 
 interface MailStore {
@@ -62,11 +41,13 @@ class FileMailStore(file: File) : MailStore {
     override fun read(): List<MailMessage> {
         val stream = try { file.openRead() } catch (_: IOException) { return emptyList() }
         return DataInputStream(BufferedInputStream(stream)).use { input ->
-            if (input.readInt() != MAGIC || input.readInt() != VERSION) return emptyList()
+            if (input.readInt() != MAGIC) throw IOException("Invalid mail file")
+            val version = input.readInt()
+            if (version !in 1..VERSION) throw IOException("Unknown mail version")
             List(input.readInt()) {
                 MailMessage(
                     sender = input.readUTF(), subject = input.readUTF(), body = input.readUTF(), to = input.readUTF(),
-                    id = input.readLong(), folder = MailFolder.valueOf(input.readUTF()), updatedAt = input.readLong(),
+                    id = input.readLong(), folder = MailFolder.valueOf(input.readUTF()), updatedAt = input.readLong(), remoteKey = if (version >= 2) input.readUTF() else "",
                 )
             }
         }
@@ -79,13 +60,13 @@ class FileMailStore(file: File) : MailStore {
             data.writeInt(MAGIC); data.writeInt(VERSION); data.writeInt(messages.size)
             messages.forEach {
                 data.writeUTF(it.sender.take(300)); data.writeUTF(it.subject.take(500)); data.writeUTF(it.body.take(50_000))
-                data.writeUTF(it.to.take(300)); data.writeLong(it.id); data.writeUTF(it.folder.name); data.writeLong(it.updatedAt)
+                data.writeUTF(it.to.take(300)); data.writeLong(it.id); data.writeUTF(it.folder.name); data.writeLong(it.updatedAt); data.writeUTF(it.remoteKey)
             }
             data.flush(); file.finishWrite(out)
         } catch (e: IOException) { file.failWrite(out); throw e }
     }
 
-    private companion object { const val MAGIC = 0x534B4D4C; const val VERSION = 1 }
+    private companion object { const val MAGIC = 0x534B4D4C; const val VERSION = 2 }
 }
 
 class MailRepository(
@@ -97,16 +78,17 @@ class MailRepository(
     private val _messages = MutableStateFlow<List<MailMessage>?>(null)
     val messages: StateFlow<List<MailMessage>?> = _messages.asStateFlow()
     private var lastId = 0L
+    val error = MutableStateFlow<String?>(null)
 
     init {
         scope.launch(io) {
-            val loaded = try { store.read() } catch (_: Exception) { emptyList() }
+            val loaded = try { store.read() } catch (_: Exception) { error.value = "Mail storage cannot be read; existing data has been preserved"; return@launch }
             lastId = loaded.maxOfOrNull { it.id } ?: 0
             _messages.value = loaded
             var written = loaded
             _messages.filterNotNull().conflate().collect {
                 if (it !== written) {
-                    try { store.write(it); written = it } catch (_: IOException) {}
+                    try { store.write(it); written = it; error.value = null } catch (_: Exception) { error.value = "Mail could not be saved on this phone" }
                 }
             }
         }
@@ -114,6 +96,7 @@ class MailRepository(
 
     @Synchronized
     fun save(id: Long?, to: String, subject: String, body: String, folder: MailFolder): MailMessage {
+        check(_messages.value != null) { "Mail has not loaded" }
         val cleanTo = to.trim()
         val old = _messages.value.orEmpty().firstOrNull { it.id == id }
         val message = MailMessage(
@@ -122,6 +105,14 @@ class MailRepository(
         )
         _messages.value = listOf(message) + _messages.value.orEmpty().filterNot { it.id == message.id }
         return message
+    }
+
+    @Synchronized
+    fun replaceInbox(messages: List<MailMessage>) {
+        val existing = _messages.value ?: throw IllegalStateException("Mail is loading")
+        val ids = existing.filter { it.remoteKey.isNotEmpty() }.associate { it.remoteKey to it.id }
+        val incoming = messages.map { it.copy(id = ids[it.remoteKey] ?: ++lastId) }
+        _messages.value = incoming + existing.filter { it.folder != MailFolder.Inbox }
     }
 
     fun folder(id: Long, folder: MailFolder) {
@@ -146,6 +137,6 @@ class MailRepository(
 object Mail {
     @Volatile private var repository: MailRepository? = null
     fun repository(context: Context): MailRepository = repository ?: synchronized(this) {
-        repository ?: MailRepository(FileMailStore(File(context.applicationContext.filesDir, "mail.bin")), CoroutineScope(SupervisorJob())).also { repository = it }
+        repository ?: MailRepository(EncryptedMailStore(context.applicationContext), CoroutineScope(SupervisorJob())).also { repository = it }
     }
 }

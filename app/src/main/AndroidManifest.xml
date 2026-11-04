@@ -46,7 +46,14 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Sideport: install APKs the user picks (Android still asks to confirm each one). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!--
+        Sideport projects any app the user adds, so it must see them all. Sidekit is sideloaded
+        onto the Sidephone, not published, so the Play policy on this permission doesn't apply.
+    -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -165,6 +172,12 @@
             </intent-filter>
         </receiver>
 
+        <provider android:name="com.klinker.android.send_message.MmsFileProvider" tools:node="remove" />
+        <receiver android:name=".apps.sidemessage.MmsResultReceiver" android:exported="false" />
+        <provider android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.mms" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/mms_paths" />
+        </provider>
         <!-- Keypad top-left key -> Back (see KeypadAccessibilityService). -->
         <service
             android:name=".system.KeypadAccessibilityService"
@@ -178,6 +191,37 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/keypad_accessibility" />
         </service>
+        <!-- Sideport: draws ported Android apps as Sidekit screens (see SideportService). -->
+        <service
+            android:name=".apps.sideport.service.SideportService"
+            android:exported="true"
+            android:label="@string/sideport_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/sideport_accessibility" />
+        </service>
+        <!-- Sideport: ported apps' chats (notifications with inline reply) and media sessions. -->
+        <service
+            android:name=".apps.sideport.bridge.Bridge$Listener"
+            android:exported="true"
+            android:label="@string/sideport_bridge_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+        <!-- Sideport: PackageInstaller session results. -->
+        <receiver
+            android:name=".apps.sideport.install.ApkInstaller$ResultReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="hrln.interactive.sidekit.sideport.INSTALL_RESULT" />
+            </intent-filter>
+        </receiver>
         <!-- Music playback outside the app (media notification, lock screen, media keys). -->
         <service
             android:name=".apps.music.MusicService"

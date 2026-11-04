@@ -1,0 +1,14 @@
+{
+  "name": "Permission request",
+  "packages": ["com.google.android.permissioncontroller", "com.android.permissioncontroller"],
+  "whenPresent": ["id:permission_message"],
+  "title": "id:permission_message",
+  "hide": ["id:permission_icon"],
+  "actions": [
+    { "select": "id:permission_deny_button", "label": "Deny", "tone": "muted" },
+    { "select": "id:permission_allow_foreground_only_button", "label": "While using", "tone": "primary" },
+    { "select": "id:permission_allow_button", "label": "Allow", "tone": "primary" },
+    { "select": "id:permission_allow_one_time_button", "label": "Only this time" },
+    { "select": "id:permission_deny_and_dont_ask_again_button", "label": "Don't ask again", "tone": "muted" }
+  ]
+}

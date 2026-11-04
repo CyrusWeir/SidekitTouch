@@ -23,7 +23,7 @@ class SmsProviderTest {
         sms.db.execSQL("INSERT INTO messages VALUES (11, 7, 'newer', 1, 2001, -1, '0400')")
         sms.db.execSQL("INSERT INTO messages VALUES (10, 7, 'tie 10', 1, 2000, -1, '0400')")
         sms.db.execSQL("INSERT INTO messages VALUES (9, 7, 'tie 9', 1, 2000, -1, '0400')")
-        mms.db.execSQL("INSERT INTO messages VALUES (1, 7, 2, 1)")
+        mms.db.execSQL("INSERT INTO messages VALUES (1, 7, 2, 1, 132)")
         val context = ApplicationProvider.getApplicationContext<Context>()
         val source = AndroidMessageSource(context.contentResolver)
         val first = source.messages(7, 2)
@@ -36,12 +36,29 @@ class SmsProviderTest {
         mms.db.close()
     }
 
+    @Test fun pendingMmsCanBeRetriedAndDownloadedPartsExposeViewableAttachments() {
+        val sms = TestMessages(false); val mms = TestMessages(true)
+        ShadowContentResolver.registerProviderInternal("sms", sms)
+        ShadowContentResolver.registerProviderInternal("mms", mms)
+        mms.db.execSQL("INSERT INTO messages VALUES (2, 7, 3, 1, 130)")
+        mms.db.execSQL("INSERT INTO messages VALUES (1, 7, 2, 1, 132)")
+        mms.db.execSQL("INSERT INTO part VALUES (1, 'text/plain', 'Hello', 10, 'text.txt')")
+        mms.db.execSQL("INSERT INTO part VALUES (1, 'image/jpeg', null, 11, 'photo.jpg')")
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val messages = AndroidMessageSource(context.contentResolver).messages(7, 10)
+        assertEquals("content://mms/2", messages.first().pendingMms)
+        assertEquals("MMS pending · tap to download or retry",messages.first().text)
+        assertEquals("[Picture] Hello",messages.last().text)
+        assertEquals(listOf(MmsAttachment("content://mms/part/11","image/jpeg","photo.jpg")),messages.last().attachments)
+        sms.db.close(); mms.db.close()
+    }
+
     /** Executes the production selections; rejects SQL LIMIT like strict Telephony providers. */
     private class TestMessages(private val mms: Boolean) : ContentProvider() {
         val db = SQLiteDatabase.create(null).apply {
-            execSQL(if (mms) "CREATE TABLE messages (_id INTEGER, thread_id INTEGER, date INTEGER, msg_box INTEGER)"
+            execSQL(if (mms) "CREATE TABLE messages (_id INTEGER, thread_id INTEGER, date INTEGER, msg_box INTEGER, m_type INTEGER)"
                 else "CREATE TABLE messages (_id INTEGER, thread_id INTEGER, body TEXT, type INTEGER, date INTEGER, status INTEGER, address TEXT)")
-            execSQL("CREATE TABLE part (mid INTEGER, ct TEXT, text TEXT)")
+            execSQL("CREATE TABLE part (mid INTEGER, ct TEXT, text TEXT, _id INTEGER, cl TEXT)")
         }
         override fun onCreate() = true
         override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {

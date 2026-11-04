@@ -1,0 +1,12 @@
+{
+  "name": "Android dialog",
+  "packages": ["*"],
+  "priority": 10,
+  "whenPresent": ["id:android:id/button1"],
+  "title": "id:android:id/alertTitle",
+  "actions": [
+    { "select": "id:android:id/button2", "tone": "muted" },
+    { "select": "id:android:id/button1", "tone": "primary" }
+  ],
+  "options": ["id:android:id/button3"]
+}

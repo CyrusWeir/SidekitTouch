@@ -28,6 +28,9 @@ import hrln.interactive.sidekit.apps.settings.settingsGraph
 import hrln.interactive.sidekit.apps.sidemessage.IncomingLinks
 import hrln.interactive.sidekit.apps.sidemessage.sidemessageGraph
 import hrln.interactive.sidekit.apps.sidenotes.sidenotesGraph
+import hrln.interactive.sidekit.apps.sideport.SideportLinks
+import hrln.interactive.sidekit.apps.sideport.openPorted
+import hrln.interactive.sidekit.apps.sideport.sideportGraph
 import hrln.interactive.sidekit.apps.sideticks.sideticksGraph
 import hrln.interactive.sidekit.apps.sideweather.sideweatherGraph
 import hrln.interactive.sidekit.apps.translate.translateGraph
@@ -50,6 +53,8 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
     }
     // sms:/smsto: links and message notifications open a Sidemessage conversation.
     IncomingLinks.Follow(navController)
+    // A projected app's "Messages and media" opens its Sideport hub.
+    SideportLinks.Follow(navController)
     // No screen transition. Every screen is the same frame (title, body, action bar) and the
     // title and bar are shared chrome that morph on their own, so navigating swaps only the body,
     // which plays its own entrance (rows rising in). Nothing moves as a whole screen, and only one
@@ -63,7 +68,12 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
         popExitTransition = { ExitTransition.None },
     ) {
         composable(LAUNCHER_ROUTE) {
-            LauncherRoute(onOpenApp = { app -> navController.navigate(app.route) { launchSingleTop = true } })
+            val context = androidx.compose.ui.platform.LocalContext.current
+            LauncherRoute(
+                onOpenApp = { app -> navController.navigate(app.route) { launchSingleTop = true } },
+                // Ported apps open straight into their projection; if that can't start, Sideport explains why.
+                onOpenPorted = { app -> if (openPorted(context, app) != null) navController.navigate(SubApp.Sideport.route) { launchSingleTop = true } },
+            )
         }
         // Core SideKit apps
         sidemessageGraph(navController)
@@ -91,6 +101,8 @@ fun SidekitNavHost(navController: NavHostController = rememberNavController(), h
         bankingGraph(navController)
         tripPlanningGraph(navController)
         videoGraph(navController)
+        // Android apps drawn as Sidekit apps
+        sideportGraph(navController)
         // Launcher tiles without an app mock
         SubApp.entries.filterNot { it.designed }.forEach { app ->
             composable(app.route) { PlaceholderAppScreen(app = app, onBack = back) }

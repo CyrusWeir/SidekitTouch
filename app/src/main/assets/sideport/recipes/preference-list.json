@@ -1,0 +1,15 @@
+[
+  {
+    "name": "Android settings",
+    "packages": ["com.android.settings"],
+    "itemTitle": "id:android:id/title",
+    "itemSecondary": "id:android:id/summary"
+  },
+  {
+    "name": "Preference screen",
+    "packages": ["*"],
+    "whenPresent": ["id:android:id/title", "id:android:id/summary"],
+    "itemTitle": "id:android:id/title",
+    "itemSecondary": "id:android:id/summary"
+  }
+]

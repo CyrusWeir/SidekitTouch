@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import hrln.interactive.sidekit.apps.sideport.service.SideportService
 import hrln.interactive.sidekit.design.input.SystemKeys
 
 /**
@@ -24,7 +25,8 @@ class KeypadAccessibilityService : AccessibilityService() {
         if (!SystemKeys.isBack(event)) return false
         if (event.action == KeyEvent.ACTION_UP) {
             if (event.eventTime - event.downTime >= SystemKeys.LONG_PRESS_MS) openDialer()
-            else performGlobalAction(GLOBAL_ACTION_BACK)
+            // A Sideport projection handles Back itself (its options bar and inspector come first).
+            else if (!SideportService.handleSystemBack()) performGlobalAction(GLOBAL_ACTION_BACK)
         }
         // Consume the press too, or the system still starts the dialer on key down.
         return true

@@ -21,6 +21,7 @@ android {
 
     buildTypes {
         release {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // R8: shrinks, inlines and devirtualises. Compose is designed to be run through R8;
             // without it release builds keep debug-only code paths (e.g. composition tracing
             // checks) and run measurably slower and larger.
@@ -41,6 +42,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    packaging { resources.merges += setOf("META-INF/NOTICE.md", "META-INF/LICENSE.md", "META-INF/LICENSE.txt", "META-INF/NOTICE.txt") }
     buildFeatures {
         compose = true
     }
@@ -57,6 +59,10 @@ android {
 
 dependencies {
     implementation(project(":sidekit"))
+    implementation("com.sun.mail:android-mail:1.6.8")
+    implementation("com.sun.mail:android-activation:1.6.8")
+    implementation("com.klinkerapps:android-smsmms:5.2.6")
+    implementation("androidx.work:work-runtime-ktx:2.11.0")
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -70,6 +76,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
+    testImplementation("com.icegreen:greenmail:1.6.15") { exclude(group = "com.sun.mail", module = "javax.mail") }
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)

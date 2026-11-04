@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Sideport projection. Starts with no events: SideportService turns on window and content events
+    and key filtering only while a ported app is open, and turns them off again after.
+    canRetrieveWindowContent reads the ported app's screen; canPerformGestures is kept for apps
+    whose controls don't take accessibility clicks.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canRequestFilterKeyEvents="true"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:notificationTimeout="80"
+    android:description="@string/sideport_service_description"
+    android:summary="@string/sideport_service_summary" />

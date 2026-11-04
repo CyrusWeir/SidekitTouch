@@ -252,14 +252,17 @@ object IncomingSms {
     }
 }
 
-/**
- * WAP_PUSH_DELIVER (an MMS has arrived). Required for the SMS role. Downloading and decoding MMS
- * (carrier MMSC over the MMS APN, PDU parsing) isn't implemented, so this only tells the user.
- */
+/** The SMS-role receiver queues durable carrier MMS download work. */
 class MmsDeliverReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Telephony.Sms.Intents.WAP_PUSH_DELIVER_ACTION) return
-        SidemessageNotifications.unsupportedMms(context.applicationContext)
+        if (intent.action != Telephony.Sms.Intents.WAP_PUSH_DELIVER_ACTION || intent.type != "application/vnd.wap.mms-message" || !SmsRole.isDefault(context)) return
+        val data = intent.getByteArrayExtra("data") ?: return
+        val pending = goAsync()
+        Sidemessage.repository(context).scope.launch( kotlinx.coroutines.Dispatchers.IO) {
+            try { MmsTransport.enqueue(context.applicationContext, data, intent.getIntExtra("subscription", SubscriptionManager.getDefaultSmsSubscriptionId())) }
+            catch (_: Exception) { SidemessageNotifications.mmsError(context, "MMS notification could not be queued") }
+            finally { pending.finish() }
+        }
     }
 }
 
