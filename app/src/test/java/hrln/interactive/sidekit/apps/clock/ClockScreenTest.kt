@@ -56,4 +56,18 @@ class ClockScreenTest {
         compose.runOnIdle { assertEquals("new", selected) }
         compose.onRoot().captureRoboImage("screenshots/clock_alarms.png")
     }
+    @Test fun `swipe delete hides an alarm and Undo restores it`() {
+        val store = Memory().apply { saved = ClockData(alarms = listOf(ClockAlarm(id = "test", hour = 7, minute = 30))) }
+        val repo = ClockRepository(store, scope, Dispatchers.Unconfined)
+        compose.setContent { SidekitPreviewFrame { ClockScreen({}, repo) } }
+        compose.onNodeWithText("07:30").performTouchInput { swipeLeft(startX = 400f, endX = 250f) }
+        compose.waitForIdle()
+        val rowY = compose.onNodeWithText("07:30").fetchSemanticsNode().boundsInRoot.center.y
+        compose.onRoot().performTouchInput { click(androidx.compose.ui.geometry.Offset(width - 30f, rowY)) }
+        compose.onNodeWithText("07:30").assertDoesNotExist()
+        compose.onNodeWithText("Undo").performClick()
+        compose.onNodeWithText("07:30").assertIsDisplayed()
+        compose.runOnIdle { assertEquals("test", store.saved.alarms.single().id) }
+    }
+
 }
