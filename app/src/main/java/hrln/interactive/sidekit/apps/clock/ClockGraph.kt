@@ -128,7 +128,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
             }
         }
         // As in Sideticks, Undo takes a place in the bar while a delete can be undone.
-        if (deletedPending != null) add(SideAction("undo", "Undo", SidekitIcon.Undo, onClick = repo::undoDelete))
+        if (deletedPending != null) add(SideAction("undo", "Undo", SidekitIcon.Undo, tone = ActionTone.Muted, onClick = repo::undoDelete))
     }
     SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (permissionPage) "Clock access" else tab, actions = actions,
         options = if (permissionPage) emptyList() else listOf(SideAction("access", "Alarm access") { permissionPage = true })) { padding ->
