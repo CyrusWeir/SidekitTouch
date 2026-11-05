@@ -537,7 +537,12 @@ private fun ActionContent(action: SideAction, modifier: Modifier) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (action.dense) spacing.itemContentGap / 2 else spacing.itemContentGap),
+        // Action buttons keep their icons closer to the label than list rows do. With long
+        // single-line labels the row fills the slot, and a list-sized gap makes the text look
+        // detached from its icon.
+        horizontalArrangement = Arrangement.spacedBy(
+            if (action.dense) spacing.itemContentGap / 2 - 2.dp else spacing.itemContentGap - 4.dp,
+        ),
     ) {
         val icon = action.icon
         val art = action.art
@@ -555,15 +560,10 @@ private fun ActionContent(action: SideAction, modifier: Modifier) {
                 // full-width two-line label squeezes a trailing arrow down to nothing.
                 modifier = Modifier
                     .weight(1f, fill = false)
-                    // Drawn text does not expose semantics on its own; without this the button
-                    // loses its label to accessibility whenever the action has no description.
-                    .then(
-                        if (action.description == null) {
-                            Modifier.semantics { text = AnnotatedString(label) }
-                        } else {
-                            Modifier
-                        },
-                    ),
+                    // Drawn text does not expose semantics on its own. Always expose the label as
+                    // text so tests and accessibility can find the button by what it says, even
+                    // when the action also has a content description.
+                    .semantics { text = AnnotatedString(label) },
             )
         }
         if (icon != null && action.iconAtEnd) SidekitIconImage(icon, tint = foreground)
