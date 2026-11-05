@@ -109,11 +109,8 @@ class AndroidSmsTransport(private val context: Context) : SmsTransport {
     override fun delete(message: Message): Boolean = try {
         when {
             message.key.startsWith("s") -> resolver.delete(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, message.rowId), null, null) > 0
-            message.key.startsWith("m") -> {
-                // Parts first: the provider may not cascade, and orphaned parts would leak storage.
-                resolver.delete(MMS_PART, "${Telephony.Mms.Part.MSG_ID}=?", arrayOf(message.rowId.toString()))
-                resolver.delete(ContentUris.withAppendedId(Telephony.Mms.CONTENT_URI, message.rowId), null, null) > 0
-            }
+            // The provider owns part/file cleanup when deleting the parent MMS.
+            message.key.startsWith("m") -> resolver.delete(ContentUris.withAppendedId(Telephony.Mms.CONTENT_URI, message.rowId), null, null) > 0
             else -> false
         }
     } catch (_: RuntimeException) {
@@ -138,7 +135,6 @@ class AndroidSmsTransport(private val context: Context) : SmsTransport {
     }
 
     companion object {
-        private val MMS_PART: Uri = Uri.parse("content://mms/part")
         const val ACTION_SENT = "hrln.interactive.sidekit.sms.SENT"
         const val ACTION_DELIVERED = "hrln.interactive.sidekit.sms.DELIVERED"
         const val EXTRA_TOKEN = "token"

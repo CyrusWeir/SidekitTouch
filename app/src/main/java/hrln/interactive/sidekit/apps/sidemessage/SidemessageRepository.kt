@@ -100,6 +100,7 @@ class SidemessageRepository(
     /** The most recent deletion the user can still undo, or null. */
     val deleted: StateFlow<PendingDelete?> = _deleted.asStateFlow()
 
+    private val deleteLock = Any()
     private var undoJob: Job? = null
     private val deleteTokens = AtomicLong(0)
 
@@ -176,55 +177,40 @@ class SidemessageRepository(
         }
     }
 
-    /**
-     * Removes [message] from the conversation at once, but waits [UNDO_WINDOW_MS] before touching
-     * the provider so [undoDelete] can put it back. Pending outgoing messages are local only.
-     */
+    /** Hides a stored message until Undo wins or its window expires. */
     fun delete(message: Message) {
-        commitPending()
-        val token = deleteTokens.incrementAndGet()
-        _pendingKeys.update { it + message.key }
-        _deleted.value = PendingDelete(message, token)
-        undoJob = scope.launch(io) {
-            delay(UNDO_WINDOW_MS)
-            val pending = _deleted.value?.takeIf { it.token == token } ?: return@launch
-            _deleted.value = null
-            finishDelete(pending.message)
+        if (!transport.isDefault || !message.isStored) return
+        synchronized(deleteLock) {
+            val previous = _deleted.value
+            undoJob?.cancel()
+            val token = deleteTokens.incrementAndGet()
+            _pendingKeys.update { it + message.key }
+            _deleted.value = PendingDelete(message, token)
+            if (previous != null) scope.launch(io) { finishDelete(previous.message) }
+            undoJob = scope.launch(io) {
+                delay(UNDO_WINDOW_MS)
+                // Claim the deletion atomically with respect to Undo and a replacement deletion.
+                val pending = synchronized(deleteLock) {
+                    _deleted.value?.takeIf { it.token == token }?.also { _deleted.value = null }
+                } ?: return@launch
+                finishDelete(pending.message)
+            }
         }
     }
 
-    /** Puts back the message waiting out its window, if any. */
     fun undoDelete() {
-        val pending = _deleted.value ?: return
-        undoJob?.cancel()
-        _deleted.value = null
-        _pendingKeys.update { it - pending.message.key }
-    }
-
-    /** Commits the deletion still on offer when a new one starts. */
-    private fun commitPending() {
-        val pending = _deleted.value ?: return
-        _deleted.value = null
-        scope.launch(io) { finishDelete(pending.message) }
-    }
-
-    /**
-     * Removes [message] for good. A provider row that is really gone stays hidden: no reload can
-     * bring it back, so the stale page can't flash it in while it waits for the next load.
-     */
-    private fun finishDelete(message: Message) {
-        val removed = performDelete(message)
-        // A pending outgoing message is local, and a failed delete leaves its row in place.
-        if (message.key.startsWith("p") || !removed) _pendingKeys.update { it - message.key }
-    }
-
-    private fun performDelete(message: Message): Boolean {
-        if (message.key.startsWith("p")) {
-            val token = message.key.drop(1).toLongOrNull()
-            _outgoing.update { list -> list.filterNot { it.token == token } }
-            return true
+        synchronized(deleteLock) {
+            val pending = _deleted.value ?: return
+            undoJob?.cancel()
+            _deleted.value = null
+            _pendingKeys.update { it - pending.message.key }
         }
-        return transport.isDefault && transport.delete(message)
+    }
+
+    private fun finishDelete(message: Message) {
+        val removed = transport.isDefault && transport.delete(message)
+        // Keep successful deletions hidden until stale pages have been replaced.
+        if (!removed) _pendingKeys.update { it - message.key }
     }
 
     private fun sendOne(address: String, text: String, threadId: Long) {

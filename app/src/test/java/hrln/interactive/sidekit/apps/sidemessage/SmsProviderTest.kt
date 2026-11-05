@@ -8,6 +8,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -53,6 +55,36 @@ class SmsProviderTest {
         sms.db.close(); mms.db.close()
     }
 
+    @Test fun deletingMmsUsesProviderCleanup() {
+        val mms = mmsWithAttachment()
+        try {
+            val transport = AndroidSmsTransport(ApplicationProvider.getApplicationContext<Context>())
+            assertTrue(transport.delete(Message("Hello", false, key = "m1", rowId = 1)))
+            assertEquals(0, mms.count("messages"))
+            assertEquals(0, mms.count("part"))
+        } finally { mms.db.close() }
+    }
+
+    @Test fun refusedMmsDeletionPreservesContents() {
+        for (throws in listOf(false, true)) {
+            val mms = mmsWithAttachment()
+            try {
+                mms.refuseDelete = true
+                mms.throwOnDelete = throws
+                val transport = AndroidSmsTransport(ApplicationProvider.getApplicationContext<Context>())
+                assertFalse(transport.delete(Message("Hello", false, key = "m1", rowId = 1)))
+                assertEquals(1, mms.count("messages"))
+                assertEquals(1, mms.count("part"))
+            } finally { mms.db.close() }
+        }
+    }
+
+    private fun mmsWithAttachment() = TestMessages(true).also { mms ->
+        ShadowContentResolver.registerProviderInternal("mms", mms)
+        mms.db.execSQL("INSERT INTO messages VALUES (1, 7, 2, 1, 132)")
+        mms.db.execSQL("INSERT INTO part VALUES (1, 'image/jpeg', null, 11, 'photo.jpg')")
+    }
+
     /** Executes the production selections; rejects SQL LIMIT like strict Telephony providers. */
     private class TestMessages(private val mms: Boolean) : ContentProvider() {
         val db = SQLiteDatabase.create(null).apply {
@@ -68,7 +100,21 @@ class SmsProviderTest {
         }
         override fun getType(uri: Uri): String? = null
         override fun insert(uri: Uri, values: ContentValues?): Uri? = null
-        override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?) = 0
+        var refuseDelete = false
+        var throwOnDelete = false
+        fun count(table: String) = db.rawQuery("SELECT COUNT(*) FROM $table", null).use {
+            it.moveToFirst()
+            it.getInt(0)
+        }
+        override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int {
+            if (uri.path == "/part") return db.delete("part", selection, selectionArgs)
+            if (throwOnDelete) throw SecurityException("SMS role revoked")
+            if (refuseDelete) return 0
+            val id = uri.lastPathSegment!!
+            val removed = db.delete("messages", "_id=?", arrayOf(id))
+            if (mms && removed > 0) db.delete("part", "mid=?", arrayOf(id))
+            return removed
+        }
         override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?) = 0
     }
 }

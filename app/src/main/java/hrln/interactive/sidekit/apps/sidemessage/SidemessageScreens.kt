@@ -231,8 +231,8 @@ fun ConversationScreen(
                 itemsIndexed(messages, key = { i, m -> m.key.ifEmpty { "i$i" } }, contentType = { _, m -> m.fromMe }) { i, message ->
                     val showStatus = message.fromMe && (i == newestMine || message.delivery == Delivery.Sending || message.delivery == Delivery.Failed)
                     val fade = Modifier.listFade(listState, i + if (state.hasNewer) 1 else 0)
-                    // Only the default SMS app may delete a stored message; a pending outgoing one is local.
-                    if (state.access.isDefault || message.key.startsWith("p")) {
+                    // Only offer deletion for provider rows that this app is allowed to remove.
+                    if (state.access.isDefault && message.isStored) {
                         SidekitSwipeRow(message.key.ifEmpty { "i$i" }, swipes, { onDelete(message) }, fade, deleteLabel = "Delete message") {
                             Bubble(message, showStatus, onRetry, Modifier)
                         }
