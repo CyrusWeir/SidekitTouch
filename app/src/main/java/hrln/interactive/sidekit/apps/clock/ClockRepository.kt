@@ -36,7 +36,7 @@ data class Stopwatch(val startedAt: Long? = null, val elapsed: Long = 0, val lap
 
 data class Ringing(val id: String, val label: String, val at: Long)
 
-/** An alarm waiting out its undo window before it is really removed. */
+/** A removed alarm that can still be restored. */
 data class PendingDelete(val alarm: ClockAlarm, val token: Long)
 
 data class ClockData(val alarms: List<ClockAlarm> = emptyList(), val timer: ClockTimer = ClockTimer(),
@@ -95,14 +95,9 @@ class ClockRepository(
     private val mutable = MutableStateFlow<ClockData?>(null)
     val data = mutable.asStateFlow()
     val error = MutableStateFlow<String?>(null)
-    private val _pendingIds = MutableStateFlow<Set<String>>(emptySet())
-
-    /** Alarm ids hidden from the list while their deletion can still be undone. */
-    val pendingIds: StateFlow<Set<String>> = _pendingIds.asStateFlow()
-
     private val _deleted = MutableStateFlow<PendingDelete?>(null)
 
-    /** The alarm awaiting its undo window before being really removed, or null. */
+    /** The last removed alarm while Undo is available, or null. */
     val deleted: StateFlow<PendingDelete?> = _deleted.asStateFlow()
 
     private var undoJob: Job? = null
@@ -132,43 +127,27 @@ class ClockRepository(
     fun toggle(id: String) { data.value?.alarms?.find { it.id == id }?.let { save(it.copy(enabled = !it.enabled)) } }
     fun delete(id: String) = mutate { it.copy(alarms = it.alarms.filterNot { a -> a.id == id }, ringing = it.ringing?.takeUnless { r -> r.id == id }) }
 
-    /**
-     * Removes the alarm [id] from the list at once, but waits [UNDO_WINDOW_MS] before really
-     * removing it so [undoDelete] can put it back. A delete still on offer is committed first.
-     */
-    fun deleteWithUndo(id: String) {
-        commitPending()
+    /** Removes and unschedules an alarm immediately, keeping it available for Undo. */
+    @Synchronized fun deleteWithUndo(id: String) {
         val alarm = data.value?.alarms?.find { it.id == id } ?: return
-        val token = deleteTokens.incrementAndGet()
-        _pendingIds.update { it + id }
-        _deleted.value = PendingDelete(alarm, token)
+        undoJob?.cancel()
+        val pending = PendingDelete(alarm, deleteTokens.incrementAndGet())
+        delete(id)
+        _deleted.value = pending
         undoJob = scope.launch(io) {
             delay(UNDO_WINDOW_MS)
-            val pending = _deleted.value?.takeIf { it.token == token } ?: return@launch
-            _deleted.value = null
-            finishDelete(pending.alarm.id)
+            synchronized(this@ClockRepository) {
+                if (_deleted.value?.token == pending.token) _deleted.value = null
+            }
         }
     }
 
-    /** Puts back the alarm waiting out its window, if any. */
-    fun undoDelete() {
+    /** Restores the last removed alarm with its next future occurrence. */
+    @Synchronized fun undoDelete() {
         val pending = _deleted.value ?: return
         undoJob?.cancel()
         _deleted.value = null
-        _pendingIds.update { it - pending.alarm.id }
-    }
-
-    /** Commits the deletion still on offer when a new one starts. */
-    private fun commitPending() {
-        val pending = _deleted.value ?: return
-        _deleted.value = null
-        scope.launch(io) { finishDelete(pending.alarm.id) }
-    }
-
-    /** Really removes the alarm that waited out its window. */
-    private fun finishDelete(id: String) {
-        delete(id)
-        _pendingIds.update { it - id }
+        save(pending.alarm)
     }
     fun startTimer(duration: Long) { require(duration in 1000..604800000); mutate { it.copy(timer = ClockTimer(endAt = now() + duration, elapsedEndAt = elapsed() + duration)) } }
     fun pauseTimer() = mutate { it.copy(timer = ClockTimer(remaining = it.timer.remainingAt(now(), elapsed()))) }

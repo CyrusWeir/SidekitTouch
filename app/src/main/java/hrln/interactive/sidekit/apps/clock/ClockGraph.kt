@@ -75,7 +75,6 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
     val repo = repository ?: remember { Clock.repository(context.applicationContext) }
     val data by repo.data.collectAsStateWithLifecycle()
     val error by repo.error.collectAsStateWithLifecycle()
-    val pendingIds by repo.pendingIds.collectAsStateWithLifecycle()
     val deletedPending by repo.deleted.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf("Alarms") }
     var minutes by rememberSaveable { mutableStateOf("5") }
@@ -148,7 +147,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
                 if (data == null) item { SidekitItem("Loading…") }
                 else when (tab) {
                     "Alarms" -> {
-                        val visible = current.alarms.filterNot { it.id in pendingIds }
+                        val visible = current.alarms
                         if (visible.isEmpty()) item { SidekitItem("No alarms yet", Modifier.listFade(list, 3)) }
                         visible.forEachIndexed { index, alarm -> item(alarm.id) {
                             SidekitSwipeRow(alarm.id, swipes, { repo.deleteWithUndo(alarm.id) }, Modifier.listFade(list, index + 3)) {

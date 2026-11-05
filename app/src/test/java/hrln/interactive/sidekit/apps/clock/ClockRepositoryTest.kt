@@ -119,13 +119,11 @@ class ClockRepositoryTest {
         repo = ClockRepository(store, scope.backgroundScope, dispatcher, now = { now }, elapsed = { elapsed })
         drain()
         repo.deleteWithUndo("a"); drain()
-        // Hidden from the list at once, but the store is only touched when the window closes.
-        assertTrue(repo.pendingIds.value.contains("a"))
+        // Removal is persisted immediately so a restart cannot resurrect the alarm.
         assertNotNull(repo.deleted.value)
-        assertTrue(store.saved.alarms.any { it.id == "a" })
+        assertTrue(store.saved.alarms.none { it.id == "a" })
         scope.testScheduler.advanceTimeBy(ClockRepository.UNDO_WINDOW_MS + 1); drain()
         assertTrue(store.saved.alarms.none { it.id == "a" })
-        assertFalse(repo.pendingIds.value.contains("a"))
         assertNull(repo.deleted.value)
     }
 
@@ -139,7 +137,6 @@ class ClockRepositoryTest {
         assertTrue(restored.enabled)
         assertEquals(setOf(1, 5), restored.days)
         assertEquals(30, restored.minute)
-        assertFalse(repo.pendingIds.value.contains("a"))
         assertNull(repo.deleted.value)
         scope.testScheduler.advanceTimeBy(ClockRepository.UNDO_WINDOW_MS + 1); drain()
         assertTrue(store.saved.alarms.any { it.id == "a" })
@@ -151,18 +148,26 @@ class ClockRepositoryTest {
         drain()
         repo.deleteWithUndo("a"); drain()
         repo.deleteWithUndo("b"); drain()
-        // The earlier delete is committed, the newest waits out its own window.
+        // Both are removed; only the latest can be restored.
         assertTrue(store.saved.alarms.none { it.id == "a" })
-        assertTrue(store.saved.alarms.any { it.id == "b" })
-        assertTrue(repo.pendingIds.value.contains("b"))
-        assertFalse(repo.pendingIds.value.contains("a"))
+        assertTrue(store.saved.alarms.none { it.id == "b" })
         scope.testScheduler.advanceTimeBy(ClockRepository.UNDO_WINDOW_MS + 1); drain()
         assertTrue(store.saved.alarms.none { it.id == "b" })
     }
 
     @Test fun `deleting an unknown id changes nothing and offers no undo`() {
         repo.deleteWithUndo("missing"); drain()
-        assertTrue(repo.pendingIds.value.isEmpty())
         assertNull(repo.deleted.value)
     }
+    @Test fun `deleted alarm cannot ring during undo window and stays deleted on reopen`() {
+        repo.save(ClockAlarm(id = "due")); drain()
+        val at = store.saved.alarms.single().nextAt
+        repo.deleteWithUndo("due"); drain()
+        now = at
+        assertNull(repo.fire("due", at))
+        val reopened = ClockRepository(store, scope.backgroundScope, dispatcher, now = { now }, elapsed = { elapsed })
+        drain()
+        assertTrue(reopened.data.value!!.alarms.isEmpty())
+    }
+
 }
