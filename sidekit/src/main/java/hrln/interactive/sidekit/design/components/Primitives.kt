@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -17,12 +18,14 @@ import androidx.compose.ui.unit.Dp
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 
+internal val LocalSidekitContentColor = compositionLocalOf { Color.White }
+
 @Composable
 fun SidekitText(
     text: String,
     modifier: Modifier = Modifier,
     style: TextStyle = SidekitTheme.typography.body,
-    color: Color = SidekitTheme.colors.light,
+    color: Color = LocalSidekitContentColor.current,
     maxLines: Int = 1,
     textAlign: TextAlign? = null,
     textDecoration: TextDecoration? = null,
@@ -45,7 +48,7 @@ fun SidekitIconImage(
     icon: SidekitIcon,
     modifier: Modifier = Modifier,
     size: Dp = SidekitTheme.spacing.iconSize,
-    tint: Color = SidekitTheme.colors.light,
+    tint: Color = LocalSidekitContentColor.current,
     contentDescription: String? = null,
 ) {
     Image(

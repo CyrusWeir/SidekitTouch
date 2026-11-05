@@ -19,6 +19,41 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsUiTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun `case swatches update the theme selection and saved preference`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = SidekitPreferences(context)
+        prefs.caseColour = null
+        var renderedColour = androidx.compose.ui.graphics.Color.Unspecified
+        compose.setContent {
+            val selected = rememberCaseColour(prefs)
+            hrln.interactive.sidekit.design.theme.SidekitTheme(
+                colors = selected?.palette() ?: hrln.interactive.sidekit.design.theme.SidekitColors(),
+            ) {
+                renderedColour = hrln.interactive.sidekit.design.theme.SidekitTheme.colors.primaryA1
+                hrln.interactive.sidekit.design.canvas.SidekitCanvas { CaseColourScreen {} }
+            }
+        }
+        compose.mainClock.advanceTimeBy(1000)
+        val expected = listOf(0xFFA2F49F, 0xFFF68A02, 0xFF82C7F3, 0xFFF575D1, 0xFF90C190, 0xFFAE99D1)
+        CaseColour.entries.forEachIndexed { index, colour ->
+            compose.onNodeWithContentDescription(colour.label).performClick()
+            compose.onNodeWithContentDescription(colour.label).assertIsSelected()
+            CaseColour.entries.filter { it != colour }.forEach {
+                compose.onNodeWithContentDescription(it.label).assertIsNotSelected()
+            }
+            compose.runOnIdle {
+                assertEquals(androidx.compose.ui.graphics.Color(expected[index]), renderedColour)
+                assertEquals(colour, SidekitPreferences(context).caseColour)
+            }
+        }
+        compose.onRoot().captureRoboImage("/tmp/sidekit-case-colour.png")
+        compose.onNodeWithText("Original blue").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertNull(SidekitPreferences(context).caseColour)
+            assertEquals(androidx.compose.ui.graphics.Color(0xFF2C65E0), renderedColour)
+        }
+    }
+
     @Test fun `launcher default row persists the selected layout`() {
         val prefs = SidekitPreferences(ApplicationProvider.getApplicationContext<Context>())
         prefs.listLayout = false

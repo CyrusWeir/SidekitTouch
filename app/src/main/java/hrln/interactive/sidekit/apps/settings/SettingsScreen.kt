@@ -33,14 +33,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
-    composable(SubApp.Settings.route) { SettingsHome({ nav.popBackStack() }, { nav.navigate("${SubApp.Settings.route}/about") }) }
+    composable(SubApp.Settings.route) { SettingsHome({ nav.popBackStack() }, { nav.navigate("${SubApp.Settings.route}/about") }, { nav.navigate("${SubApp.Settings.route}/case-colour") }) }
+    composable("${SubApp.Settings.route}/case-colour") { CaseColourScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/about") { AboutScreen { nav.popBackStack() } }
 }
 
 @Composable
-internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit) {
+internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { SidekitPreferences(context) }
+    val caseColour = rememberCaseColour(prefs)
     val keypad = LocalKeypad.current
     var revision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -57,12 +59,13 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit) {
     SidekitScaffold("Settings", actions = listOf(SideAction.back("home", "Home", onHome), SideAction.forward("about", "About", onAbout))) { padding ->
         SidekitList(padding, state = list) {
             item { SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", onClick = { prefs.listLayout = !prefs.listLayout; revision++ }) }
+            item { SidekitItem("Case colour", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = caseColour?.label ?: "Original blue", onClick = onCaseColour) }
             // Detected from the keys pressed; tapping overrides it until another module's key is seen.
-            item { SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = keypad?.module?.label ?: "None", onClick = { keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }; revision++ }) }
-            item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
-            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
-            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
-            itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index + 5), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
+            item { SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = keypad?.module?.label ?: "None", onClick = { keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }; revision++ }) }
+            item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
+            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
+            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
+            itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index + 6), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
             message?.let { item { SidekitCard { SidekitText(it, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } } }
         }
     }

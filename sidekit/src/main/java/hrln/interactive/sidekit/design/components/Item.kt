@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import hrln.interactive.sidekit.design.theme.contentColorFor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,7 +58,9 @@ fun SidekitTile(
                 else Modifier,
             ),
         contentAlignment = contentAlignment,
-        content = content,
+        content = {
+            CompositionLocalProvider(LocalSidekitContentColor provides SidekitTheme.colors.contentColorFor(color)) { content() }
+        },
     )
 }
 
@@ -141,6 +145,8 @@ fun SidekitCard(
             .background(color)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(SidekitTheme.spacing.itemPadding),
-        content = content,
+        content = {
+            CompositionLocalProvider(LocalSidekitContentColor provides SidekitTheme.colors.contentColorFor(color)) { content() }
+        },
     )
 }

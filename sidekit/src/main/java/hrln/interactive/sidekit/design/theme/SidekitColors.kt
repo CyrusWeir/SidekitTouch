@@ -2,6 +2,7 @@ package hrln.interactive.sidekit.design.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 /**
  * SideKit colour tokens. Values are the Figma variables in the `Color/` collection
@@ -33,3 +34,7 @@ data class SidekitColors(
     val dark: Color = Color(0xFF000000),
     val light: Color = Color(0xFFFFFFFF),
 )
+
+/** Keep labels readable when a light case colour replaces the default blue. */
+fun SidekitColors.contentColorFor(background: Color): Color =
+    if (background in listOf(primaryA1, primaryA2, primaryA3) && background.luminance() > 0.3f) dark else light
