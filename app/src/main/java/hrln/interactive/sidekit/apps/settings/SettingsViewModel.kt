@@ -10,12 +10,24 @@ import kotlinx.coroutines.flow.asStateFlow
 /** Small preferences, also consumed by the launcher and the activity's existing keypad. */
 class SidekitPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("sidekit_settings", Context.MODE_PRIVATE)
+    var hiddenApps: Set<String>
+        get() = prefs.getStringSet("hidden_apps", emptySet()).orEmpty().toSet()
+        set(value) { prefs.edit().putStringSet("hidden_apps", value.toSet()).apply() }
+
+    fun observeHiddenApps(onChange: () -> Unit): () -> Unit {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "hidden_apps" || key == null) onChange()
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     var setupComplete: Boolean
         get() = prefs.getBoolean("setup_complete", false)
         set(value) { prefs.edit().putBoolean("setup_complete", value).apply() }
     var setupStep: Int
-        get() = prefs.getInt("setup_step", 0).coerceIn(0, 5)
-        set(value) { prefs.edit().putInt("setup_step", value.coerceIn(0, 5)).apply() }
+        get() = prefs.getInt("setup_step", 0).coerceIn(0, 6)
+        set(value) { prefs.edit().putInt("setup_step", value.coerceIn(0, 6)).apply() }
     var caseColour: CaseColour?
         get() = CaseColour.entries.firstOrNull { it.name == prefs.getString("case_colour", null) }
         set(value) { prefs.edit().putString("case_colour", value?.name).apply() }

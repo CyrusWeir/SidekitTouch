@@ -76,11 +76,12 @@ fun SidekitScaffold(
     titleAlign: TextAlign = TextAlign.Start,
     titleModifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
+    trailingAction: SideAction? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val spacing = SidekitTheme.spacing
     val spec = if (header == null && title != null) HeaderSpec(title, titleAlign, titleModifier) else null
-    PublishChrome(spec, actions, options)
+    PublishChrome(spec, actions, options, trailingAction)
 
     // Previews and screenshots show the arrived state; on device the body plays its entrance.
     val inspection = LocalInspectionMode.current

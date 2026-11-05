@@ -18,7 +18,13 @@ import org.junit.runner.RunWith
 /** The keypad's top keys: top-right (ENDCALL) is Options, top-left (CALL) is Back. */
 @RunWith(AndroidJUnit4::class)
 class KeypadKeysTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0) val completedSetup = object : org.junit.rules.ExternalResource() {
+        override fun before() {
+            val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+            hrln.interactive.sidekit.apps.settings.SidekitPreferences(context).setupComplete = true
+        }
+    }
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
 
     private fun press(code: Int): Boolean {
         var handled = false

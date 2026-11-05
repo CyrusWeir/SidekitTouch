@@ -34,14 +34,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
-    composable(SubApp.Settings.route) { SettingsHome({ nav.popBackStack() }, { nav.navigate("${SubApp.Settings.route}/about") }, { nav.navigate("${SubApp.Settings.route}/case-colour") }, { nav.navigate("${SubApp.Settings.route}/setup") }) }
+    composable(SubApp.Settings.route) { SettingsHome({ nav.popBackStack() }, { nav.navigate("${SubApp.Settings.route}/about") }, { nav.navigate("${SubApp.Settings.route}/case-colour") }, { nav.navigate("${SubApp.Settings.route}/setup") }, { nav.navigate("${SubApp.Settings.route}/hidden-apps") }) }
+    composable("${SubApp.Settings.route}/hidden-apps") { HiddenAppsScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/setup") { OnboardingScreen(onFinish = { nav.popBackStack() }, replay = true) }
     composable("${SubApp.Settings.route}/case-colour") { CaseColourScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/about") { AboutScreen { nav.popBackStack() } }
 }
 
 @Composable
-internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}) {
+internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { SidekitPreferences(context) }
     val caseColour = rememberCaseColour(prefs)
@@ -68,6 +69,7 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
             item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
             item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
             itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index + 6), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
+            item { SidekitItem("Hide apps", onClick = onHiddenApps) }
             item { SidekitItem("Setup & keypad tour", onClick = onSetup) }
             message?.let { item { SidekitCard { SidekitText(it, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } } }
         }

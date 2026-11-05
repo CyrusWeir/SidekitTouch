@@ -71,6 +71,8 @@ fun SidekitTextField(
     singleLine: Boolean = false,
     onDone: (() -> Unit)? = null,
     autoFocus: Boolean = false,
+    trailingTypingAction: SideAction? = null,
+    onKeypadFocus: (() -> Unit)? = null,
 ) {
     val keypad = LocalKeypad.current
     val scope = rememberCoroutineScope()
@@ -84,9 +86,10 @@ fun SidekitTextField(
     val session = remember(keypad, state) { keypad?.let { T9Session(it, TextFieldT9Buffer(state), scope) } }
     val t9 = keypad?.typing == true
 
+    val activateOnKeypad by rememberUpdatedState(onKeypadFocus)
     if (focusOnKeypad && keypad != null) {
         DisposableEffect(keypad, focusRequester) {
-            keypad.registerFallback(focusRequester)
+            keypad.registerFallback(focusRequester) { activateOnKeypad?.invoke() }
             onDispose { keypad.unregisterFallback(focusRequester) }
         }
     }
@@ -105,6 +108,7 @@ fun SidekitTextField(
     if (focused && t9 && keypad != null && session != null) {
         PublishActionOverride(
             t9Actions(
+                maxSuggestions = if (trailingTypingAction == null) MAX_SHOWN else MAX_SHOWN - 1,
                 engine = keypad.engine,
                 session = session,
                 onDone = {
@@ -126,6 +130,7 @@ fun SidekitTextField(
                     contentDescription = "Input mode $label",
                 ) { session.setMode(mode) }
             },
+            trailingAction = trailingTypingAction,
         )
     }
 
@@ -239,9 +244,9 @@ fun SidekitTextField(
  * are reused as the completions change: each key press swaps labels in place and the strip grows
  * or shrinks between one and three buttons, instead of rebuilding.
  */
-private fun t9Actions(engine: T9Engine, session: T9Session, onDone: () -> Unit): List<SideAction> {
+private fun t9Actions(engine: T9Engine, session: T9Session, maxSuggestions: Int, onDone: () -> Unit): List<SideAction> {
     if (engine.composing) {
-        return engine.candidates.take(MAX_SHOWN).mapIndexed { i, word ->
+        return engine.candidates.take(maxSuggestions).mapIndexed { i, word ->
             val chosen = i == engine.selected
             SideAction(
                 key = "t9.$i",

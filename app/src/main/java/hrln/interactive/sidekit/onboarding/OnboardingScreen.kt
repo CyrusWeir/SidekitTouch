@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
 import hrln.interactive.sidekit.apps.settings.*
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
@@ -31,6 +33,8 @@ internal fun OnboardingScreen(onFinish: () -> Unit, replay: Boolean = false) {
     var revision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     val keypad = LocalKeypad.current
+    val hidden = rememberHiddenApps(prefs)
+    val ported by remember { PortedApps.get(context).apps }.collectAsStateWithLifecycle()
     val selectedColour = rememberCaseColour(prefs)
     var listLayout by remember { mutableStateOf(prefs.listLayout) }
     var inputMode by remember { mutableStateOf(prefs.inputMode) }
@@ -57,17 +61,17 @@ internal fun OnboardingScreen(onFinish: () -> Unit, replay: Boolean = false) {
         else if (entry.title in requested) open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
         else { requested.add(entry.title); permissionResult.launch(entry.permissions.toTypedArray()) }
     }
-    val titles = listOf("Hello, Sidekit", "Make it yours", "Your home screen", "Make it work", "Your typing style", "Meet your keypad")
+    val titles = listOf("Hello, Sidekit", "Make it yours", "Your home screen", "Choose your apps", "Make it work", "Your typing style", "Meet your keypad")
     BackHandler { if (step > 0) move(step - 1) else if (replay) onFinish() }
     SidekitScaffold(titles[step], actions = buildList {
         if (step > 0 || replay) add(SideAction.back("back", "Back") { if (step > 0) move(step - 1) else onFinish() })
-        add(SideAction.forward("next", if (step == 5) "Finish" else "Next", { if (step == 5) finish() else move(step + 1) }))
+        add(SideAction.forward("next", if (step == 6) "Finish" else "Next", { if (step == 6) finish() else move(step + 1) }))
     }) { padding ->
         key(step) {
             val listState = rememberLazyListState()
-            LaunchedEffect(tourIndex) { if (step == 5) listState.scrollToItem(0) }
+            LaunchedEffect(tourIndex) { if (step == 6) listState.scrollToItem(0) }
             SidekitList(padding, state = listState) {
-                if (step != 5) item { SidekitText("${step + 1} / 6 · SIDEPHONE SETUP", style = SidekitTheme.typography.label) }
+                if (step != 6) item { SidekitText("${step + 1} / 7 · SIDEPHONE SETUP", style = SidekitTheme.typography.label) }
                 when (step) {
                     0 -> {
                         item { Copy("A home that feels like you", "Choose your colours, layout and controls. Your choices save as you go.") }
@@ -83,7 +87,8 @@ internal fun OnboardingScreen(onFinish: () -> Unit, replay: Boolean = false) {
                         item { LayoutChoice(false, listLayout) { listLayout = false; prefs.listLayout = false } }
                         item { LayoutChoice(true, listLayout) { listLayout = true; prefs.listLayout = true } }
                     }
-                    3 -> {
+                    3 -> hiddenAppChoices(hidden, ported) { prefs.hiddenApps = it }
+                    4 -> {
                         item { Copy("You’re in control", "Enable access for the features you want, or continue without it. Status updates when you return.") }
                         access.forEach { entry ->
                             item {
@@ -96,7 +101,7 @@ internal fun OnboardingScreen(onFinish: () -> Unit, replay: Boolean = false) {
                         }
                         item { Copy("Accounts come later", "Connect mail and other accounts inside their apps. Screen lock and network access use Android’s existing settings; there is no extra permission prompt here.") }
                     }
-                    4 -> {
+                    5 -> {
                         item { Copy("Letters or numbers?", "Choose how text fields start. Hold # (T9) or aA (Mini QWERTY) to switch while typing.") }
                         T9Mode.entries.forEach { mode -> item {
                             val label = if (mode == T9Mode.Numeric) "Numbers" else "Letters · multi-tap"
@@ -106,7 +111,7 @@ internal fun OnboardingScreen(onFinish: () -> Unit, replay: Boolean = false) {
                         } }
                         item { Copy("Words as you type", "Suggestions appear in the action bar. Select a suggestion to complete a word. Your typing preference can be changed in Settings.") }
                     }
-                    5 -> {
+                    6 -> {
                         item { SidekitText("${tourIndex + 1} / ${modules.size} · ${modules[tourIndex].label}", style = SidekitTheme.typography.headline) }
                         item { KeypadDemo(modules[tourIndex]) }
                         item { SidekitText("${keypad?.module?.label ?: "T9"} is your current selection. Press a letter, digit or media key to detect yours.", style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) }

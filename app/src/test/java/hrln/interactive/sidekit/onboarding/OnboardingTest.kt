@@ -57,6 +57,8 @@ class OnboardingTest {
         assertTrue(prefs.listLayout)
         shot("03-layout")
         compose.onNodeWithText("Next").performClick()
+        shot("03b-hide-apps")
+        compose.onNodeWithText("Next").performClick()
         shot("04-permissions")
         compose.onNodeWithText("Next").performClick()
         compose.onNodeWithText("Numbers").performClick()
@@ -77,7 +79,7 @@ class OnboardingTest {
         compose.onNodeWithText("Make it yours").assertIsDisplayed()
     }
     @Test fun `current keypad is first and other demos do not change it`() {
-        launch(5, KeypadModule.Qwerty)
+        launch(6, KeypadModule.Qwerty)
         compose.onNodeWithText("1 / 4 · Mini QWERTY").assertIsDisplayed()
         compose.onNodeWithText("aA").performScrollTo().performClick()
         compose.onNodeWithText("Tap to change letter case. Hold to switch letters / numbers.").assertExists()
