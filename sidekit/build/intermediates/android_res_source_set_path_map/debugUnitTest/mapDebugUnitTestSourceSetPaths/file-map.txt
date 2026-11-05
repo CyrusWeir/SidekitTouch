@@ -1,4 +1,0 @@
-hrln.interactive.sidekit.design.test.sidekit-mergeDebugUnitTestResources-0 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/incremental/debugUnitTest/mergeDebugUnitTestResources/merged.dir
-hrln.interactive.sidekit.design.test.sidekit-mergeDebugUnitTestResources-1 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/incremental/debugUnitTest/mergeDebugUnitTestResources/stripped.dir
-hrln.interactive.sidekit.design.test.sidekit-debugUnitTest-2 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/merged_res/debugUnitTest/mergeDebugUnitTestResources
-gradleHome-0 /Users/harlenpostill/.gradle

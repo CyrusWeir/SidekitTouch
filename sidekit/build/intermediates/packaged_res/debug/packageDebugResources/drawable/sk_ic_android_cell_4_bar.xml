@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Material Symbols Rounded, filled: android_cell_4_bar (Apache 2.0) -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="960" android:viewportHeight="960">
-    <group android:translateY="960.0">
-    <path android:fillColor="@android:color/white" android:pathData="M60-220v-200q0-25 17.5-42.5T120-480q25 0 42.5 17.5T180-420v200q0 25-17.5 42.5T120-160q-25 0-42.5-17.5T60-220Zm240 0v-300q0-25 17.5-42.5T360-580q25 0 42.5 17.5T420-520v300q0 25-17.5 42.5T360-160q-25 0-42.5-17.5T300-220Zm240 0v-400q0-25 17.5-42.5T600-680q25 0 42.5 17.5T660-620v400q0 25-17.5 42.5T600-160q-25 0-42.5-17.5T540-220Zm240 0v-520q0-25 17.5-42.5T840-800q25 0 42.5 17.5T900-740v520q0 25-17.5 42.5T840-160q-25 0-42.5-17.5T780-220Z" />
-    </group>
-</vector>
