@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
@@ -47,10 +48,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import hrln.interactive.sidekit.design.components.SidekitIconImage
-import hrln.interactive.sidekit.design.components.SidekitText
 import hrln.interactive.sidekit.design.theme.contentColorFor
 import hrln.interactive.sidekit.design.motion.SidekitMotion
 import hrln.interactive.sidekit.design.theme.SidekitTheme
@@ -225,15 +233,15 @@ internal fun ActionBarHost(state: ChromeState, modifier: Modifier = Modifier) {
 
     val spacing = SidekitTheme.spacing
     val gapPx = with(LocalDensity.current) { spacing.actionButtonGap.toPx() }
-    val padPx = with(LocalDensity.current) { spacing.actionButtonPadding.toPx() }
-    val densePadPx = with(LocalDensity.current) { DENSE_PADDING.toPx() }
+    // Labels may reach into the button's generous side padding; only this margin is sacred.
+    val edgePx = with(LocalDensity.current) { LABEL_EDGE.toPx() }
     val iconPx = with(LocalDensity.current) { spacing.iconSize.roundToPx() }
     val slots = model.slots
 
     Layout(
         contents = listOf(
             { slots.forEach { slot -> key(slot) { SlotSurface(slot, model) } } },
-            { slots.forEach { slot -> key(slot) { SlotContent(slot, if (slot.action.dense) densePadPx else padPx) } } },
+            { slots.forEach { slot -> key(slot) { SlotContent(slot) } } },
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -258,8 +266,7 @@ internal fun ActionBarHost(state: ChromeState, modifier: Modifier = Modifier) {
         }
         val contentPlaceables = Array(n) { i ->
             val slot = slots[i]
-            val pad = if (slot.action.dense) densePadPx else padPx
-            if (!slot.removing) slot.contentMaxWidth = (targets[i] - 2 * pad).roundToInt().coerceAtLeast(iconPx)
+            if (!slot.removing) slot.contentMaxWidth = (targets[i] - 2 * edgePx).roundToInt().coerceAtLeast(iconPx)
             // Sized to the slot so its layer can clip to it. The labels inside are measured against
             // contentMaxWidth (see fitToSlot), not this width, so they are not re-shaped per frame.
             contents[i].measure(Constraints.fixed(widths[i].roundToInt().coerceAtLeast(0), height))
@@ -400,7 +407,7 @@ private fun SlotSurface(slot: ActionSlot, model: ActionBarModel) {
 }
 
 @Composable
-private fun SlotContent(slot: ActionSlot, padPx: Float) {
+private fun SlotContent(slot: ActionSlot) {
     val distance = with(LocalDensity.current) { CONTENT_TRAVEL.toPx() }
     // Labels slide in and out of the button's edges rather than over its neighbours. A canvas
     // clipRect: cheaper than an outline clip and honoured by every renderer.
@@ -423,7 +430,7 @@ private fun SlotContent(slot: ActionSlot, padPx: Float) {
                 },
             )
         }
-        ActionContent(current, Modifier.fitToSlot(slot, padPx, distance, current, previous != null, stale))
+        ActionContent(current, Modifier.fitToSlot(slot, distance, current, previous != null, stale))
     }
 }
 
@@ -434,7 +441,6 @@ private fun SlotContent(slot: ActionSlot, padPx: Float) {
  */
 private fun Modifier.fitToSlot(
     slot: ActionSlot,
-    padPx: Float,
     distance: Float,
     shown: SideAction,
     hasPrevious: Boolean,
@@ -449,8 +455,10 @@ private fun Modifier.fitToSlot(
         placeable.placeWithLayer((w - placeable.width) / 2, 0) {
             val p = if (stale()) 1f else slot.contentProgress
             val cw = placeable.width
-            // 0 until the label fits inside the button, 1 once it has its full side padding.
-            val fit = ((w - cw) / (2f * padPx).coerceAtLeast(1f)).coerceIn(0f, 1f)
+            // 0 until the label fits inside the button, 1 once it clears the edge margin.
+            // Measured against the margin rather than the full padding, since labels may extend
+            // into the padding and would otherwise stay permanently faded.
+            val fit = ((w - cw) / (2f * LABEL_EDGE.toPx()).coerceAtLeast(1f)).coerceIn(0f, 1f)
             // The incoming label waits for the outgoing one to clear (see LABEL_HANDOFF).
             val incoming = if (!hasPrevious) p else (p - LABEL_HANDOFF) / (1f - LABEL_HANDOFF)
             alpha = incoming.coerceIn(0f, 1f) * fit
@@ -461,7 +469,9 @@ private fun Modifier.fitToSlot(
 }
 
 private val CONTENT_TRAVEL = 56.dp
-private val DENSE_PADDING = 16.dp
+
+/** Smallest gap kept between a label and the button's outer edge. */
+private val LABEL_EDGE = 8.dp
 
 /** Fraction of a label swap spent fading the old label before the new one appears. */
 private const val LABEL_HANDOFF = 0.3f
@@ -480,6 +490,46 @@ private fun GraphicsLayerScope.applyTravel(motion: ActionMotion, t: Float, dista
     }
 }
 
+/**
+ * An action label that wraps onto a second row instead of truncating. It is measured at [oneLine]
+ * first; only a label that cannot fit on one line falls back to [twoLine] (a step down the type
+ * scale) and is allowed to wrap to two lines. Labels too long even for two are ellipsized, so a
+ * button never grows a third row.
+ *
+ * Measurement happens in the layout phase against the slot's settled width, which is constant for
+ * a whole morph, so text is shaped once per content change rather than every frame. The result is
+ * drawn through a shared [rememberTextMeasurer] cache.
+ */
+@Composable
+private fun ActionLabel(
+    text: String,
+    oneLine: TextStyle,
+    twoLine: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val measurer = rememberTextMeasurer()
+    val singleStyle = remember(oneLine, color) { oneLine.copy(color = color, textAlign = TextAlign.Center) }
+    val wrappedStyle = remember(twoLine, color) { twoLine.copy(color = color, textAlign = TextAlign.Center) }
+    var drawn by remember { mutableStateOf<TextLayoutResult?>(null) }
+    Layout(
+        content = {},
+        modifier = modifier.drawWithContent {
+            drawContent()
+            drawn?.let { drawText(it) }
+        },
+    ) { _, constraints ->
+        val bounds = Constraints(maxWidth = constraints.maxWidth, maxHeight = constraints.maxHeight)
+        val single = measurer.measure(text, singleStyle, overflow = TextOverflow.Ellipsis, maxLines = 2, constraints = bounds)
+        // lineCount == 1 means it fits on one row at the normal size, so it is never shrunk.
+        val result = if (single.lineCount <= 1) single else {
+            measurer.measure(text, wrappedStyle, overflow = TextOverflow.Ellipsis, maxLines = 2, constraints = bounds)
+        }
+        drawn = result
+        layout(result.size.width, result.size.height) {}
+    }
+}
+
 @Composable
 private fun ActionContent(action: SideAction, modifier: Modifier) {
     val spacing = SidekitTheme.spacing
@@ -487,14 +537,34 @@ private fun ActionContent(action: SideAction, modifier: Modifier) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (action.dense) spacing.itemContentGap / 2 else spacing.itemContentGap),
+        // Action buttons keep their icons closer to the label than list rows do. With long
+        // single-line labels the row fills the slot, and a list-sized gap makes the text look
+        // detached from its icon.
+        horizontalArrangement = Arrangement.spacedBy(
+            if (action.dense) spacing.itemContentGap / 2 - 2.dp else spacing.itemContentGap - 4.dp,
+        ),
     ) {
         val icon = action.icon
         val art = action.art
         if (art != null) art()
         if (icon != null && !action.iconAtEnd) SidekitIconImage(icon, tint = foreground)
-        if (action.label != null) {
-            SidekitText(action.label, color = foreground, style = if (action.dense) SidekitTheme.typography.label else SidekitTheme.typography.body)
+        val label = action.label
+        if (label != null) {
+            val typography = SidekitTheme.typography
+            ActionLabel(
+                text = label,
+                oneLine = if (action.dense) typography.label else typography.body,
+                twoLine = if (action.dense) typography.caption else typography.label,
+                color = foreground,
+                // Weighted so the icons are measured first and keep their space: otherwise a
+                // full-width two-line label squeezes a trailing arrow down to nothing.
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    // Drawn text does not expose semantics on its own. Always expose the label as
+                    // text so tests and accessibility can find the button by what it says, even
+                    // when the action also has a content description.
+                    .semantics { text = AnnotatedString(label) },
+            )
         }
         if (icon != null && action.iconAtEnd) SidekitIconImage(icon, tint = foreground)
     }
