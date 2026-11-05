@@ -55,32 +55,36 @@ internal fun CaseColourScreen(back: () -> Unit) {
     val selected = rememberCaseColour(prefs)
     SidekitScaffold("Case colour", actions = listOf(SideAction.back("back", "Settings", back))) { padding ->
         SidekitList(padding) {
-            item { SidekitText("Match your Sidephone case", style = SidekitTheme.typography.label) }
-            item {
-                Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap)) {
-                    CaseColour.entries.chunked(3).forEach { row ->
-                        SidekitItemRow {
-                            row.forEach { colour ->
-                                val active = colour == selected
-                                Box(
-                                    Modifier.weight(1f).height(88.dp)
-                                        .border(if (active) 3.dp else 0.dp, if (active) Color.White else Color.Transparent, SidekitTheme.shapes.item)
-                                        .padding(6.dp)
-                                        .clip(SidekitTheme.shapes.item)
-                                        .background(colour.color)
-                                        .selectable(active, role = Role.RadioButton, onClick = { prefs.caseColour = colour })
-                                        .semantics { contentDescription = colour.label },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (active) SidekitIconImage(SidekitIcon.Check, tint = Color.Black)
-                                }
-                            }
+            caseColourChoices(selected) { prefs.caseColour = it }
+        }
+    }
+}
+
+internal fun androidx.compose.foundation.lazy.LazyListScope.caseColourChoices(selected: CaseColour?, choose: (CaseColour?) -> Unit) {
+    item { SidekitText("Match your Sidephone case", style = SidekitTheme.typography.label) }
+    item {
+        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap)) {
+            CaseColour.entries.chunked(3).forEach { row ->
+                SidekitItemRow {
+                    row.forEach { colour ->
+                        val active = colour == selected
+                        Box(
+                            Modifier.weight(1f).height(88.dp)
+                                .border(if (active) 3.dp else 0.dp, if (active) Color.White else Color.Transparent, SidekitTheme.shapes.item)
+                                .padding(6.dp)
+                                .clip(SidekitTheme.shapes.item)
+                                .background(colour.color)
+                                .selectable(active, role = Role.RadioButton, onClick = { choose(colour) })
+                                .semantics { contentDescription = colour.label },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (active) SidekitIconImage(SidekitIcon.Check, tint = Color.Black)
                         }
                     }
                 }
             }
-            item { SidekitText("Active: ${selected?.label ?: "Original blue"}", style = SidekitTheme.typography.label) }
-            item { SidekitLineButton("Original blue", { prefs.caseColour = null }, variant = LineButtonVariant.Secondary) }
         }
     }
+    item { SidekitText("Active: ${selected?.label ?: "Original blue"}", style = SidekitTheme.typography.label) }
+    item { SidekitLineButton("Original blue", { choose(null) }, variant = LineButtonVariant.Secondary) }
 }

@@ -10,7 +10,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import hrln.interactive.sidekit.onboarding.OnboardingScreen
 import hrln.interactive.sidekit.apps.settings.SidekitPreferences
 import hrln.interactive.sidekit.apps.settings.rememberCaseColour
 import hrln.interactive.sidekit.design.theme.SidekitColors
@@ -46,10 +47,12 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val prefs = remember { SidekitPreferences(this) }
+            var setupComplete by remember { mutableStateOf(prefs.setupComplete) }
             val caseColour = rememberCaseColour(prefs)
             SidekitTheme(colors = caseColour?.palette() ?: SidekitColors()) {
                 SidekitCanvas(chrome = chrome, keypad = keypad) {
-                    SidekitNavHost(homeRequests = homeRequests.intValue)
+                    if (setupComplete) SidekitNavHost(homeRequests = homeRequests.intValue)
+                    else OnboardingScreen(onFinish = { setupComplete = true })
                 }
             }
         }

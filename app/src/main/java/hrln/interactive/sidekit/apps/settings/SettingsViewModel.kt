@@ -10,6 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 /** Small preferences, also consumed by the launcher and the activity's existing keypad. */
 class SidekitPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("sidekit_settings", Context.MODE_PRIVATE)
+    var setupComplete: Boolean
+        get() = prefs.getBoolean("setup_complete", false)
+        set(value) { prefs.edit().putBoolean("setup_complete", value).apply() }
+    var setupStep: Int
+        get() = prefs.getInt("setup_step", 0).coerceIn(0, 5)
+        set(value) { prefs.edit().putInt("setup_step", value.coerceIn(0, 5)).apply() }
     var caseColour: CaseColour?
         get() = CaseColour.entries.firstOrNull { it.name == prefs.getString("case_colour", null) }
         set(value) { prefs.edit().putString("case_colour", value?.name).apply() }
