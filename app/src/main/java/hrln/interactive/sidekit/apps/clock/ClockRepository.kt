@@ -12,6 +12,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.time.*
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 data class ClockAlarm(
     val id: String = UUID.randomUUID().toString(), val hour: Int = 7, val minute: Int = 0,
@@ -34,6 +35,10 @@ data class Stopwatch(val startedAt: Long? = null, val elapsed: Long = 0, val lap
 }
 
 data class Ringing(val id: String, val label: String, val at: Long)
+
+/** A removed alarm that can still be restored. */
+data class PendingDelete(val alarm: ClockAlarm, val token: Long)
+
 data class ClockData(val alarms: List<ClockAlarm> = emptyList(), val timer: ClockTimer = ClockTimer(),
     val stopwatch: Stopwatch = Stopwatch(), val boot: Int = 0, val ringing: Ringing? = null)
 
@@ -81,7 +86,7 @@ class FileClockStore(file: File) : ClockStore {
 
 fun interface ClockScheduling { fun reconcile(before: ClockData, after: ClockData) }
 class ClockRepository(
-    private val store: ClockStore, scope: CoroutineScope, io: CoroutineDispatcher = Dispatchers.IO,
+    private val store: ClockStore, private val scope: CoroutineScope, private val io: CoroutineDispatcher = Dispatchers.IO,
     private val scheduling: ClockScheduling = ClockScheduling { _, _ -> },
     private val now: () -> Long = System::currentTimeMillis,
     private val elapsed: () -> Long = SystemClock::elapsedRealtime,
@@ -90,6 +95,13 @@ class ClockRepository(
     private val mutable = MutableStateFlow<ClockData?>(null)
     val data = mutable.asStateFlow()
     val error = MutableStateFlow<String?>(null)
+    private val _deleted = MutableStateFlow<PendingDelete?>(null)
+
+    /** The last removed alarm while Undo is available, or null. */
+    val deleted: StateFlow<PendingDelete?> = _deleted.asStateFlow()
+
+    private var undoJob: Job? = null
+    private val deleteTokens = AtomicLong(0)
     private val persisted = MutableStateFlow<ClockData?>(null)
     init {
         scope.launch(io) {
@@ -114,6 +126,29 @@ class ClockRepository(
     }
     fun toggle(id: String) { data.value?.alarms?.find { it.id == id }?.let { save(it.copy(enabled = !it.enabled)) } }
     fun delete(id: String) = mutate { it.copy(alarms = it.alarms.filterNot { a -> a.id == id }, ringing = it.ringing?.takeUnless { r -> r.id == id }) }
+
+    /** Removes and unschedules an alarm immediately, keeping it available for Undo. */
+    @Synchronized fun deleteWithUndo(id: String) {
+        val alarm = data.value?.alarms?.find { it.id == id } ?: return
+        undoJob?.cancel()
+        val pending = PendingDelete(alarm, deleteTokens.incrementAndGet())
+        delete(id)
+        _deleted.value = pending
+        undoJob = scope.launch(io) {
+            delay(UNDO_WINDOW_MS)
+            synchronized(this@ClockRepository) {
+                if (_deleted.value?.token == pending.token) _deleted.value = null
+            }
+        }
+    }
+
+    /** Restores the last removed alarm with its next future occurrence. */
+    @Synchronized fun undoDelete() {
+        val pending = _deleted.value ?: return
+        undoJob?.cancel()
+        _deleted.value = null
+        save(pending.alarm)
+    }
     fun startTimer(duration: Long) { require(duration in 1000..604800000); mutate { it.copy(timer = ClockTimer(endAt = now() + duration, elapsedEndAt = elapsed() + duration)) } }
     fun pauseTimer() = mutate { it.copy(timer = ClockTimer(remaining = it.timer.remainingAt(now(), elapsed()))) }
     fun cancelTimer() = mutate { it.copy(timer = ClockTimer(), ringing = it.ringing?.takeUnless { r -> r.id == TIMER_ID }) }
@@ -149,7 +184,12 @@ class ClockRepository(
     fun timeChanged() = mutate { it.copy(alarms = it.alarms.map { a -> if (!a.enabled) a else a.copy(nextAt = nextAlarm(a.hour, a.minute, a.days, now())) }) }
     suspend fun awaitSaved() { persisted.first { it != null && it == data.value } }
     private fun mutate(change: (ClockData) -> ClockData) { mutable.update { it?.let(change) } }
-    companion object { const val TIMER_ID = "timer" }
+    companion object {
+        const val TIMER_ID = "timer"
+
+        /** How long a deleted alarm can be restored from the action bar. */
+        const val UNDO_WINDOW_MS = 5_000L
+    }
 }
 
 object Clock {
