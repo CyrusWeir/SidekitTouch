@@ -10,6 +10,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.remember
+import hrln.interactive.sidekit.apps.settings.SidekitPreferences
+import hrln.interactive.sidekit.apps.settings.rememberCaseColour
+import hrln.interactive.sidekit.design.theme.SidekitColors
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -41,7 +45,9 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
         }
         setContent {
-            SidekitTheme {
+            val prefs = remember { SidekitPreferences(this) }
+            val caseColour = rememberCaseColour(prefs)
+            SidekitTheme(colors = caseColour?.palette() ?: SidekitColors()) {
                 SidekitCanvas(chrome = chrome, keypad = keypad) {
                     SidekitNavHost(homeRequests = homeRequests.intValue)
                 }

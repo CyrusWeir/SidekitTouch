@@ -10,6 +10,18 @@ import kotlinx.coroutines.flow.asStateFlow
 /** Small preferences, also consumed by the launcher and the activity's existing keypad. */
 class SidekitPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("sidekit_settings", Context.MODE_PRIVATE)
+    var caseColour: CaseColour?
+        get() = CaseColour.entries.firstOrNull { it.name == prefs.getString("case_colour", null) }
+        set(value) { prefs.edit().putString("case_colour", value?.name).apply() }
+
+    fun observeCaseColour(onChange: () -> Unit): () -> Unit {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "case_colour" || key == null) onChange()
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     var listLayout: Boolean
         get() = prefs.getBoolean("list_layout", false)
         set(value) { prefs.edit().putBoolean("list_layout", value).apply() }

@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import hrln.interactive.sidekit.design.components.SidekitIconImage
 import hrln.interactive.sidekit.design.components.SidekitText
+import hrln.interactive.sidekit.design.theme.contentColorFor
 import hrln.interactive.sidekit.design.motion.SidekitMotion
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import kotlinx.coroutines.CoroutineScope
@@ -482,6 +483,7 @@ private fun GraphicsLayerScope.applyTravel(motion: ActionMotion, t: Float, dista
 @Composable
 private fun ActionContent(action: SideAction, modifier: Modifier) {
     val spacing = SidekitTheme.spacing
+    val foreground = SidekitTheme.colors.contentColorFor(action.tone.color(SidekitTheme.colors))
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -490,11 +492,11 @@ private fun ActionContent(action: SideAction, modifier: Modifier) {
         val icon = action.icon
         val art = action.art
         if (art != null) art()
-        if (icon != null && !action.iconAtEnd) SidekitIconImage(icon)
+        if (icon != null && !action.iconAtEnd) SidekitIconImage(icon, tint = foreground)
         if (action.label != null) {
-            SidekitText(action.label, style = if (action.dense) SidekitTheme.typography.label else SidekitTheme.typography.body)
+            SidekitText(action.label, color = foreground, style = if (action.dense) SidekitTheme.typography.label else SidekitTheme.typography.body)
         }
-        if (icon != null && action.iconAtEnd) SidekitIconImage(icon)
+        if (icon != null && action.iconAtEnd) SidekitIconImage(icon, tint = foreground)
     }
 }
 
