@@ -33,6 +33,9 @@ interface SmsTransport {
     fun markRow(rowId: Long, delivery: Delivery)
 
     fun deleteRow(rowId: Long)
+
+    /** Deletes one SMS or MMS from the provider. Returns false when the row is still there. */
+    fun delete(message: Message): Boolean
 }
 
 class AndroidSmsTransport(private val context: Context) : SmsTransport {
@@ -103,6 +106,20 @@ class AndroidSmsTransport(private val context: Context) : SmsTransport {
         }
     }
 
+    override fun delete(message: Message): Boolean = try {
+        when {
+            message.key.startsWith("s") -> resolver.delete(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, message.rowId), null, null) > 0
+            message.key.startsWith("m") -> {
+                // Parts first: the provider may not cascade, and orphaned parts would leak storage.
+                resolver.delete(MMS_PART, "${Telephony.Mms.Part.MSG_ID}=?", arrayOf(message.rowId.toString()))
+                resolver.delete(ContentUris.withAppendedId(Telephony.Mms.CONTENT_URI, message.rowId), null, null) > 0
+            }
+            else -> false
+        }
+    } catch (_: RuntimeException) {
+        false
+    }
+
     private fun smsManager(): SmsManager? {
         val manager = context.getSystemService(SmsManager::class.java) ?: return null
         val sub = SubscriptionManager.getDefaultSmsSubscriptionId()
@@ -121,6 +138,7 @@ class AndroidSmsTransport(private val context: Context) : SmsTransport {
     }
 
     companion object {
+        private val MMS_PART: Uri = Uri.parse("content://mms/part")
         const val ACTION_SENT = "hrln.interactive.sidekit.sms.SENT"
         const val ACTION_DELIVERED = "hrln.interactive.sidekit.sms.DELIVERED"
         const val EXTRA_TOKEN = "token"

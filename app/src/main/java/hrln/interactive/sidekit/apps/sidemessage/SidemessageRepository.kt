@@ -9,7 +9,9 @@ import hrln.interactive.sidekit.apps.phonebook.Phonebook
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +33,9 @@ import kotlin.math.abs
 /** A message handed to the radio that the provider doesn't show yet (Sidekit is not the default SMS app). */
 @Immutable
 data class Outgoing(val token: Long, val address: String, val text: String, val date: Long, val delivery: Delivery)
+
+/** A message waiting out its undo window before its provider row is really removed. */
+data class PendingDelete(val message: Message, val token: Long)
 
 /** Pinned addresses, one per line. Called off the main thread only. */
 interface PinStore {
@@ -84,6 +89,19 @@ class SidemessageRepository(
 
     private val _outgoing = MutableStateFlow<List<Outgoing>>(emptyList())
     val outgoing: StateFlow<List<Outgoing>> = _outgoing.asStateFlow()
+
+    private val _pendingKeys = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Message keys hidden from a conversation while their deletion can still be undone. */
+    val pendingKeys: StateFlow<Set<String>> = _pendingKeys.asStateFlow()
+
+    private val _deleted = MutableStateFlow<PendingDelete?>(null)
+
+    /** The most recent deletion the user can still undo, or null. */
+    val deleted: StateFlow<PendingDelete?> = _deleted.asStateFlow()
+
+    private var undoJob: Job? = null
+    private val deleteTokens = AtomicLong(0)
 
     private val tokens = AtomicLong(clock())
 
@@ -158,6 +176,57 @@ class SidemessageRepository(
         }
     }
 
+    /**
+     * Removes [message] from the conversation at once, but waits [UNDO_WINDOW_MS] before touching
+     * the provider so [undoDelete] can put it back. Pending outgoing messages are local only.
+     */
+    fun delete(message: Message) {
+        commitPending()
+        val token = deleteTokens.incrementAndGet()
+        _pendingKeys.update { it + message.key }
+        _deleted.value = PendingDelete(message, token)
+        undoJob = scope.launch(io) {
+            delay(UNDO_WINDOW_MS)
+            val pending = _deleted.value?.takeIf { it.token == token } ?: return@launch
+            _deleted.value = null
+            finishDelete(pending.message)
+        }
+    }
+
+    /** Puts back the message waiting out its window, if any. */
+    fun undoDelete() {
+        val pending = _deleted.value ?: return
+        undoJob?.cancel()
+        _deleted.value = null
+        _pendingKeys.update { it - pending.message.key }
+    }
+
+    /** Commits the deletion still on offer when a new one starts. */
+    private fun commitPending() {
+        val pending = _deleted.value ?: return
+        _deleted.value = null
+        scope.launch(io) { finishDelete(pending.message) }
+    }
+
+    /**
+     * Removes [message] for good. A provider row that is really gone stays hidden: no reload can
+     * bring it back, so the stale page can't flash it in while it waits for the next load.
+     */
+    private fun finishDelete(message: Message) {
+        val removed = performDelete(message)
+        // A pending outgoing message is local, and a failed delete leaves its row in place.
+        if (message.key.startsWith("p") || !removed) _pendingKeys.update { it - message.key }
+    }
+
+    private fun performDelete(message: Message): Boolean {
+        if (message.key.startsWith("p")) {
+            val token = message.key.drop(1).toLongOrNull()
+            _outgoing.update { list -> list.filterNot { it.token == token } }
+            return true
+        }
+        return transport.isDefault && transport.delete(message)
+    }
+
     private fun sendOne(address: String, text: String, threadId: Long) {
         val token = tokens.incrementAndGet()
         val now = clock()
@@ -180,6 +249,9 @@ class SidemessageRepository(
     companion object {
         const val MAX_PINS = 4
         const val MAX_OUTGOING = 50
+
+        /** How long a deleted message can be restored from the action bar. */
+        const val UNDO_WINDOW_MS = 5_000L
 
         /**
          * Shows [outgoing] messages to [addresses] in a conversation. A message the provider already

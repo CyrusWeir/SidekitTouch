@@ -111,6 +111,8 @@ data class ConversationUiState(
     /** Message being typed ("text - typing", 35:268), or null when not typing. */
     val draft: String? = null,
     val pinned: Boolean = false,
+    /** A deleted message is still waiting out its undo window. */
+    val canUndo: Boolean = false,
 )
 
 private data class Page(val messages: List<Message>, val hasMore: Boolean, val loaded: Boolean = true, val hasNewer: Boolean = false)
@@ -168,12 +170,17 @@ class ConversationViewModel(
         return Page(shown, hasMore = messages.size > window.limit, hasNewer = window.before != null)
     }
 
-    private val messages: Flow<Pair<Page, List<Message>>> = combine(page, repo.outgoing) { p, out ->
-        p to if (p.hasNewer) p.messages else SidemessageRepository.mergeOutgoing(p.messages, out, addresses)
+    private val messages: Flow<Pair<Page, List<Message>>> = combine(page, repo.outgoing, repo.pendingKeys) { p, out, hidden ->
+        val shown = if (p.hasNewer) p.messages else SidemessageRepository.mergeOutgoing(p.messages, out, addresses)
+        p to shown.filterNot { it.key in hidden }
     }
 
-    val state: StateFlow<ConversationUiState> = combine(messages, draft, repo.pins, title, access) { (p, list), d, _, t, acc ->
+    private val conversation: Flow<ConversationUiState> = combine(messages, draft, repo.pins, title, access) { (p, list), d, _, t, acc ->
         ConversationUiState(t, acc, p.loaded, list, p.hasMore, p.hasNewer, d, repo.isPinned(addresses))
+    }
+
+    val state: StateFlow<ConversationUiState> = combine(conversation, repo.deleted) { current, deleted ->
+        current.copy(canUndo = deleted != null)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), ConversationUiState(addresses.joinToString(", ")))
 
     fun setAccess(canRead: Boolean, isDefault: Boolean) { access.value = SmsAccess(canRead, isDefault) }
@@ -198,6 +205,11 @@ class ConversationViewModel(
     }
 
     fun retry(message: Message) = repo.retry(message, addresses, thread.value)
+
+    /** Deletes [message] after the undo window; [undoDelete] puts it back. */
+    fun delete(message: Message) = repo.delete(message)
+
+    fun undoDelete() = repo.undoDelete()
 
     fun togglePin() {
         val address = addresses.singleOrNull() ?: return

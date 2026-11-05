@@ -176,6 +176,8 @@ fun NavGraphBuilder.sidemessageGraph(nav: NavHostController) {
                 onTogglePin = if (addresses.size == 1) vm::togglePin else null,
                 onCall = addresses.singleOrNull()?.let { number -> { nav.navigateFrom(entry, PhonebookRoutes.dial(number)) } },
                 onMakeDefault = access::requestDefault,
+                onDelete = vm::delete,
+                onUndoDelete = vm::undoDelete,
             )
         }
     }
