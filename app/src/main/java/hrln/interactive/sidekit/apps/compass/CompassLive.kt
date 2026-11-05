@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import hrln.interactive.sidekit.apps.maps.*
+import hrln.interactive.sidekit.design.action.ActionTone
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
 import kotlinx.coroutines.*
@@ -74,7 +75,7 @@ fun CompassBookmarks(onBack: () -> Unit) {
     val group = rememberSwipeRevealGroup()
     var deleted by remember { mutableStateOf<HeadingBookmark?>(null) }
     LaunchedEffect(deleted) { if (deleted != null) { delay(5_000); deleted = null } }
-    SidekitScaffold("Saved headings", actions = listOfNotNull(SideAction.back("back", "Back", onBack), deleted?.let { p -> SideAction("undo", "Undo") { store.edit { (it + p).sortedByDescending { b -> b.time } }; deleted = null } })) { padding ->
+    SidekitScaffold("Saved headings", actions = listOfNotNull(SideAction.back("back", "Back", onBack), deleted?.let { p -> SideAction("undo", "Undo", tone = ActionTone.Muted) { store.edit { (it + p).sortedByDescending { b -> b.time } }; deleted = null } })) { padding ->
         SidekitList(padding, state = list) {
             if (rows.isNullOrEmpty()) item { OutdoorInfo("No saved headings", modifier = Modifier.listFade(list, 0)) }
             items(rows.orEmpty().size) { i -> val b = rows!![i]

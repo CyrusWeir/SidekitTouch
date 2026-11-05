@@ -194,10 +194,10 @@ fun ConversationScreen(
         // A draft already open keeps its Send action so typing isn't stranded.
         when {
             draft != null -> add(SideAction("compose", "Send", SidekitIcon.ArrowUpward, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Send message", onClick = onSend))
-            state.canUndo -> add(SideAction("undo", "Undo", SidekitIcon.Undo, motion = ActionMotion.Up, onClick = onUndoDelete))
+            state.canUndo -> add(SideAction("undo", "Undo", SidekitIcon.Undo, tone = ActionTone.Muted, motion = ActionMotion.Up, onClick = onUndoDelete))
             else -> add(SideAction("compose", "Text", SidekitIcon.ArrowUpward, iconAtEnd = true, motion = ActionMotion.Up, onClick = onStartTyping))
         }
-        if (draft != null && state.canUndo) add(SideAction("undo", "Undo", SidekitIcon.Undo, onClick = onUndoDelete))
+        if (draft != null && state.canUndo) add(SideAction("undo", "Undo", SidekitIcon.Undo, tone = ActionTone.Muted, onClick = onUndoDelete))
     }
     val options = listOfNotNull(
         onAttach?.let { SideAction("attachment", "Attach MMS", onClick = it) },

@@ -14,6 +14,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import hrln.interactive.sidekit.apps.maps.*
+import hrln.interactive.sidekit.design.action.ActionTone
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
 import hrln.interactive.sidekit.navigation.SubApp
@@ -64,7 +65,7 @@ fun NavGraphBuilder.sideweatherGraph(nav: NavHostController) {
                         val locate = locationAction(vm.repository::select) { message = it }
                         val list = rememberLazyListState()
                         val group = rememberSwipeRevealGroup()
-                        SidekitScaffold("Locations", actions = listOf(SideAction.back("back", "Back", back), deleted?.let { p -> SideAction("add", "Undo") { vm.repository.select(p); deleted = null } } ?: SideAction("add", "Add") { nav.navigate("$root/search") }, locate)) { padding ->
+                        SidekitScaffold("Locations", actions = listOf(SideAction.back("back", "Back", back), deleted?.let { p -> SideAction("add", "Undo", tone = ActionTone.Muted) { vm.repository.select(p); deleted = null } } ?: SideAction("add", "Add") { nav.navigate("$root/search") }, locate)) { padding ->
                             SidekitList(padding, state = list) {
                                 item { OutdoorInfo(error ?: message, modifier = Modifier.listFade(list, 0)) }
                                 val places = settings?.places.orEmpty()
