@@ -196,8 +196,10 @@ class ChromeState {
     internal val actions: List<SideAction>
         get() {
             val owner = optionsOwner
-            if (owner != null && owner === optionsSource) return owner.optionsBar(::closeOptions)
-            return (overrides.lastOrNull() ?: publishers.lastOrNull())?.actions.orEmpty()
+            val source = if (owner != null && owner === optionsSource) owner else overrides.lastOrNull() ?: publishers.lastOrNull()
+            val base = if (owner != null && source === owner) owner.optionsBar(::closeOptions) else source?.actions.orEmpty()
+            val trailing = source?.trailingAction ?: return base
+            return base + trailing
         }
 
     /**
@@ -221,6 +223,7 @@ internal class ChromePublisher {
     // Referential: a new list from a recomposed screen must reach the host so its click handlers
     // are fresh. The host itself only animates when visible content differs.
     var actions: List<SideAction> by mutableStateOf(emptyList(), referentialEqualityPolicy())
+    var trailingAction: SideAction? by mutableStateOf(null, referentialEqualityPolicy())
     var header: HeaderSpec? by mutableStateOf(null, referentialEqualityPolicy())
     var options: List<SideAction> by mutableStateOf(emptyList(), referentialEqualityPolicy())
 
@@ -262,25 +265,28 @@ val LocalChrome = staticCompositionLocalOf<ChromeState?> { null }
  * still composed while leaving keeps updating its own entry without taking the chrome back.
  */
 @Composable
-fun PublishChrome(header: HeaderSpec?, actions: List<SideAction>, options: List<SideAction> = emptyList()) {
+fun PublishChrome(header: HeaderSpec?, actions: List<SideAction>, options: List<SideAction> = emptyList(), trailingAction: SideAction? = null) {
     val chrome = LocalChrome.current ?: return
     Publish(chrome, chrome.publishers) {
         it.header = header
         it.actions = actions
         it.options = options
+        it.trailingAction = trailingAction
     }
 }
 
 /**
  * Shows [actions] in place of the screen's while composed (used by T9 typing). [options], if
- * any, replace the screen's options for the Options key too.
+ * any, replace the screen's options for the Options key too. [trailingAction] stays at the right
+ * edge in both bars.
  */
 @Composable
-fun PublishActionOverride(actions: List<SideAction>, options: List<SideAction> = emptyList()) {
+fun PublishActionOverride(actions: List<SideAction>, options: List<SideAction> = emptyList(), trailingAction: SideAction? = null) {
     val chrome = LocalChrome.current ?: return
     Publish(chrome, chrome.overrides) {
         it.actions = actions
         it.options = options
+        it.trailingAction = trailingAction
     }
 }
 

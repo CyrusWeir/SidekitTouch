@@ -65,7 +65,8 @@ class Keypad internal constructor(
 
     /** The focused T9-capable field, if any. */
     internal var session: T9Session? = null
-    private val fallbacks = ArrayList<FocusRequester>()
+    private data class TypingTarget(val focus: FocusRequester, val activate: () -> Unit)
+    private val fallbacks = ArrayList<TypingTarget>()
 
     init {
         if (typing) loadResources()
@@ -89,7 +90,8 @@ class Keypad internal constructor(
         session?.let { return it.onKeyEvent(event) }
         val target = fallbacks.lastOrNull()
         if (target != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && isTypingKey(event.keyCode)) {
-            target.requestFocus()
+            target.activate()
+            target.focus.requestFocus()
             return session?.onKeyEvent(event) ?: false
         }
         return false
@@ -115,8 +117,8 @@ class Keypad internal constructor(
         session?.finish()
     }
 
-    internal fun registerFallback(focus: FocusRequester) { fallbacks.add(focus) }
-    internal fun unregisterFallback(focus: FocusRequester) { fallbacks.remove(focus) }
+    internal fun registerFallback(focus: FocusRequester, activate: () -> Unit = {}) { fallbacks.add(TypingTarget(focus, activate)) }
+    internal fun unregisterFallback(focus: FocusRequester) { fallbacks.removeAll { it.focus === focus } }
 
     private fun loadResources() {
         if (wordsJob != null || loadWords == null) return
