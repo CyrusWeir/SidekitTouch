@@ -28,8 +28,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
+import hrln.interactive.sidekit.design.action.ActionMotion
+import hrln.interactive.sidekit.design.action.ActionTone
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
+import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.navigation.SubApp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
@@ -94,7 +97,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
     val elapsed = visibleTime((tab == "Stopwatch" && current.stopwatch.startedAt != null) || (tab == "Timer" && current.timer.endAt != null), true)
     BackHandler(permissionPage) { permissionPage = false }
     val actions = if (permissionPage) listOf(
-        SideAction("main", "Allow") {
+        SideAction("main", "Allow", SidekitIcon.Check, iconAtEnd = true) {
             when {
                 !notifications && Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED -> permission.launch(Manifest.permission.POST_NOTIFICATIONS)
                 !notifications -> context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
@@ -102,12 +105,12 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
                 !fullscreen && Build.VERSION.SDK_INT >= 34 -> context.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}")))
                 else -> permissionPage = false
             }
-        }, SideAction("back", "Back") { permissionPage = false },
+        }, SideAction("back", "Back", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back) { permissionPage = false },
     ) else buildList {
         when (tab) {
-            "Alarms" -> add(SideAction("main", "New alarm") { if (data != null) onEdit("new") })
+            "Alarms" -> add(SideAction("main", "New alarm", SidekitIcon.Add, iconAtEnd = true, motion = ActionMotion.Up) { if (data != null) onEdit("new") })
             "Timer" -> {
-                add(SideAction("main", if (current.timer.endAt != null) "Pause" else if (current.timer.remaining > 0) "Resume" else "Start") {
+                add(SideAction("main", if (current.timer.endAt != null) "Pause" else if (current.timer.remaining > 0) "Resume" else "Start", if (current.timer.endAt != null) SidekitIcon.Pause else SidekitIcon.PlayArrow, iconAtEnd = true, motion = ActionMotion.Up) {
                     if (data != null) {
                         if (current.timer.endAt != null) repo.pauseTimer()
                         else {
@@ -120,12 +123,12 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
                 add(SideAction("reset", "Reset") { repo.cancelTimer() })
             }
             else -> {
-                add(SideAction("main", if (current.stopwatch.startedAt == null) "Start" else "Pause") { repo.toggleStopwatch() })
+                add(SideAction("main", if (current.stopwatch.startedAt == null) "Start" else "Pause", if (current.stopwatch.startedAt == null) SidekitIcon.PlayArrow else SidekitIcon.Pause, iconAtEnd = true, motion = ActionMotion.Up) { repo.toggleStopwatch() })
                 add(SideAction("reset", if (current.stopwatch.startedAt == null) "Reset" else "Lap") { if (current.stopwatch.startedAt == null) repo.resetStopwatch() else repo.lap() })
             }
         }
         // As in Sideticks, Undo takes a place in the bar while a delete can be undone.
-        if (deletedPending != null) add(SideAction("undo", "Undo", onClick = repo::undoDelete))
+        if (deletedPending != null) add(SideAction("undo", "Undo", SidekitIcon.Undo, onClick = repo::undoDelete))
     }
     SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (permissionPage) "Clock access" else tab, actions = actions,
         options = if (permissionPage) emptyList() else listOf(SideAction("access", "Alarm access") { permissionPage = true })) { padding ->
@@ -190,9 +193,9 @@ private fun ClockEditor(id: String, onClose: () -> Unit) {
         onClose()
     }
     SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (id == "new") "New alarm" else "Edit alarm",
-        actions = if (deleting) listOf(SideAction("cancel", "Cancel") { deleting = false }, SideAction("main", "Delete") { repo.deleteWithUndo(id); onClose() })
-        else listOf(SideAction("cancel", "Cancel", onClick = onClose), SideAction("main", "Save", onClick = ::save)),
-        options = if (id == "new") emptyList() else listOf(SideAction("delete", "Delete") { deleting = true })) { padding ->
+        actions = if (deleting) listOf(SideAction("cancel", "Cancel", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back) { deleting = false }, SideAction("main", "Delete", SidekitIcon.DeleteForever, tone = ActionTone.Destructive) { repo.deleteWithUndo(id); onClose() })
+        else listOf(SideAction("cancel", "Cancel", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back, onClick = onClose), SideAction("main", "Save", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, onClick = ::save)),
+        options = if (id == "new") emptyList() else listOf(SideAction("delete", "Delete", SidekitIcon.DeleteForever) { deleting = true })) { padding ->
         val list = rememberLazyListState()
         SidekitList(padding, state = list) {
             item { SidekitCard(Modifier.listFade(list, 0).fillMaxWidth()) { SidekitTextField(time, { time = it }, placeholder = "HH:mm", singleLine = true, focusOnKeypad = true, autoFocus = id == "new", onDone = { focus.requestFocus() }) } }
