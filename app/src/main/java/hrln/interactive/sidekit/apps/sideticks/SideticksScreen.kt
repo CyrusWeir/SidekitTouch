@@ -66,7 +66,7 @@ fun SideticksScreen(
             if (state.draft != null) SideAction("main", "Confirm", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, onClick = onConfirmDraft)
             else SideAction("main", "New Sidetick", SidekitIcon.Add, iconAtEnd = true, motion = ActionMotion.Up, onClick = onNewTick))
             if (state.draft != null) add(SideAction("cancel", "Cancel", onClick = onCancel))
-            else if (state.recentlyDeleted.isNotEmpty()) add(SideAction("undo", "Undo", onClick = onUndo))
+            else if (state.recentlyDeleted.isNotEmpty()) add(SideAction("undo", "Undo", tone = ActionTone.Muted, onClick = onUndo))
             if (needsNotifications && state.dueText != null) add(SideAction("allow", "Allow", onClick = onNotifications))
         },
         options = if (state.draft != null) listOf(SideAction("due", if (state.dueText == null) "Due time" else "No due time") { onDue(if (state.dueText == null) "" else null) })

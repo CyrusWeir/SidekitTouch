@@ -15,6 +15,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import hrln.interactive.sidekit.apps.maps.*
+import hrln.interactive.sidekit.design.action.ActionTone
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
 import hrln.interactive.sidekit.design.theme.SidekitTheme
@@ -124,7 +125,7 @@ fun NavGraphBuilder.liveTripsGraph(nav: NavHostController, transit: NswTransit =
                     "departures" -> listOf(SideAction.back("back", "Back", back), SideAction("refresh", if (vm.busy) "Loading…" else "Refresh") { vm.board {} })
                     "stops", "journeys" -> listOf(SideAction.back("back", "Back", back))
                     else -> listOf(SideAction.back("back", "Back", back), SideAction.forward("plan", "Plan", ::plan))
-                }.let { actions -> undo?.let { restore -> actions + SideAction("undo", "Undo") { restore(); undo = null } } ?: actions }
+                }.let { actions -> undo?.let { restore -> actions + SideAction("undo", "Undo", tone = ActionTone.Muted) { restore(); undo = null } } ?: actions }
                 val options = if (page == "places") listOf(SideAction("useAs", if (useAsStart) "Use as destination" else "Use as start") { useAsStart = !useAsStart }) else if (page == "detail") listOf(SideAction("edit", "Edit") { vm.edit(vm.selected); nav.navigate("$root/plan") }) else if (page == "plan") listOf(
                     SideAction("fromSearch", "Find From stop") { vm.search(true) { nav.navigate("$root/stops") } },
                     SideAction("toSearch", "Find To stop") { vm.search(false) { nav.navigate("$root/stops") } },
