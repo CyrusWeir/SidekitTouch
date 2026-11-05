@@ -93,23 +93,35 @@ suspend fun searchPlaces(query: String): List<Place> {
     } }
 }
 
-fun hasLocation(context: Context) = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+fun hasLocation(context: Context) = hasPreciseLocation(context) ||
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+fun hasPreciseLocation(context: Context) = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-/** A bounded single fix. Cancellation (including STOP) unregisters the platform request. */
+/**
+ * A bounded single fix. Cancellation (including STOP) unregisters the platform request. GPS/fused
+ * exact fixes need ACCESS_FINE_LOCATION; with only coarse location the network provider is the
+ * only legal source (and is absent on devices that rely on the fused provider). Providers known to
+ * be unavailable are skipped, so a SecurityException from a private provider is not the final word.
+ */
 suspend fun locate(context: Context): Place? = withTimeoutOrNull(15_000) {
     if (!hasLocation(context)) return@withTimeoutOrNull null
     val manager = context.getSystemService(LocationManager::class.java)
-    val provider = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
-        .firstOrNull { manager.isProviderEnabled(it) } ?: return@withTimeoutOrNull null
-    suspendCancellableCoroutine { continuation ->
-        val signal = CancellationSignal()
-        continuation.invokeOnCancellation { signal.cancel() }
-        try {
-            manager.getCurrentLocation(provider, signal, context.mainExecutor) { location ->
-                if (continuation.isActive) continuation.resume(location?.let { Place("Current location", it.latitude, it.longitude) })
-            }
-        } catch (_: SecurityException) { continuation.resume(null) }
+    val fine = hasPreciseLocation(context)
+    val providers = (if (fine) listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+                     else listOf(LocationManager.NETWORK_PROVIDER)).filter { manager.isProviderEnabled(it) }
+    for (provider in providers) {
+        val fix = suspendCancellableCoroutine<android.location.Location?> { continuation ->
+            val signal = CancellationSignal()
+            continuation.invokeOnCancellation { signal.cancel() }
+            try {
+                manager.getCurrentLocation(provider, signal, context.mainExecutor) { location ->
+                    if (continuation.isActive) continuation.resume(location)
+                }
+            } catch (_: SecurityException) { continuation.resume(null) }
+        }
+        if (fix != null) return@withTimeoutOrNull Place("Current location", fix.latitude, fix.longitude)
     }
+    null
 }
 
 fun openDirections(context: Context, to: Place): Boolean {
