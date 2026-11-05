@@ -35,6 +35,13 @@ data class SidekitColors(
     val light: Color = Color(0xFFFFFFFF),
 )
 
+/** Luminance above which content on a fill should switch from white to black. */
+private const val CONTENT_LUMINANCE = 0.3f
+
+/** Black or white, whichever reads against an arbitrary [background] (e.g. a colour swatch). */
+fun readableContentOn(background: Color): Color =
+    if (background.luminance() > CONTENT_LUMINANCE) Color(0xFF000000) else Color(0xFFFFFFFF)
+
 /** Keep labels readable when a light case colour replaces the default blue. */
 fun SidekitColors.contentColorFor(background: Color): Color =
-    if (background in listOf(primaryA1, primaryA2, primaryA3) && background.luminance() > 0.3f) dark else light
+    if (background in listOf(primaryA1, primaryA2, primaryA3)) readableContentOn(background) else light
