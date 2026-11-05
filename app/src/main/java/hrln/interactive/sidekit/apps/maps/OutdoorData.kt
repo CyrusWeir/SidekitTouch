@@ -109,19 +109,26 @@ suspend fun locate(context: Context): Place? = withTimeoutOrNull(15_000) {
     val fine = hasPreciseLocation(context)
     val providers = (if (fine) listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
                      else listOf(LocationManager.NETWORK_PROVIDER)).filter { manager.isProviderEnabled(it) }
-    for (provider in providers) {
-        val fix = suspendCancellableCoroutine<android.location.Location?> { continuation ->
-            val signal = CancellationSignal()
-            continuation.invokeOnCancellation { signal.cancel() }
-            try {
-                manager.getCurrentLocation(provider, signal, context.mainExecutor) { location ->
-                    if (continuation.isActive) continuation.resume(location)
+    // Request providers together so a slow network fix cannot consume the GPS timeout.
+    val fix = channelFlow<android.location.Location?> {
+        providers.forEach { provider -> launch {
+            val location = suspendCancellableCoroutine<android.location.Location?> { continuation ->
+                val signal = CancellationSignal()
+                continuation.invokeOnCancellation { signal.cancel() }
+                try {
+                    manager.getCurrentLocation(provider, signal, context.mainExecutor) { location ->
+                        if (continuation.isActive) continuation.resume(location)
+                    }
+                } catch (_: SecurityException) {
+                    continuation.resume(null)
+                } catch (_: IllegalArgumentException) {
+                    continuation.resume(null)
                 }
-            } catch (_: SecurityException) { continuation.resume(null) }
-        }
-        if (fix != null) return@withTimeoutOrNull Place("Current location", fix.latitude, fix.longitude)
-    }
-    null
+            }
+            send(location)
+        } }
+    }.firstOrNull { it != null }
+    fix?.let { Place("Current location", it.latitude, it.longitude) }
 }
 
 fun openDirections(context: Context, to: Place): Boolean {

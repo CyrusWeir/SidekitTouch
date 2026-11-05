@@ -54,18 +54,15 @@ fun PlaceSearch(onBack: () -> Unit, onSelect: (Place) -> Unit) {
 fun locationAction(onFix: (Place) -> Unit, onStatus: (String) -> Unit): SideAction {
     val context = LocalContext.current
     var request by remember { mutableIntStateOf(0) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
-        when {
-            allowed && hasPreciseLocation(context) -> request++
-            allowed -> onStatus("Approximate location only. Enable precise location in Settings for accuracy.")
-            else -> onStatus("Location denied. You can still search for a place.")
-        }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        if (hasLocation(context)) request++
+        else onStatus("Location denied. You can still search for a place.")
     }
     WhileVisible(request) {
         if (request > 0) {
             onStatus("Finding location…")
             val place = locate(context)
-            if (place != null) { onFix(place); onStatus("Precise location") }
+            if (place != null) { onFix(place); onStatus(if (hasPreciseLocation(context)) "Precise location" else "Approximate location") }
             else onStatus("Location unavailable. Enable precise location or search for a place.")
         }
     }
@@ -75,7 +72,10 @@ fun locationAction(onFix: (Place) -> Unit, onStatus: (String) -> Unit): SideActi
         else -> "Allow"
     }
     return SideAction("location", badge) {
-        if (hasPreciseLocation(context)) request++ else launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (hasPreciseLocation(context)) request++ else launcher.launch(arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        ))
     }
 }
 
