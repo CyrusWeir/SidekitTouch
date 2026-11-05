@@ -32,7 +32,9 @@ data class Message(
     val address: String? = null,
     val attachments: List<MmsAttachment> = emptyList(),
     val pendingMms: String? = null,
-)
+) {
+    val isStored: Boolean get() = rowId >= 0 && (key == "s$rowId" || key == "m$rowId")
+}
 
 /** A thread as the provider has it: addresses, no contact names yet. */
 @Immutable

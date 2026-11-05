@@ -60,6 +60,14 @@ internal class FakeTransport(override var isDefault: Boolean = false) : SmsTrans
     }
     override fun markRow(rowId: Long, delivery: Delivery) { rows[rowId] = rows.getValue(rowId).first to delivery }
     override fun deleteRow(rowId: Long) { deleted += rowId; rows.remove(rowId) }
+    val removed = ArrayList<Message>()
+    var deleteSucceeds = true
+    override fun delete(message: Message): Boolean {
+        removed += message
+        if (!deleteSucceeds) return false
+        rows.remove(message.rowId)
+        return true
+    }
 }
 
 internal class MemoryPins(var saved: List<String> = emptyList()) : PinStore {
@@ -290,6 +298,144 @@ class SidemessageViewModelTest {
             listOf("0400000001", "0400000002"), 1L)
         scope.testScheduler.runCurrent()
         assertEquals(listOf("0400000002"), transport.sent.map { it.address })
+    }
+
+    @Test fun `deleting a message hides it, then removes the row after the undo window`() {
+        transport.isDefault = true
+        val vm = conversationVm()
+        vm.setAccess(canRead = true, isDefault = true)
+        scope.testScheduler.runCurrent()
+        val target = vm.state.value.messages.first()
+        vm.delete(target)
+        scope.testScheduler.runCurrent()
+        assertFalse(vm.state.value.messages.any { it.key == target.key })
+        assertTrue(vm.state.value.canUndo)
+        assertTrue(transport.removed.isEmpty())
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        assertEquals(listOf(target.rowId), transport.removed.map { it.rowId })
+        assertFalse(vm.state.value.canUndo)
+    }
+
+    @Test fun `a deleted message never flashes back when the provider row is gone`() {
+        transport.isDefault = true
+        val vm = conversationVm()
+        vm.setAccess(canRead = true, isDefault = true)
+        scope.testScheduler.runCurrent()
+        val target = vm.state.value.messages.first()
+        vm.delete(target)
+        scope.testScheduler.runCurrent()
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        // The row is deleted and the stale page still holds it; it stays hidden until a reload.
+        assertEquals(listOf(target.rowId), transport.removed.map { it.rowId })
+        assertTrue(repo.pendingKeys.value.contains(target.key))
+        assertFalse(vm.state.value.messages.any { it.key == target.key })
+        // A reload without the row drops it from the page as usual.
+        source.messages.forEach { (_, list) -> list.removeAll { it.key == target.key } }
+        source.events.tryEmit(Unit)
+        scope.testScheduler.runCurrent()
+        assertFalse(vm.state.value.messages.any { it.key == target.key })
+    }
+
+    @Test fun `a message whose provider delete fails stays in the conversation`() {
+        transport.isDefault = true
+        transport.deleteSucceeds = false
+        val vm = conversationVm()
+        vm.setAccess(canRead = true, isDefault = true)
+        scope.testScheduler.runCurrent()
+        val target = vm.state.value.messages.first()
+        vm.delete(target)
+        scope.testScheduler.runCurrent()
+        assertFalse(vm.state.value.messages.any { it.key == target.key })
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        // The row is still there, so the message comes back rather than staying invisible.
+        assertTrue(vm.state.value.messages.any { it.key == target.key })
+        assertFalse(repo.pendingKeys.value.contains(target.key))
+    }
+
+    @Test fun `undo restores a message before the window closes`() {
+        transport.isDefault = true
+        val vm = conversationVm()
+        vm.setAccess(canRead = true, isDefault = true)
+        scope.testScheduler.runCurrent()
+        val target = vm.state.value.messages.first()
+        vm.delete(target)
+        scope.testScheduler.runCurrent()
+        vm.undoDelete()
+        scope.testScheduler.runCurrent()
+        assertTrue(vm.state.value.messages.any { it.key == target.key })
+        assertFalse(vm.state.value.canUndo)
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        assertTrue(transport.removed.isEmpty())
+    }
+
+    @Test fun `pending outgoing messages cannot be deleted before the system stores them`() {
+        val vm = conversationVm()
+        vm.startTyping(); vm.updateDraft("review outgoing"); vm.send()
+        scope.testScheduler.runCurrent()
+        val pending = vm.state.value.messages.first { it.key.startsWith("p") }
+        // Even if the SMS role changes, an in-flight local message cannot be deleted.
+        transport.isDefault = true
+        vm.delete(pending)
+        scope.testScheduler.runCurrent()
+        assertFalse(vm.state.value.canUndo)
+        assertTrue(vm.state.value.messages.any { it.key == pending.key })
+        val sent = transport.sent.single()
+        repo.report(sent.token, sent.row, Delivery.Sent)
+        source.messages.getValue(1L) += msg("review outgoing", true, now + 500, Delivery.Sent, id = 999)
+        source.events.tryEmit(Unit)
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        assertEquals(1, vm.state.value.messages.count { it.text == "review outgoing" })
+        assertTrue(transport.removed.isEmpty())
+    }
+
+    @Test fun `non default app cannot start a stored message deletion`() {
+        val vm = conversationVm()
+        val target = vm.state.value.messages.first()
+        vm.delete(target)
+        scope.testScheduler.runCurrent()
+        assertFalse(vm.state.value.canUndo)
+        assertTrue(vm.state.value.messages.contains(target))
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        assertTrue(transport.removed.isEmpty())
+    }
+
+    @Test fun `replacing a deletion commits only the first and lets the second be undone`() {
+        transport.isDefault = true
+        val vm = conversationVm()
+        val targets = vm.state.value.messages.take(2)
+        vm.delete(targets[0])
+        scope.testScheduler.runCurrent()
+        scope.testScheduler.advanceTimeBy(4_999)
+        vm.delete(targets[1])
+        scope.testScheduler.runCurrent()
+        scope.testScheduler.advanceTimeBy(2)
+        scope.testScheduler.runCurrent()
+        assertTrue(vm.state.value.canUndo)
+        vm.undoDelete()
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS + 1)
+        scope.testScheduler.runCurrent()
+        assertEquals(listOf(targets[0]), transport.removed)
+        assertTrue(vm.state.value.messages.contains(targets[1]))
+        assertFalse(vm.state.value.messages.contains(targets[0]))
+    }
+
+    @Test fun `undo at the deadline before expiry runs prevents deletion`() {
+        transport.isDefault = true
+        val vm = conversationVm()
+        val target = vm.state.value.messages.first()
+        vm.delete(target)
+        scope.testScheduler.runCurrent()
+        scope.testScheduler.advanceTimeBy(SidemessageRepository.UNDO_WINDOW_MS)
+        vm.undoDelete()
+        scope.testScheduler.runCurrent()
+        assertTrue(vm.state.value.messages.contains(target))
+        assertTrue(transport.removed.isEmpty())
     }
 
     @Test fun `blank messages are not sent`() {

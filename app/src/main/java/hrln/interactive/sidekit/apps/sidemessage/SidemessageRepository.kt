@@ -9,7 +9,9 @@ import hrln.interactive.sidekit.apps.phonebook.Phonebook
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +33,9 @@ import kotlin.math.abs
 /** A message handed to the radio that the provider doesn't show yet (Sidekit is not the default SMS app). */
 @Immutable
 data class Outgoing(val token: Long, val address: String, val text: String, val date: Long, val delivery: Delivery)
+
+/** A message waiting out its undo window before its provider row is really removed. */
+data class PendingDelete(val message: Message, val token: Long)
 
 /** Pinned addresses, one per line. Called off the main thread only. */
 interface PinStore {
@@ -84,6 +89,20 @@ class SidemessageRepository(
 
     private val _outgoing = MutableStateFlow<List<Outgoing>>(emptyList())
     val outgoing: StateFlow<List<Outgoing>> = _outgoing.asStateFlow()
+
+    private val _pendingKeys = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Message keys hidden from a conversation while their deletion can still be undone. */
+    val pendingKeys: StateFlow<Set<String>> = _pendingKeys.asStateFlow()
+
+    private val _deleted = MutableStateFlow<PendingDelete?>(null)
+
+    /** The most recent deletion the user can still undo, or null. */
+    val deleted: StateFlow<PendingDelete?> = _deleted.asStateFlow()
+
+    private val deleteLock = Any()
+    private var undoJob: Job? = null
+    private val deleteTokens = AtomicLong(0)
 
     private val tokens = AtomicLong(clock())
 
@@ -158,6 +177,42 @@ class SidemessageRepository(
         }
     }
 
+    /** Hides a stored message until Undo wins or its window expires. */
+    fun delete(message: Message) {
+        if (!transport.isDefault || !message.isStored) return
+        synchronized(deleteLock) {
+            val previous = _deleted.value
+            undoJob?.cancel()
+            val token = deleteTokens.incrementAndGet()
+            _pendingKeys.update { it + message.key }
+            _deleted.value = PendingDelete(message, token)
+            if (previous != null) scope.launch(io) { finishDelete(previous.message) }
+            undoJob = scope.launch(io) {
+                delay(UNDO_WINDOW_MS)
+                // Claim the deletion atomically with respect to Undo and a replacement deletion.
+                val pending = synchronized(deleteLock) {
+                    _deleted.value?.takeIf { it.token == token }?.also { _deleted.value = null }
+                } ?: return@launch
+                finishDelete(pending.message)
+            }
+        }
+    }
+
+    fun undoDelete() {
+        synchronized(deleteLock) {
+            val pending = _deleted.value ?: return
+            undoJob?.cancel()
+            _deleted.value = null
+            _pendingKeys.update { it - pending.message.key }
+        }
+    }
+
+    private fun finishDelete(message: Message) {
+        val removed = transport.isDefault && transport.delete(message)
+        // Keep successful deletions hidden until stale pages have been replaced.
+        if (!removed) _pendingKeys.update { it - message.key }
+    }
+
     private fun sendOne(address: String, text: String, threadId: Long) {
         val token = tokens.incrementAndGet()
         val now = clock()
@@ -180,6 +235,9 @@ class SidemessageRepository(
     companion object {
         const val MAX_PINS = 4
         const val MAX_OUTGOING = 50
+
+        /** How long a deleted message can be restored from the action bar. */
+        const val UNDO_WINDOW_MS = 5_000L
 
         /**
          * Shows [outgoing] messages to [addresses] in a conversation. A message the provider already

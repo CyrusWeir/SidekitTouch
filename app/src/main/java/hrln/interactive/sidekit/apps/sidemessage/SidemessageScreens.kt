@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -35,6 +38,8 @@ import hrln.interactive.sidekit.design.components.SidekitItem
 import hrln.interactive.sidekit.design.components.SidekitItemRow
 import hrln.interactive.sidekit.design.components.SidekitList
 import hrln.interactive.sidekit.design.components.SidekitScaffold
+import hrln.interactive.sidekit.design.components.SidekitSwipeRow
+import hrln.interactive.sidekit.design.components.rememberSwipeRevealGroup
 import hrln.interactive.sidekit.design.components.SidekitText
 import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.components.SidekitTile
@@ -174,6 +179,8 @@ fun ConversationScreen(
     onLoadLatest: () -> Unit = {},
     onAttach: (() -> Unit)? = null,
     attachmentNotice: String? = null,
+    onDelete: (Message) -> Unit = {},
+    onUndoDelete: () -> Unit = {},
 ) {
     val draft = state.draft
     val actions = buildList {
@@ -183,10 +190,14 @@ fun ConversationScreen(
         } else {
             add(SideAction.back("back", "Back", onBack))
         }
-        add(
-            if (draft == null) SideAction("compose", "Text", SidekitIcon.ArrowUpward, iconAtEnd = true, motion = ActionMotion.Up, onClick = onStartTyping)
-            else SideAction("compose", "Send", SidekitIcon.ArrowUpward, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Send message", onClick = onSend),
-        )
+        // As in Mail and Sideticks, Undo takes the primary action's place while a delete can be undone.
+        // A draft already open keeps its Send action so typing isn't stranded.
+        when {
+            draft != null -> add(SideAction("compose", "Send", SidekitIcon.ArrowUpward, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Send message", onClick = onSend))
+            state.canUndo -> add(SideAction("undo", "Undo", SidekitIcon.Undo, motion = ActionMotion.Up, onClick = onUndoDelete))
+            else -> add(SideAction("compose", "Text", SidekitIcon.ArrowUpward, iconAtEnd = true, motion = ActionMotion.Up, onClick = onStartTyping))
+        }
+        if (draft != null && state.canUndo) add(SideAction("undo", "Undo", SidekitIcon.Undo, onClick = onUndoDelete))
     }
     val options = listOfNotNull(
         onAttach?.let { SideAction("attachment", "Attach MMS", onClick = it) },
@@ -198,6 +209,11 @@ fun ConversationScreen(
         Column(Modifier.fillMaxSize().padding(padding), verticalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap)) {
             attachmentNotice?.let { SidekitText(it, maxLines = 3) }
             val listState = rememberLazyListState()
+            val swipes = rememberSwipeRevealGroup()
+            // Scrolling closes an open row, as elsewhere in Sidekit.
+            LaunchedEffect(listState) {
+                snapshotFlow { listState.isScrollInProgress }.filter { it }.collect { swipes.closeAll() }
+            }
             val messages = state.messages
             // Status under the newest sent message, and under anything still sending or failed.
             val newestMine = remember(messages) { messages.indexOfFirst { it.fromMe } }
@@ -214,7 +230,15 @@ fun ConversationScreen(
                 }
                 itemsIndexed(messages, key = { i, m -> m.key.ifEmpty { "i$i" } }, contentType = { _, m -> m.fromMe }) { i, message ->
                     val showStatus = message.fromMe && (i == newestMine || message.delivery == Delivery.Sending || message.delivery == Delivery.Failed)
-                    Bubble(message, showStatus, onRetry, Modifier.listFade(listState, i + if (state.hasNewer) 1 else 0))
+                    val fade = Modifier.listFade(listState, i + if (state.hasNewer) 1 else 0)
+                    // Only offer deletion for provider rows that this app is allowed to remove.
+                    if (state.access.isDefault && message.isStored) {
+                        SidekitSwipeRow(message.key.ifEmpty { "i$i" }, swipes, { onDelete(message) }, fade, deleteLabel = "Delete message") {
+                            Bubble(message, showStatus, onRetry, Modifier)
+                        }
+                    } else {
+                        Bubble(message, showStatus, onRetry, fade)
+                    }
                 }
                 if (state.hasMore) item("older") {
                     InfoCard("Older messages", onClick = onLoadOlder)

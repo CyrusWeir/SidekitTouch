@@ -33,6 +33,9 @@ interface SmsTransport {
     fun markRow(rowId: Long, delivery: Delivery)
 
     fun deleteRow(rowId: Long)
+
+    /** Deletes one SMS or MMS from the provider. Returns false when the row is still there. */
+    fun delete(message: Message): Boolean
 }
 
 class AndroidSmsTransport(private val context: Context) : SmsTransport {
@@ -101,6 +104,17 @@ class AndroidSmsTransport(private val context: Context) : SmsTransport {
             resolver.delete(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, rowId), null, null)
         } catch (_: RuntimeException) {
         }
+    }
+
+    override fun delete(message: Message): Boolean = try {
+        when {
+            message.key.startsWith("s") -> resolver.delete(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, message.rowId), null, null) > 0
+            // The provider owns part/file cleanup when deleting the parent MMS.
+            message.key.startsWith("m") -> resolver.delete(ContentUris.withAppendedId(Telephony.Mms.CONTENT_URI, message.rowId), null, null) > 0
+            else -> false
+        }
+    } catch (_: RuntimeException) {
+        false
     }
 
     private fun smsManager(): SmsManager? {
