@@ -1,9 +1,0 @@
-hrln.interactive.sidekit.design.sidekit-pngs-0 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/generated/res/pngs/debug
-hrln.interactive.sidekit.design.sidekit-updated_navigation_xml-1 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/generated/updated_navigation_xml/debug
-hrln.interactive.sidekit.design.sidekit-mergeDebugResources-2 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
-hrln.interactive.sidekit.design.sidekit-mergeDebugResources-3 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
-hrln.interactive.sidekit.design.sidekit-debug-4 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/merged_res/debug/mergeDebugResources
-hrln.interactive.sidekit.design.sidekit-debug-5 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/build/intermediates/packaged_res/debug/packageDebugResources
-hrln.interactive.sidekit.design.sidekit-debug-6 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/src/debug/res
-hrln.interactive.sidekit.design.sidekit-main-7 /Users/harlenpostill/Documents/Github/Sidekit/sidekit/src/main/res
-gradleHome-0 /Users/harlenpostill/.gradle

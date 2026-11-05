@@ -1,8 +1,0 @@
-en_words.txt is derived from FrequencyWords by Hermit Dave
-(https://github.com/hermitdave/FrequencyWords), content/2018/en/en_50k.txt, itself built from
-OpenSubtitles 2018 (http://opus.nlpl.eu/OpenSubtitles2018.php).
-
-The word list is licensed under Creative Commons Attribution-ShareAlike 4.0
-(https://creativecommons.org/licenses/by-sa/4.0/). Changes: lowercased, filtered to a-z words with
-at most one inner apostrophe, a small profanity blocklist removed, truncated to 40,000 entries.
-Regenerate with tools/build_t9_words.py.
