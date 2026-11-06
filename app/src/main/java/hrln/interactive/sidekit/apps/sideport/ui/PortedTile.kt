@@ -23,7 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Small rasterised app icons for launcher tiles, loaded off the main thread and cached. */
-private object PortedIcons {
+internal object PortedIcons {
     private const val SIZE = 64
     private val cache = object : LruCache<String, Bitmap>(512 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
