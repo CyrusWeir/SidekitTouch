@@ -69,13 +69,13 @@ class SidekitPreferences(context: Context) {
 enum class SettingKey { WiFi, Bluetooth, Display, Sounds, Battery, Storage, DateTime, Privacy }
 data class SettingRow(val key: SettingKey, val label: String, val value: String)
 data class SettingsUiState(val rows: List<SettingRow> = listOf(
-    SettingRow(SettingKey.WiFi, "Wi-Fi", "System settings"),
-    SettingRow(SettingKey.Bluetooth, "Bluetooth", "System settings"),
+    SettingRow(SettingKey.WiFi, "Wi-Fi", "Network"),
+    SettingRow(SettingKey.Bluetooth, "Bluetooth", "Devices"),
     SettingRow(SettingKey.Display, "Display", "Brightness"),
     SettingRow(SettingKey.Sounds, "Sounds", "Volume"),
     SettingRow(SettingKey.Battery, "Battery", "Usage"),
     SettingRow(SettingKey.Storage, "Storage", "Device storage"),
-    SettingRow(SettingKey.DateTime, "Date & time", "System settings"),
+    SettingRow(SettingKey.DateTime, "Date & time", "Clock"),
     SettingRow(SettingKey.Privacy, "Privacy", "Permissions"),
 ))
 class SettingsViewModel : ViewModel() {

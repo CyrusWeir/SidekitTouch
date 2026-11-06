@@ -19,6 +19,12 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsUiTest {
     @get:Rule val compose = createComposeRule()
+
+    private fun scrollTo(text: String) {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+        compose.mainClock.advanceTimeBy(1000)
+        compose.onNodeWithText(text).assertIsDisplayed()
+    }
     @Test fun `case swatches update the theme selection and saved preference`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val prefs = SidekitPreferences(context)
@@ -64,5 +70,24 @@ class SettingsUiTest {
         compose.onNodeWithText("Launcher default").performClick()
         assertTrue(prefs.listLayout)
         compose.onNodeWithText("List").assertIsDisplayed()
+    }
+
+    @Test fun `system settings live on their own page`() {
+        var opened = 0
+        compose.setContent { SidekitPreviewFrame { SettingsHome({}, {}, onSystem = { opened++ }) } }
+        compose.mainClock.advanceTimeBy(1000)
+        // Device rows are gone from the settings home; one entry leads to them instead.
+        SettingsUiState().rows.forEach { compose.onNodeWithText(it.label).assertDoesNotExist() }
+        scrollTo("System settings")
+        compose.onNodeWithText("System settings").performClick()
+        assertEquals(1, opened)
+    }
+
+    @Test fun `system settings page lists the device settings`() {
+        compose.setContent { SidekitPreviewFrame { SystemSettingsScreen {} } }
+        compose.mainClock.advanceTimeBy(1000)
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("/tmp/sidekit-system-settings.png")
+        SettingsUiState().rows.forEach { scrollTo(it.label) }
     }
 }
