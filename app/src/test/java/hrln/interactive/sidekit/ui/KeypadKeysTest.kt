@@ -68,6 +68,28 @@ class KeypadKeysTest {
         compose.onNodeWithText("No options here").assertIsDisplayed()
     }
 
+    @Test fun remappedKeysActAsTheControlsTheyWereLearnedFor() {
+        // A keypad Sidekit doesn't know: its F1 is learned as Options. Set up before the
+        // activity reads it, as after a restart.
+        compose.runOnIdle {
+            val keypad = hrln.interactive.sidekit.design.input.Keypad.forTesting(
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+                hrln.interactive.sidekit.design.input.T9Words.Empty,
+                mapper = hrln.interactive.sidekit.design.input.KeyMapper.create(
+                    compose.activity.getSharedPreferences("sidekit_keypad", android.content.Context.MODE_PRIVATE)),
+            )
+            keypad.useCustomMapping(hrln.interactive.sidekit.design.input.KeypadModule.T9)
+            keypad.mapper.bind(hrln.interactive.sidekit.design.input.KeypadModule.T9, KeyEvent.KEYCODE_ENDCALL,
+                // Test events come from the virtual keyboard device.
+                hrln.interactive.sidekit.design.input.PhysicalKey("Virtual", KeyEvent.KEYCODE_F1))
+        }
+        assertTrue(press(KeyEvent.KEYCODE_F1))
+        compose.onNodeWithContentDescription("Close options").assertIsDisplayed()
+        compose.runOnIdle {
+            compose.activity.getSharedPreferences("sidekit_keypad", android.content.Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
+
     @Test fun theCallKeyNeverReachesTheSystemFromSidekit() {
         assertTrue(press(KeyEvent.KEYCODE_CALL))
     }

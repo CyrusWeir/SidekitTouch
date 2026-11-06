@@ -162,7 +162,7 @@ fun SidekitTextField(
             // and must not see keypad presses while T9 is typing.
             .onInterceptKeyBeforeSoftKeyboard { event ->
                 if (keypad == null || session == null) return@onInterceptKeyBeforeSoftKeyboard false
-                val native = event.nativeKeyEvent
+                val native = keypad.translate(event.nativeKeyEvent) ?: return@onInterceptKeyBeforeSoftKeyboard true
                 keypad.observe(native)
                 if (!keypad.typing) return@onInterceptKeyBeforeSoftKeyboard false
                 val enter = native.keyCode == android.view.KeyEvent.KEYCODE_ENTER || native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER

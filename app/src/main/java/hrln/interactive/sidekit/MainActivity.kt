@@ -67,7 +67,9 @@ class MainActivity : ComponentActivity() {
         hrln.interactive.sidekit.apps.settings.SidekitPreferences(this).applyInputDefault(keypad)
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+    override fun dispatchKeyEvent(raw: KeyEvent): Boolean {
+        // Custom keypad mapping first, so Options, Back, focus and typing all see the mapped key.
+        val event = keypad.translate(raw) ?: return true
         when {
             // Keypad top-right: the universal Options key. Acts on release; the press is consumed
             // so the system's end-call handling never sees it.
