@@ -12,6 +12,8 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import hrln.interactive.sidekit.apps.sideport.bridge.BridgeMessage
 import hrln.interactive.sidekit.apps.sideport.bridge.Conversation
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
+import hrln.interactive.sidekit.design.action.ChromeState
+import hrln.interactive.sidekit.design.action.LocalChrome
 import hrln.interactive.sidekit.ui.SidekitPreviewFrame
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -28,6 +30,7 @@ class SideportHubUiTest {
     @get:Rule val compose = createComposeRule()
 
     private val calls = mutableListOf<String>()
+    private lateinit var chrome: ChromeState
     private val app = PortedApp("com.example.chat", "Example Chat")
     private val chat = Conversation(
         key = "com.example.chat|1",
@@ -41,6 +44,7 @@ class SideportHubUiTest {
         compose.setContent {
             var ui by remember { mutableStateOf(state) }
             SidekitPreviewFrame {
+                chrome = LocalChrome.current!!
                 SideportHubContent(
                     ui,
                     onBack = { calls += "back" },
@@ -48,6 +52,7 @@ class SideportHubUiTest {
                     onChat = { calls += "chat:$it" },
                     onPlayer = { calls += "player" },
                     onBridge = { calls += "bridge" },
+                    onInfo = { calls += "info" },
                     onMode = { calls += "mode" },
                     onDismissMessage = { ui = ui.copy(message = null) },
                     onAsk = { ui = ui.copy(confirming = it) },
@@ -62,7 +67,7 @@ class SideportHubUiTest {
 
     private fun installed() = SideportHubUiState(app, version = "2.24.6.78", chats = listOf(chat))
 
-    @Test fun `hub shows the app, its version and its actions without Options`() {
+    @Test fun `hub shows the app, its version and its actions in the body`() {
         show(installed())
         compose.onRoot().captureRoboImage("screenshots/sideport_hub.png")
         compose.onNodeWithText("Version 2.24.6.78").assertExists()
@@ -106,6 +111,19 @@ class SideportHubUiTest {
         compose.onNodeWithText("Uninstall app").performClick()
         compose.onNodeWithText("Uninstall").performClick()
         assertEquals(listOf("uninstall"), calls)
+    }
+
+    @Test fun `Options keeps only the system app page`() {
+        show(installed())
+        compose.runOnIdle { chrome.toggleOptions() }
+        compose.onNodeWithText("App info").performClick()
+        assertEquals(listOf("info"), calls)
+    }
+
+    @Test fun `an app that is gone has no Options`() {
+        show(SideportHubUiState(app, version = null))
+        compose.runOnIdle { chrome.toggleOptions() }
+        compose.onNodeWithText("App info").assertDoesNotExist()
     }
 
     @Test fun `an app that is no longer installed says so and offers only Remove`() {

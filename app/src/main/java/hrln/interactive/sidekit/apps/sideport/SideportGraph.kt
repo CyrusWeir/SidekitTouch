@@ -274,7 +274,7 @@ internal data class SideportHubUiState(
 /**
  * A ported app's home in Sidekit: what the app is, how it opens, its chats and media, and what can
  * be done with it. Remove and Uninstall live in the body rather than in Options, so they are
- * findable without the keypad.
+ * findable without the keypad; Options keeps only the system app page.
  */
 @Composable
 internal fun SideportHubScreen(pkg: String, onBack: () -> Unit, onChat: (String) -> Unit, onPlayer: () -> Unit) {
@@ -305,6 +305,7 @@ internal fun SideportHubScreen(pkg: String, onBack: () -> Unit, onChat: (String)
         onChat = onChat,
         onPlayer = onPlayer,
         onBridge = { context.openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
+        onInfo = { context.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")) },
         onMode = { ported.setMode(pkg, if (app.mode == PortMode.Projected) PortMode.Original else PortMode.Projected) },
         onDismissMessage = { message = null },
         onAsk = { confirming = it },
@@ -328,6 +329,7 @@ internal fun SideportHubContent(
     onChat: (String) -> Unit,
     onPlayer: () -> Unit,
     onBridge: () -> Unit,
+    onInfo: () -> Unit,
     onMode: () -> Unit,
     onDismissMessage: () -> Unit,
     onAsk: (HubRemoval) -> Unit,
@@ -353,7 +355,9 @@ internal fun SideportHubContent(
         SideAction.square("back", SidekitIcon.ArrowLeftAlt, "Back", onBack, tone = ActionTone.Muted, motion = ActionMotion.Back),
         SideAction.forward("open", "Open", onOpen),
     )
-    SidekitScaffold(app.label, actions = actions) { padding ->
+    // Everything frequent is in the body; Options keeps the one rare action, the system app page.
+    val options = if (state.version != null) listOf(SideAction("info", "App info", SidekitIcon.Settings) { onInfo() }) else emptyList()
+    SidekitScaffold(app.label, actions = actions, options = options) { padding ->
         SidekitList(padding, state = list) {
             var index = 0
             state.message?.let { text ->
@@ -371,7 +375,7 @@ internal fun SideportHubContent(
                 item(key = "mode") {
                     SidekitItem(
                         "Open as", Modifier.height(CompactRowHeight).listFade(list, mode),
-                        secondary = if (app.mode == PortMode.Projected) "Sidekit" else "Original",
+                        secondary = if (app.mode == PortMode.Projected) "Sideport" else "Original",
                         onClick = onMode,
                     )
                 }
