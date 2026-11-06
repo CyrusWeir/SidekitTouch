@@ -292,5 +292,3 @@ private class Translation(
         e.eventTime == eventTime && e.repeatCount == repeat
 }
 
-private fun KeyEvent.withCode(code: Int) =
-    KeyEvent(downTime, eventTime, action, code, repeatCount, metaState, deviceId, scanCode, flags, source)

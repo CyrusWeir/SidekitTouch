@@ -122,7 +122,7 @@ class ProjectionController(
             if (injectedBack || event.keyCode in SYSTEM_KEYS) return false
             if (overlay.focusable) return false
             // The overlay window translates its own keys; these come straight from the filter.
-            event = overlay.keypad.translate(raw) ?: return true
+            event = overlay.keypad.translateForUi(raw) ?: return true
         }
         when {
             event.keyCode == KeyEvent.KEYCODE_BACK -> {

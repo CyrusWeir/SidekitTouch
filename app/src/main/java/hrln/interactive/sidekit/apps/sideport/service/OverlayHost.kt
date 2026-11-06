@@ -220,7 +220,7 @@ class OverlayHost(private val context: Context, private val controller: Projecti
         init { addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)) }
 
         override fun dispatchKeyEvent(raw: KeyEvent): Boolean {
-            val event = keypad.translate(raw) ?: return true
+            val event = keypad.translateForUi(raw) ?: return true
             val special = event.keyCode == KeyEvent.KEYCODE_BACK || hrln.interactive.sidekit.design.input.SystemKeys.isOptions(event)
             if (special) return controller.onKey(event, fromFilter = false)
             if (keypad.dispatch(event)) return true
