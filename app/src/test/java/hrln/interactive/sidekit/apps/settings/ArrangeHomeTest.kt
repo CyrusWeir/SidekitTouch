@@ -1,6 +1,11 @@
 package hrln.interactive.sidekit.apps.settings
 
 import android.content.Context
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -45,6 +50,24 @@ class ArrangeHomeTest {
         compose.waitForIdle()
     }
 
+    /** The keypad is a hardware input device: clickable rows are focus targets in keyboard mode. */
+    private fun arrangeWithKeypad() {
+        compose.setContent {
+            val keyboard = object : InputModeManager {
+                override val inputMode = InputMode.Keyboard
+                override fun requestInputMode(inputMode: InputMode) = true
+            }
+            CompositionLocalProvider(LocalInputModeManager provides keyboard) {
+                SidekitTheme {
+                    SidekitCanvas {
+                        ArrangeHomeScreen(back = {})
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
+
     @Test
     fun `renders every app with the four pinned dock apps marked In dock`() {
         arrange()
@@ -62,6 +85,36 @@ class ArrangeHomeTest {
         compose.onNodeWithContentDescription("Move Sidenotes up").assertExists()
         compose.onNodeWithContentDescription("Move Sidenotes down").assertExists()
         compose.onNodeWithContentDescription("Move Photos up").assertDoesNotExist()
+    }
+
+    @Test
+    fun `keypad walks the app list without selecting, then moves the selected app`() {
+        arrangeWithKeypad()
+
+        // Nothing is selected: Up/Down only move focus, exactly like the home app list.
+        compose.onNodeWithText("Sidemessage").assertIsFocused()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Sidenotes").assertIsFocused()
+        compose.onNodeWithContentDescription("Move Sidenotes up").assertDoesNotExist()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Sideticks").assertIsFocused()
+
+        // Confirm selects the focused app; from then on Up/Down move it instead of moving focus.
+        compose.onRoot().performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Move Sideticks up").assertExists()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Sideticks").assertIsFocused()
+        compose.onNodeWithContentDescription("Move Sideticks up").assertExists()
+
+        // Confirm on the selected row deselects, and the keypad browses freely again.
+        compose.onRoot().performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Move Sideticks up").assertDoesNotExist()
     }
 
     @Test

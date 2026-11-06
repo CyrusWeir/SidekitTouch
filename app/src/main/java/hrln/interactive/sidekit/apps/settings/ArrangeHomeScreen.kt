@@ -2,7 +2,6 @@ package hrln.interactive.sidekit.apps.settings
 
 import android.view.KeyEvent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,9 +39,9 @@ import hrln.interactive.sidekit.navigation.SubApp
  * Settings → Arrange apps. Edit the home order against a local buffer and commit only on Done, so
  * Back genuinely cancels and Reset only touches the buffer.
  *
- * Reordering is a selection mode, keypad-first: Confirm on a focused app selects it (highlighted),
- * then Up/Down moves it through the order. The selected row also shows up/down arrows on its right
- * as a direct toggle, and tapping a row selects it too. The dock is automatic — the first
+ * Up/Down walk the app list like Home. Reordering is a selection mode, keypad-first: Confirm on a
+ * focused app selects it (highlighted), then Up/Down moves it through the order. The selected row
+ * also shows up/down arrows on its right as a direct toggle, and tapping a row selects it too. The dock is automatic — the first
  * [HomePreferences.DOCK_MAX] apps are "In dock" — so reordering an app into/out of the top four
  * pins/unpins it. Hidden apps are omitted so they cannot take a dock slot here.
  */
@@ -66,9 +65,11 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     }
     fun cancel() = back() // buffer never committed, so Back leaves the launcher unchanged
 
-    val focus = remember { FocusRequester() }
+    // Start on the first app, not on the screen itself: a focused screen has no D-pad target, so
+    // Up/Down would do nothing. A frame is needed because LazyColumn composes rows during layout.
+    val firstRow = remember { FocusRequester() }
     val list = rememberLazyListState()
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(Unit) { withFrameNanos { }; runCatching { firstRow.requestFocus() } }
     // Moving the selected app reorders the keyed row, but focus alone does not re-run bring-into-view.
     // Keep the list on the selected app so Up/Down never walks the selection off the visible page.
     LaunchedEffect(selected, order) {
@@ -77,10 +78,11 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     }
     SidekitScaffold(
         "Arrange apps",
-        // While an app is selected, Up/Down move it instead of moving focus (B/T on the keypad);
-        // Left/Right, Confirm and Back are untouched so the user can still reach the arrows and the
-        // action bar. Deselect (Confirm on the selected row) to browse freely again.
-        modifier = Modifier.focusRequester(focus).onPreviewKeyEvent { event ->
+        // With nothing selected, Up/Down are left to focus traversal, so the keypad walks the app
+        // list like Home. Once an app is selected, Up/Down move that app instead (T/B on the
+        // keypad); Left/Right, Confirm and Back are untouched so the user can still reach the
+        // arrows and the action bar. Deselect (Confirm on the selected row) to browse freely again.
+        modifier = Modifier.onPreviewKeyEvent { event ->
             val native = event.nativeKeyEvent
             if (selected != null && native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0) {
                 when (native.keyCode) {
@@ -89,7 +91,7 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                     else -> false
                 }
             } else false
-        }.focusable(),
+        },
         actions = listOf(
             SideAction.back("back", "Settings", ::cancel),
             SideAction.forward("done", "Done", ::done, icon = SidekitIcon.Check),
@@ -119,7 +121,9 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                 ) {
                     SidekitItem(
                         title = label,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).then(
+                            if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
+                        ),
                         secondary = when {
                             isSelected -> "Selected"
                             arranger.isInDock(id) -> "In dock"
