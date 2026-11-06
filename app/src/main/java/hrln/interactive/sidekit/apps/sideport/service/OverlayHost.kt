@@ -219,7 +219,8 @@ class OverlayHost(private val context: Context, private val controller: Projecti
     private inner class ViewGroupHost(context: Context, val content: ComposeView) : FrameLayout(context) {
         init { addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)) }
 
-        override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        override fun dispatchKeyEvent(raw: KeyEvent): Boolean {
+            val event = keypad.translate(raw) ?: return true
             val special = event.keyCode == KeyEvent.KEYCODE_BACK || hrln.interactive.sidekit.design.input.SystemKeys.isOptions(event)
             if (special) return controller.onKey(event, fromFilter = false)
             if (keypad.dispatch(event)) return true

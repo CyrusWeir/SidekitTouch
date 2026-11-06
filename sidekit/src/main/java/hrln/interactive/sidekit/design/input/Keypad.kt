@@ -39,6 +39,10 @@ enum class KeypadModule(val label: String, val typesOnKeypad: Boolean) {
  * virtual keyboard: their presses are typed by the shared [engine] with multi-tap, and its word
  * completions take over the action bar. The Sundial and game controller have no letters, so text
  * fields open the virtual keyboard as usual.
+ *
+ * A custom mapping ([mapper], Settings > Keypad mapping) can stand in for detection: it fixes the
+ * module and rewrites the keys of keypads SideKit doesn't recognise (or keys the user moved) into
+ * the module's own, so everything below sees the keys it expects. See [translate].
  */
 @Stable
 class Keypad internal constructor(
@@ -48,9 +52,13 @@ class Keypad internal constructor(
     private val loadWords: (suspend () -> T9Words)?,
     initialModule: KeypadModule,
     val longPressMs: Long = DEFAULT_LONG_PRESS_MS,
+    /** Custom key mapping (off unless the user turns it on in Settings). */
+    val mapper: KeyMapper = KeyMapper.forTesting(),
 ) {
-    var module: KeypadModule by mutableStateOf(initialModule)
-        private set
+    private var detected: KeypadModule by mutableStateOf(initialModule)
+
+    /** The attached module: the custom mapping's when one is on, else the detected one. */
+    val module: KeypadModule get() = mapper.customModule ?: detected
 
     /** True when text is typed on the keypad itself, so the virtual keyboard never opens. */
     val typing: Boolean get() = module.typesOnKeypad
@@ -73,12 +81,30 @@ class Keypad internal constructor(
     }
 
     fun useModule(next: KeypadModule) {
-        if (module == next) return
-        session?.finish()
-        module = next
+        if (detected == next) return
+        if (module != (mapper.customModule ?: next)) session?.finish()
+        detected = next
         prefs?.edit()?.putString(PREF_MODULE, next.name)?.apply()
         if (typing) loadResources()
     }
+
+    /**
+     * Turns the custom mapping on for [custom] (detection pauses, and that module's profile
+     * applies), or off with null (back to automatic detection and the keys as they arrive).
+     */
+    fun useCustomMapping(custom: KeypadModule?) {
+        if (mapper.customModule == custom) return
+        session?.finish()
+        mapper.setCustom(custom)
+        if (typing) loadResources()
+    }
+
+    /**
+     * Applies the custom mapping to a key event as it arrives (see [KeyMapper.translate]). Every
+     * place that receives raw keys calls this first and works with what it returns; null means the
+     * press is being captured and must be dropped.
+     */
+    fun translate(event: KeyEvent): KeyEvent? = mapper.translate(event)
 
     /**
      * Activity-level hook (`dispatchKeyEvent`). Detects the T9 module and, when no field is focused,
@@ -104,6 +130,8 @@ class Keypad internal constructor(
         // with source 0, while the keypad itself reports keyboard|gamepad.
         if (event.flags and KeyEvent.FLAG_SOFT_KEYBOARD != 0) return
         if (event.action != KeyEvent.ACTION_DOWN) return
+        // A custom mapping was chosen on purpose: no key may switch it away.
+        if (mapper.customModule != null) return
         KeypadDetector.moduleFor(event)?.let(::useModule)
     }
 
@@ -188,12 +216,17 @@ class Keypad internal constructor(
                     // Before modules were told apart, T9 was the only one that typed.
                     ?: if (prefs.getBoolean(PREF_T9, true)) KeypadModule.T9 else KeypadModule.Sundial,
                 longPressMs = ViewConfiguration.getLongPressTimeout().toLong(),
+                mapper = KeyMapper.create(prefs),
             )
         }
 
         /** A keypad for previews and tests, with an in-memory dictionary. */
-        fun forTesting(scope: CoroutineScope, words: T9Words, module: KeypadModule = KeypadModule.T9) =
-            Keypad(null, null, scope, null, module).also { it.words = words }
+        fun forTesting(
+            scope: CoroutineScope,
+            words: T9Words,
+            module: KeypadModule = KeypadModule.T9,
+            mapper: KeyMapper = KeyMapper.forTesting(),
+        ) = Keypad(null, null, scope, null, module, mapper = mapper).also { it.words = words }
     }
 }
 

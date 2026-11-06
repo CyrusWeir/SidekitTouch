@@ -123,7 +123,9 @@ private fun VaultEditor(note: PrivateNote, onText: (String) -> Unit) {
     // This existing factory has neither preferences nor a user-word file. Learning stays in RAM.
     val privateKeypad = remember(note.id) {
         hrln.interactive.sidekit.design.input.Keypad.forTesting(scope, hrln.interactive.sidekit.design.input.T9Words.Empty,
-            globalKeypad?.module ?: hrln.interactive.sidekit.design.input.KeypadModule.T9).also {
+            globalKeypad?.module ?: hrln.interactive.sidekit.design.input.KeypadModule.T9,
+            // The same custom key mapping as everywhere else, so remapped keys type here too.
+            mapper = globalKeypad?.mapper ?: hrln.interactive.sidekit.design.input.KeyMapper.forTesting()).also {
             it.engine.setMode(hrln.interactive.sidekit.design.input.T9Mode.MultiTap,
                 object : hrln.interactive.sidekit.design.input.T9Buffer {
                     override val text: CharSequence = ""

@@ -112,14 +112,17 @@ class ProjectionController(
      * Hardware keys, from the service's key filter (overlay not focusable) or from the overlay's
      * own window (focusable). Returns true when consumed.
      */
-    fun onKey(event: KeyEvent, fromFilter: Boolean): Boolean {
+    fun onKey(raw: KeyEvent, fromFilter: Boolean): Boolean {
         if (ended || state.app.mode != PortMode.Projected) return false
+        var event = raw
         if (fromFilter) {
             // Our own injected Back (a global action) must reach the app, not loop back here; keys
             // the system must keep pass through too.
             val injectedBack = event.deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD && event.keyCode == KeyEvent.KEYCODE_BACK
             if (injectedBack || event.keyCode in SYSTEM_KEYS) return false
             if (overlay.focusable) return false
+            // The overlay window translates its own keys; these come straight from the filter.
+            event = overlay.keypad.translate(raw) ?: return true
         }
         when {
             event.keyCode == KeyEvent.KEYCODE_BACK -> {
