@@ -10,6 +10,12 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import hrln.interactive.sidekit.apps.settings.*
 import hrln.interactive.sidekit.design.components.SidekitTextField
@@ -120,6 +126,10 @@ fun LauncherRoute(
 /**
  * The SideKit home screen. Header = clock (long-press to switch grid/list), body = all apps,
  * bottom = the blue dock. With a D-pad, focus starts on the first app: the clock isn't a stop.
+ *
+ * Search is the one focus stop above the grid: Up on the first row moves into the query field, and
+ * from there every key types (including the mini QWERTY cross keys, see [NavControls]). That keeps
+ * the cross keys navigating the grid and search reachable from the keypad.
  */
 @Composable
 fun LauncherScreen(
@@ -137,14 +147,24 @@ fun LauncherScreen(
     val chrome = LocalChrome.current
     val focusManager = LocalFocusManager.current
     var searching by remember { mutableStateOf(false) }
+    // Row (grid) or item (list) that holds navigation focus, or -1 when nothing does. Up only steps
+    // into the query field from the first row; anywhere lower it is ordinary focus movement.
+    var focusedRow by remember { mutableStateOf(-1) }
     val text = query.text.toString().trim()
     fun clearSearch() {
         chrome?.closeOptions()
         keypad?.finishTyping()
         query.clearText()
         focusManager.clearFocus()
+        focusedRow = -1
         searching = false
     }
+    fun startSearch() {
+        searching = true
+    }
+    // The field is only focusable while searching (`canFocus` below), so focus it once the frame
+    // that made it focusable has been composed, not from the key event that started the search.
+    LaunchedEffect(searching) { if (searching) runCatching { searchFocus.requestFocus() } }
     val clear = SideAction.square("search.clear", SidekitIcon.Close, "Clear app search", ::clearSearch)
     val entries = home.ifEmpty { defaultHome() }
     val visible = entries.filter { it.id !in hiddenApps && it.label.contains(text, ignoreCase = true) }
@@ -152,6 +172,17 @@ fun LauncherScreen(
 
     SidekitScaffold(
         title = null,
+        modifier = Modifier.onPreviewKeyEvent { event ->
+            // Up on the first row steps into search, where the keypad types again. This is also the
+            // only keyboard route to search on the mini QWERTY, whose navigation cross (T/D/B/J)
+            // would otherwise leave those four letters unable to start typing.
+            if (event.type == KeyEventType.KeyDown && !searching && text.isEmpty() && focusedRow == 0 &&
+                event.nativeKeyEvent.repeatCount == 0 && event.key == Key.DirectionUp
+            ) {
+                startSearch()
+                true
+            } else false
+        },
         header = {
             Box(Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.itemPadding)) {
                 SidekitTextField(
@@ -188,8 +219,8 @@ fun LauncherScreen(
         if (visible.isEmpty()) {
             SidekitText(if (text.isNotEmpty()) "No matching apps" else "No apps shown. Use Options → Settings to show apps.", maxLines = Int.MAX_VALUE)
         } else when (state.layout) {
-            LauncherLayout.Grid -> AppGrid(visible, padding, onOpenApp, onOpenPorted)
-            LauncherLayout.List -> AppList(visible, padding, onOpenApp, onOpenPorted)
+            LauncherLayout.Grid -> AppGrid(visible, padding, onOpenApp, onOpenPorted) { focusedRow = it }
+            LauncherLayout.List -> AppList(visible, padding, onOpenApp, onOpenPorted) { focusedRow = it }
         }
     }
 }
@@ -215,6 +246,7 @@ private fun AppGrid(
     padding: PaddingValues,
     onOpenApp: (SubApp) -> Unit,
     onOpenPorted: (PortedApp) -> Unit,
+    onFocusedRow: (Int) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val rows = remember(entries) { entries.chunked(GRID_COLUMNS) }
@@ -222,9 +254,10 @@ private fun AppGrid(
         itemsIndexed(rows, key = { _, row -> row.joinToString { it.id } }) { index, row ->
             SidekitItemRow(Modifier.listFade(listState, index)) {
                 row.forEach { entry ->
+                    val focus = Modifier.weight(1f).onFocusChanged { onFocusedRow(if (it.isFocused) index else -1) }
                     when (entry) {
-                        is BuiltinEntry -> AppTile(entry.app, onOpenApp, Modifier.weight(1f))
-                        is PortedEntry -> PortedTile(entry.app, onOpenPorted, Modifier.weight(1f))
+                        is BuiltinEntry -> AppTile(entry.app, onOpenApp, focus)
+                        is PortedEntry -> PortedTile(entry.app, onOpenPorted, focus)
                     }
                 }
                 repeat(GRID_COLUMNS - row.size) { Box(Modifier.weight(1f)) }
@@ -239,13 +272,14 @@ private fun AppList(
     padding: PaddingValues,
     onOpenApp: (SubApp) -> Unit,
     onOpenPorted: (PortedApp) -> Unit,
+    onFocusedRow: (Int) -> Unit,
 ) {
     val listState = rememberLazyListState()
     SidekitList(padding, Modifier.testTag(LauncherTags.LIST), state = listState) {
         itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
             SidekitItem(
                 title = entry.label,
-                modifier = Modifier.listFade(listState, index),
+                modifier = Modifier.listFade(listState, index).onFocusChanged { onFocusedRow(if (it.isFocused) index else -1) },
                 onClick = {
                     when (entry) {
                         is BuiltinEntry -> onOpenApp(entry.app)
