@@ -17,6 +17,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import hrln.interactive.sidekit.launcher.BuiltinEntry
+import hrln.interactive.sidekit.launcher.LauncherEntry
 import hrln.interactive.sidekit.launcher.LauncherLayout
 import hrln.interactive.sidekit.launcher.LauncherScreen
 import hrln.interactive.sidekit.launcher.LauncherTags
@@ -33,6 +35,8 @@ class LauncherUiTest {
 
     private var state by mutableStateOf(LauncherUiState(time = "9:19"))
     private val opened = mutableListOf<SubApp>()
+    private val home: List<LauncherEntry> = SubApp.entries.map { BuiltinEntry(it) }
+    private val dock: List<LauncherEntry> = listOf(SubApp.Mail, SubApp.Photos, SubApp.Sidenotes, SubApp.Sideticks).map { BuiltinEntry(it) }
 
     private fun launch() = compose.setContent {
         SidekitPreviewFrame {
@@ -42,6 +46,8 @@ class LauncherUiTest {
                 onToggleLayout = {
                     state = state.copy(layout = if (state.layout == LauncherLayout.Grid) LauncherLayout.List else LauncherLayout.Grid)
                 },
+                home = home,
+                dock = dock,
             )
         }
     }
@@ -50,8 +56,8 @@ class LauncherUiTest {
         launch()
         compose.onNodeWithText("9:19").assertIsDisplayed()
         compose.onNodeWithTag(LauncherTags.GRID).assertIsDisplayed()
-        // The dock is the shared action bar: its four buttons sit alongside the grid tiles.
-        SubApp.dock.forEach { compose.onAllNodesWithContentDescription(it.label).assertCountEquals(2) }
+        // The configured dock is the shared action bar: its buttons sit alongside the matching grid tiles.
+        dock.forEach { compose.onAllNodesWithContentDescription(it.label).assertCountEquals(2) }
     }
 
     @Test fun dockButtonsOpenTheirApp() {

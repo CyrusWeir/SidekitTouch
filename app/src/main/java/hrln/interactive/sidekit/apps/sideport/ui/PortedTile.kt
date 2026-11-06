@@ -58,3 +58,16 @@ fun PortedTile(app: PortedApp, onOpen: (PortedApp) -> Unit, modifier: Modifier =
         }
     }
 }
+
+/** A ported app's monochrome icon alone, for action-bar slots such as a dock button's art. */
+@Composable
+fun PortedIcon(app: PortedApp, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val icon by produceState<Bitmap?>(null, app.packageName) { value = PortedIcons.load(context, app.packageName) }
+    val bitmap = icon
+    if (bitmap != null) {
+        Image(bitmap.asImageBitmap(), app.label, Modifier.size(SidekitTheme.spacing.iconSize).then(modifier), colorFilter = Monochrome)
+    } else {
+        SidekitIconImage(SidekitIcon.DeployedCode, size = SidekitTheme.spacing.iconSize, contentDescription = app.label, modifier = modifier)
+    }
+}

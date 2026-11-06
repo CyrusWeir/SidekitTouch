@@ -55,6 +55,12 @@ class SidekitPreferences(context: Context) {
             override fun replace(start: Int, end: Int, text: String, selectStart: Int, selectEnd: Int) {}
         })
     }
+    /**
+     * Legacy write-only stub kept for backward compatibility. It stored a component path, not a
+     * launcher app id, so it never drove the dock and has nothing meaningful to migrate. The
+     * launcher now reads dock membership and order from
+     * [hrln.interactive.sidekit.home.HomePreferences].
+     */
     var dockComponent: String?
         get() = prefs.getString("dock_component", null)
         set(value) { prefs.edit().putString("dock_component", value).apply() }

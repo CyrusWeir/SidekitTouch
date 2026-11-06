@@ -43,8 +43,5 @@ enum class SubApp(val label: String, val icon: SidekitIcon, val designed: Boolea
     companion object {
         /** The blue dock pinned to the bottom of the launcher (53:1256). */
         val dock: List<SubApp> = listOf(Sidemessage, Sidenotes, Sideticks, Phonebook)
-
-        /** Launcher List View order (36:2): dock apps first, then Translate, then the rest. */
-        val listOrder: List<SubApp> = dock + Translate + (entries - dock.toSet() - Translate)
     }
 }

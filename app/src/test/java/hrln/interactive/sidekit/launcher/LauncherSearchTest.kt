@@ -33,9 +33,12 @@ class LauncherSearchTest {
             keypad = remember { Keypad.forTesting(scope, T9Words.parse("mail\nmaps\nmusic"), module) }
             SidekitTheme {
                 SidekitCanvas(keypad = keypad, chrome = chrome) {
-                    LauncherScreen(LauncherUiState(layout = layout), {}, {},
-                        ported = listOf(PortedApp("test.matrix", "Matrix"), PortedApp("test.hidden", "Masked")),
-                        hiddenApps = setOf(SubApp.Maps.visibilityId(), SubApp.Sidemessage.visibilityId(), "ported:test.hidden"))
+                    val portedApps = listOf(PortedApp("test.matrix", "Matrix"), PortedApp("test.hidden", "Masked"))
+                    LauncherScreen(
+                        LauncherUiState(layout = layout), {}, {},
+                        home = SubApp.entries.map { BuiltinEntry(it) } + portedApps.map { PortedEntry(it) },
+                        hiddenApps = setOf(SubApp.Maps.visibilityId(), SubApp.Sidemessage.visibilityId(), "ported:test.hidden"),
+                    )
                 }
             }
         }

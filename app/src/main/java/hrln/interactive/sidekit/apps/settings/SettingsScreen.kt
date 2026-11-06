@@ -34,16 +34,27 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
-    composable(SubApp.Settings.route) { SettingsHome({ nav.popBackStack() }, { nav.navigate("${SubApp.Settings.route}/about") }, { nav.navigate("${SubApp.Settings.route}/case-colour") }, { nav.navigate("${SubApp.Settings.route}/setup") }, { nav.navigate("${SubApp.Settings.route}/hidden-apps") }, { nav.navigate(keypadMappingRoute()) }) }
+    composable(SubApp.Settings.route) {
+        SettingsHome(
+            onHome = { nav.popBackStack() },
+            onAbout = { nav.navigate("${SubApp.Settings.route}/about") },
+            onCaseColour = { nav.navigate("${SubApp.Settings.route}/case-colour") },
+            onSetup = { nav.navigate("${SubApp.Settings.route}/setup") },
+            onHiddenApps = { nav.navigate("${SubApp.Settings.route}/hidden-apps") },
+            onKeypadMapping = { nav.navigate(keypadMappingRoute()) },
+            onArrange = { nav.navigate("${SubApp.Settings.route}/arrange") },
+        )
+    }
     keypadMappingGraph(nav)
     composable("${SubApp.Settings.route}/hidden-apps") { HiddenAppsScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/setup") { OnboardingScreen(onFinish = { nav.popBackStack() }, replay = true) }
     composable("${SubApp.Settings.route}/case-colour") { CaseColourScreen { nav.popBackStack() } }
+    composable("${SubApp.Settings.route}/arrange") { ArrangeHomeScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/about") { AboutScreen { nav.popBackStack() } }
 }
 
 @Composable
-internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}, onKeypadMapping: () -> Unit = {}) {
+internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}, onKeypadMapping: () -> Unit = {}, onArrange: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { SidekitPreferences(context) }
     val caseColour = rememberCaseColour(prefs)
@@ -63,15 +74,16 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
     SidekitScaffold("Settings", actions = listOf(SideAction.back("home", "Home", onHome), SideAction.forward("about", "About", onAbout))) { padding ->
         SidekitList(padding, state = list) {
             item { SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", onClick = { prefs.listLayout = !prefs.listLayout; revision++ }) }
-            item { SidekitItem("Case colour", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = caseColour?.label ?: "Original blue", onClick = onCaseColour) }
+            item { SidekitItem("Arrange apps", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = "Home order & dock", onClick = onArrange) }
+            item { SidekitItem("Case colour", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = caseColour?.label ?: "Original blue", onClick = onCaseColour) }
             // Detected from the keys pressed; tapping overrides it until another module's key is seen.
             // A custom mapping fixes the module, so then the row opens the mapping instead.
             val custom = keypad?.mapper?.customModule
-            item { SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = custom?.let { "${it.label} · custom" } ?: keypad?.module?.label ?: "None", onClick = { if (custom != null) onKeypadMapping() else keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }; revision++ }) }
-            item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
-            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
-            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
-            itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index + 6), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
+            item { SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = custom?.let { "${it.label} · custom" } ?: keypad?.module?.label ?: "None", onClick = { if (custom != null) onKeypadMapping() else keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }; revision++ }) }
+            item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
+            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
+            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 6), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
+            itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index + 7), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
             item { SidekitItem("Hide apps", onClick = onHiddenApps) }
             // Advanced: custom mapping for keypads Sidekit doesn't recognise, or keys moved around.
             item { SidekitItem("Keypad mapping", secondary = if (custom != null) "Custom" else null, showLinkArrow = custom == null, onClick = onKeypadMapping) }
