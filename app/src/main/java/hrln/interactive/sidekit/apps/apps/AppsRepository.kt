@@ -34,16 +34,32 @@ class AppsRepository(private val context: Context) : AppsSource {
     }
     override val apps: Flow<List<LaunchableApp>> = callbackFlow {
         val callback = object : LauncherApps.Callback() {
-            override fun onPackageRemoved(packageName: String, user: UserHandle) { changed() }
-            override fun onPackageAdded(packageName: String, user: UserHandle) { changed() }
-            override fun onPackageChanged(packageName: String, user: UserHandle) { changed() }
-            override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) { changed() }
-            override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) { changed() }
-            private fun changed() { icons.evictAll(); trySend(Unit) }
+            override fun onPackageRemoved(packageName: String, user: UserHandle) {
+                changed()
+            }
+            override fun onPackageAdded(packageName: String, user: UserHandle) {
+                changed()
+            }
+            override fun onPackageChanged(packageName: String, user: UserHandle) {
+                changed()
+            }
+            override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) {
+                changed()
+            }
+            override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) {
+                changed()
+            }
+            private fun changed() {
+                icons.evictAll()
+                trySend(Unit)
+            }
         }
         launcher.registerCallback(callback, android.os.Handler(android.os.Looper.getMainLooper()))
         trySend(Unit)
-        awaitClose { launcher.unregisterCallback(callback); icons.evictAll() }
+        awaitClose {
+            launcher.unregisterCallback(callback)
+            icons.evictAll()
+        }
     }.conflate().mapLatest { load() }
 
     private suspend fun load(): List<LaunchableApp> = withContext(Dispatchers.IO) {
@@ -75,7 +91,17 @@ fun matchesApp(label: String, query: String): Boolean {
     if (label.contains(text, ignoreCase = true)) return true
     if (!text.all(Char::isDigit)) return false
     val digits = label.lowercase().map { c ->
-        when (c) { in 'a'..'c' -> '2'; in 'd'..'f' -> '3'; in 'g'..'i' -> '4'; in 'j'..'l' -> '5'; in 'm'..'o' -> '6'; in 'p'..'s' -> '7'; in 't'..'v' -> '8'; in 'w'..'z' -> '9'; else -> c }
+        when (c) {
+            in 'a'..'c' -> '2'
+            in 'd'..'f' -> '3'
+            in 'g'..'i' -> '4'
+            in 'j'..'l' -> '5'
+            in 'm'..'o' -> '6'
+            in 'p'..'s' -> '7'
+            in 't'..'v' -> '8'
+            in 'w'..'z' -> '9'
+            else -> c
+        }
     }.joinToString("")
     return digits.contains(text)
 }

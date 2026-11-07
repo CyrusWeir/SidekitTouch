@@ -18,8 +18,7 @@ import hrln.interactive.sidekit.design.theme.SidekitTheme
  * The installed apps Sidekit may launch: all of them, except Sidekit itself. A sibling build
  * (`.dev`) stays, since launching that is an ordinary app launch, not recursion.
  */
-internal fun launchableApps(apps: List<LaunchableApp>, selfPackage: String): List<LaunchableApp> =
-    apps.filterNot { it.component.packageName == selfPackage }
+internal fun launchableApps(apps: List<LaunchableApp>, selfPackage: String): List<LaunchableApp> = apps.filterNot { it.component.packageName == selfPackage }
 
 /** An installed app's own icon, rasterised off the main thread and kept while it stays in the row. */
 @Composable
@@ -48,7 +47,7 @@ internal fun AppRow(
     secondary: String? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
-    onLongClickLabel: String? = null,
+    onLongClickLabel: String? = null
 ) {
     val icon = rememberAppIcon(source, app)
     SidekitItem(
@@ -56,12 +55,12 @@ internal fun AppRow(
         modifier = modifier.combinedClickable(
             onClick = onClick,
             onLongClick = onLongClick,
-            onLongClickLabel = onLongClickLabel,
+            onLongClickLabel = onLongClickLabel
         ),
         secondary = secondary,
         showLinkArrow = true,
         leading = {
             icon?.let { Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.size(SidekitTheme.spacing.iconSize)) }
-        },
+        }
     )
 }

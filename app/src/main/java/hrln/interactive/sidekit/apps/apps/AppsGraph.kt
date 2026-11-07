@@ -17,8 +17,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
-import hrln.interactive.sidekit.navigation.SubApp
 import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.navigation.SubApp
 
 fun NavGraphBuilder.appsGraph(nav: NavHostController) {
     composable(SubApp.Apps.route) {
@@ -35,14 +35,24 @@ internal fun AppsScreen(vm: AppsViewModel, back: () -> Unit) {
     val query by vm.query.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<LaunchableApp?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-    fun perform(action: () -> Unit) { try { action() } catch (e: Exception) { message = "Couldn't open app: ${e.localizedMessage}" } }
+    fun perform(action: () -> Unit) {
+        try {
+            action()
+        } catch (e: Exception) {
+            message = "Couldn't open app: ${e.localizedMessage}"
+        }
+    }
     val app = selected
-    val options = if (app == null) emptyList() else listOf(
-        SideAction("info", "App info") { perform { vm.repository.info(app) } },
-        SideAction("uninstall", "Uninstall") {
-            perform { context.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:${app.component.packageName}")).putExtra(Intent.EXTRA_USER, app.user)) }
-        },
-    )
+    val options = if (app == null) {
+        emptyList()
+    } else {
+        listOf(
+            SideAction("info", "App info") { perform { vm.repository.info(app) } },
+            SideAction("uninstall", "Uninstall") {
+                perform { context.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:${app.component.packageName}")).putExtra(Intent.EXTRA_USER, app.user)) }
+            }
+        )
+    }
     val list = rememberLazyListState()
     SidekitScaffold("Apps", actions = listOf(SideAction.back("back", "Home", back)), options = options) { padding ->
         SidekitList(padding, state = list) {
@@ -57,9 +67,12 @@ internal fun AppsScreen(vm: AppsViewModel, back: () -> Unit) {
                     vm.repository,
                     Modifier.listFade(list, index + 2),
                     secondary = if (target.user != Process.myUserHandle()) "Work profile" else null,
-                    onClick = { selected = target; perform { vm.repository.launch(target) } },
+                    onClick = {
+                        selected = target
+                        perform { vm.repository.launch(target) }
+                    },
                     onLongClick = { selected = target },
-                    onLongClickLabel = "App options",
+                    onLongClickLabel = "App options"
                 )
             }
         }
