@@ -102,8 +102,19 @@ internal class ActionSlot(action: SideAction, present: Boolean) {
     /** Last settled content width, used to measure content while this slot merges away. */
     var contentMaxWidth: Int = 0
 
+    /**
+     * The newest action published for this button, for click handling. Can be newer than [action]:
+     * a screen that recomposes rebuilds its actions with fresh handlers but the same look, and
+     * swapping those into [action] would recompose the button (and, for one frame before
+     * composition catches up, measure its label as stale) for nothing visible.
+     */
+    var latest: SideAction = action
+        private set
+
     fun update(next: SideAction, scope: CoroutineScope) {
+        latest = next
         val old = action
+        if (old.sameLook(next)) return
         action = next
         if (!old.sameContent(next)) {
             previous = old
@@ -414,7 +425,7 @@ private fun SlotSurface(slot: ActionSlot, model: ActionBarModel) {
                     },
                 )
                 model.lastPressed = slot.key
-                slot.action.onClick()
+                slot.latest.onClick()
             },
     )
 }
