@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import hrln.interactive.sidekit.onboarding.OnboardingScreen
 import hrln.interactive.sidekit.apps.settings.SidekitPreferences
 import hrln.interactive.sidekit.apps.settings.rememberCaseColour
+import hrln.interactive.sidekit.apps.settings.rememberCompactLayout
 import hrln.interactive.sidekit.design.theme.SidekitColors
+import hrln.interactive.sidekit.design.theme.SidekitSpacing
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -49,7 +51,10 @@ class MainActivity : ComponentActivity() {
             val prefs = remember { SidekitPreferences(this) }
             var setupComplete by remember { mutableStateOf(prefs.setupComplete) }
             val caseColour = rememberCaseColour(prefs)
-            SidekitTheme(colors = caseColour?.palette() ?: SidekitColors()) {
+            // Compact layout (Settings) trims the header and the action bar on every screen.
+            val compact = rememberCompactLayout(prefs)
+            val spacing = remember(compact) { if (compact) SidekitSpacing.Compact else SidekitSpacing() }
+            SidekitTheme(colors = caseColour?.palette() ?: SidekitColors(), spacing = spacing) {
                 SidekitCanvas(chrome = chrome, keypad = keypad) {
                     if (setupComplete) SidekitNavHost(homeRequests = homeRequests.intValue)
                     else OnboardingScreen(onFinish = { setupComplete = true })

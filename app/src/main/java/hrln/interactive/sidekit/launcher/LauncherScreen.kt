@@ -184,7 +184,7 @@ fun LauncherScreen(
             } else false
         },
         header = {
-            Box(Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.itemPadding)) {
+            Box(Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.headerPaddingTop)) {
                 SidekitTextField(
                     state = query,
                     focusRequester = searchFocus,

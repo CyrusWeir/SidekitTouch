@@ -43,6 +43,18 @@ class SidekitPreferences(context: Context) {
     var listLayout: Boolean
         get() = prefs.getBoolean("list_layout", false)
         set(value) { prefs.edit().putBoolean("list_layout", value).apply() }
+    /** Shorter header and action bar; see `SidekitSpacing.Compact` in the design module. */
+    var compactLayout: Boolean
+        get() = prefs.getBoolean("compact_layout", false)
+        set(value) { prefs.edit().putBoolean("compact_layout", value).apply() }
+
+    fun observeCompactLayout(onChange: () -> Unit): () -> Unit {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "compact_layout" || key == null) onChange()
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     var inputMode: T9Mode
         get() = T9Mode.entries.firstOrNull { it.name == prefs.getString("input_mode", null) } ?: T9Mode.MultiTap
         set(value) { prefs.edit().putString("input_mode", value.name).apply() }

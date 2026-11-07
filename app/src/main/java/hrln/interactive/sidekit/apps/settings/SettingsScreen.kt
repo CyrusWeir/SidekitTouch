@@ -71,6 +71,7 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
     val home = remember(revision) { context.getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_HOME) }
     fun open(action: String) { try { context.startActivity(Intent(action)) } catch (_: Exception) { message = "This settings screen is unavailable on this device." } }
     val listLayout = remember(revision) { prefs.listLayout }
+    val compactLayout = remember(revision) { prefs.compactLayout }
     val inputMode = remember(revision) { prefs.inputMode }
     val list = rememberLazyListState()
     SidekitScaffold("Settings", actions = listOf(SideAction.back("home", "Home", onHome), SideAction.forward("about", "About", onAbout))) { padding ->
@@ -78,13 +79,15 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
             item { SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", onClick = { prefs.listLayout = !prefs.listLayout; revision++ }) }
             item { SidekitItem("Arrange apps", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = "Home order & dock", onClick = onArrange) }
             item { SidekitItem("Case colour", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = caseColour?.label ?: "Original blue", onClick = onCaseColour) }
+            // Shorter header and action bar on every screen: more room for the body.
+            item { SidekitItem("Compact layout", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = if (compactLayout) "On" else "Off", onClick = { prefs.compactLayout = !prefs.compactLayout; revision++ }) }
             // Detected from the keys pressed; tapping overrides it until another module's key is seen.
             // A custom mapping fixes the module, so then the row opens the mapping instead.
             val custom = keypad?.mapper?.customModule
-            item { SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = custom?.let { "${it.label} · custom" } ?: keypad?.module?.label ?: "None", onClick = { if (custom != null) onKeypadMapping() else keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }; revision++ }) }
-            item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
-            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
-            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 6), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
+            item { SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = custom?.let { "${it.label} · custom" } ?: keypad?.module?.label ?: "None", onClick = { if (custom != null) onKeypadMapping() else keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }; revision++ }) }
+            item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
+            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 6), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
+            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 7), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
             item { SidekitItem("Hide apps", showLinkArrow = true, onClick = onHiddenApps) }
             // Device settings live on their own page, so this screen stays Sidekit's own settings.
             item { SidekitItem("System settings", showLinkArrow = true, onClick = onSystem) }
