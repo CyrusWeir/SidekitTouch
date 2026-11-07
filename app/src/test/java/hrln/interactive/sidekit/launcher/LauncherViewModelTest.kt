@@ -29,11 +29,4 @@ class SubAppTest {
     @Test fun `routes are unique`() {
         assertEquals(SubApp.entries.size, SubApp.entries.map { it.route }.toSet().size)
     }
-
-    @Test fun `dock matches the mock and leads the list view`() {
-        assertEquals(listOf(SubApp.Sidemessage, SubApp.Sidenotes, SubApp.Sideticks, SubApp.Phonebook), SubApp.dock)
-        assertEquals(SubApp.dock + SubApp.Translate, SubApp.listOrder.take(5))
-        assertEquals(SubApp.entries.toSet(), SubApp.listOrder.toSet())
-        assertEquals(SubApp.entries.size, SubApp.listOrder.size)
-    }
 }

@@ -68,8 +68,12 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(raw: KeyEvent): Boolean {
-        // Custom keypad mapping first, so Options, Back, focus and typing all see the mapped key.
-        val event = keypad.translate(raw) ?: return true
+        // Detect the module from the raw key before navigation rewrites it, so a first QWERTY press
+        // on a letter that is also a navigator (T/D/B/J) still reveals the module.
+        keypad.observe(raw)
+        // Keypad mapping first, plus each module's default navigation, so Options, Back, focus and
+        // typing all see the mapped key.
+        val event = keypad.translateForUi(raw) ?: return true
         when {
             // Keypad top-right: the universal Options key. Acts on release; the press is consumed
             // so the system's end-call handling never sees it.

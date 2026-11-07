@@ -3,6 +3,9 @@ package hrln.interactive.sidekit.launcher
 import android.content.Context
 import android.view.KeyEvent
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -27,25 +30,57 @@ class LauncherSearchTest {
     @get:Rule val compose = createComposeRule()
     private lateinit var keypad: Keypad
     private val chrome = ChromeState()
+    /**
+     * Keyboard input mode makes Compose take grid focus, as it does once a hardware keypad is used.
+     * Robolectric doesn't switch input mode on key presses the way a device does.
+     */
+    private object KeypadInputMode : InputModeManager {
+        override val inputMode = InputMode.Keyboard
+        override fun requestInputMode(inputMode: InputMode) = true
+    }
+
     private fun launch(module: KeypadModule, layout: LauncherLayout = LauncherLayout.List) {
         compose.setContent {
             val scope = rememberCoroutineScope()
             keypad = remember { Keypad.forTesting(scope, T9Words.parse("mail\nmaps\nmusic"), module) }
-            SidekitTheme {
-                SidekitCanvas(keypad = keypad, chrome = chrome) {
-                    LauncherScreen(LauncherUiState(layout = layout), {}, {},
-                        ported = listOf(PortedApp("test.matrix", "Matrix"), PortedApp("test.hidden", "Masked")),
-                        hiddenApps = setOf(SubApp.Maps.visibilityId(), SubApp.Sidemessage.visibilityId(), "ported:test.hidden"))
+            CompositionLocalProvider(LocalInputModeManager provides KeypadInputMode) {
+                SidekitTheme {
+                    SidekitCanvas(keypad = keypad, chrome = chrome) {
+                        val portedApps = listOf(PortedApp("test.matrix", "Matrix"), PortedApp("test.hidden", "Masked"))
+                        LauncherScreen(
+                            LauncherUiState(layout = layout), {}, {},
+                            home = SubApp.entries.map { BuiltinEntry(it) } + portedApps.map { PortedEntry(it) },
+                            hiddenApps = setOf(SubApp.Maps.visibilityId(), SubApp.Sidemessage.visibilityId(), "ported:test.hidden"),
+                        )
+                    }
                 }
             }
         }
         compose.mainClock.advanceTimeBy(1000)
     }
+
+    /** The grid tile carrying [label] (the same label also appears on a dock button). */
+    private fun tile(label: String) =
+        compose.onNode(hasContentDescription(label) and hasAnyAncestor(hasTestTag(LauncherTags.GRID)))
+
+    /**
+     * Mirrors `MainActivity.dispatchKeyEvent`: the module's UI translation and typing first, then
+     * the UI itself (focus movement, Up into search) with whatever the keypad didn't consume.
+     */
     private fun key(code: Int) {
-        compose.runOnIdle { keypad.dispatch(KeyEvent(KeyEvent.ACTION_DOWN, code)) }
-        compose.runOnIdle { keypad.dispatch(KeyEvent(KeyEvent.ACTION_UP, code)) }
+        for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
+            val translated = keypad.translateForUi(KeyEvent(action, code)) ?: continue
+            if (!keypad.dispatch(translated)) compose.onRoot().performKeyPress(androidx.compose.ui.input.key.KeyEvent(translated))
+        }
+        compose.waitForIdle()
         compose.mainClock.advanceTimeBy(200)
     }
+
+    private fun focusFirstTile() {
+        tile("Sidenotes").requestFocus()
+        compose.waitForIdle()
+    }
+
     private fun checkMatchesAndClear(name: String) {
         compose.onNode(hasText("Mail") and hasAnyAncestor(hasTestTag(LauncherTags.LIST))).assertIsDisplayed()
         compose.onNodeWithText("Matrix").assertIsDisplayed()
@@ -95,6 +130,29 @@ class LauncherSearchTest {
         compose.mainClock.advanceTimeBy(1000)
         compose.onRoot().captureRoboImage("screenshots/onboarding/12-search-grid.png")
     }
+    @Test fun `QWERTY cross letters still start search from home`() {
+        launch(KeypadModule.Qwerty, LauncherLayout.Grid)
+        focusFirstTile()
+        tile("Sidenotes").assertIsFocused()
+        // J is part of the navigation cross, but home has a type-to-search field, so it types
+        // (the T9 engine capitalises the first letter of a session, as it does for every key).
+        key(KeyEvent.KEYCODE_J)
+        compose.onNodeWithContentDescription("Clear app search").assertIsDisplayed()
+        compose.onNodeWithTag(LauncherTags.SEARCH).assertTextEquals("J")
+    }
+
+    @Test fun `keypad Up on the first row starts search`() {
+        launch(KeypadModule.Qwerty, LauncherLayout.Grid)
+        focusFirstTile()
+        tile("Sidenotes").assertIsFocused()
+        // On the first row there is nowhere to go up, so Up (the QWERTY rocker) opens the query field.
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithContentDescription("Clear app search").assertIsDisplayed()
+        compose.onNodeWithTag(LauncherTags.CLOCK).assertDoesNotExist()
+        key(KeyEvent.KEYCODE_T)
+        compose.onNodeWithTag(LauncherTags.SEARCH).assertTextEquals("T")
+    }
+
     @Test fun `clear remains square and rightmost in typing options`() {
         launch(KeypadModule.T9)
         key(KeyEvent.KEYCODE_6)

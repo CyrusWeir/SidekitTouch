@@ -102,9 +102,32 @@ class Keypad internal constructor(
     /**
      * Applies the custom mapping to a key event as it arrives (see [KeyMapper.translate]). Every
      * place that receives raw keys calls this first and works with what it returns; null means the
-     * press is being captured and must be dropped.
+     * press is being captured and must be dropped. This is the raw / custom-only path: typing keys
+     * and projection stay untouched, so games and text fields see the keypad exactly as sent.
      */
     fun translate(event: KeyEvent): KeyEvent? = mapper.translate(event)
+
+    /**
+     * Translation for Sidekit's own screens ([NavControls]). The custom mapping (if any) applies
+     * first and always wins, so a learned key keeps its bound meaning. Defaults apply too, but only
+     * while the module is auto-detected and no text field owns the keys: custom mapping is the
+     * user's deliberate choice, and a typing key (e.g. QWERTY's modifier keys) must stay as it is
+     * while a field is focused.
+     *
+     * A default that rewrites a typing key (the mini QWERTY's T / D / B / J cross) also stands down
+     * while the screen has a type-to-search field ([registerFallback]): there, pressing any letter
+     * starts the search, and losing four letters to navigation would break searches that start with
+     * them. The cross navigates on screens with nothing to type into.
+     */
+    fun translateForUi(raw: KeyEvent): KeyEvent? {
+        var event = mapper.translate(raw) ?: return null
+        if (mapper.customModule == null && session == null) {
+            NavControls.applyDefault(detected, event.keyCode)
+                ?.takeUnless { fallbacks.isNotEmpty() && isTypingKey(event.keyCode) }
+                ?.let { event = event.withCode(it) }
+        }
+        return event
+    }
 
     /**
      * Activity-level hook (`dispatchKeyEvent`). Detects the T9 module and, when no field is focused,
@@ -229,5 +252,8 @@ class Keypad internal constructor(
         ) = Keypad(null, null, scope, null, module, mapper = mapper).also { it.words = words }
     }
 }
+
+internal fun KeyEvent.withCode(code: Int) =
+    KeyEvent(downTime, eventTime, action, code, repeatCount, metaState, deviceId, scanCode, flags, source)
 
 val LocalKeypad = staticCompositionLocalOf<Keypad?> { null }

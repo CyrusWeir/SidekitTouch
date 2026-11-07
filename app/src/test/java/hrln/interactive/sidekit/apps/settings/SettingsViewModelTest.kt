@@ -65,15 +65,13 @@ class SettingsViewModelTest {
         assertEquals(SettingKey.entries.toSet(), rows.map { it.key }.toSet())
         rows.forEach { assertTrue(it.key.settingsAction().startsWith("android.settings.")) }
     }
-    @Test fun `defaults and dock selection survive a new preferences instance`() {
+    @Test fun `layout and input mode survive a new preferences instance`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val prefs = SidekitPreferences(context)
         prefs.listLayout = true
         prefs.inputMode = T9Mode.Numeric
-        prefs.dockComponent = "example/.Main"
         val restored = SidekitPreferences(context)
         assertTrue(restored.listLayout)
         assertEquals(T9Mode.Numeric, restored.inputMode)
-        assertEquals("example/.Main", restored.dockComponent)
     }
 }

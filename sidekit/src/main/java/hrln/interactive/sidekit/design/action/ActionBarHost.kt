@@ -200,6 +200,19 @@ internal class ActionBarModel {
                 if (slot.removing) slots.remove(slot)
             }
         }
+
+        // Existing keys can stay in the bar while their target order changes (for example when the
+        // launcher dock is reordered). Move those slots to the requested order; removing slots stay
+        // where they are and fade out, so they do not block the final positions.
+        alignSlotsToTarget(slots, target)
+    }
+}
+
+/** Places slots carrying target keys in target order, leaving surplus slots to fade out. */
+internal fun alignSlotsToTarget(slots: MutableList<ActionSlot>, target: List<SideAction>) {
+    target.forEachIndexed { index, action ->
+        val current = slots.indexOfFirst { it.key == action.key }
+        if (current >= 0 && current != index) slots.add(index, slots.removeAt(current))
     }
 }
 

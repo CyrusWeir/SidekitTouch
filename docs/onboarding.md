@@ -16,7 +16,7 @@ Progress and preferences survive process restarts. Only Finish records completio
 
 ## Launcher search
 
-Start typing on T9 or Mini QWERTY from home. The clock becomes the query field, and the dock becomes the normal typing/suggestions bar. Search matches visible app names without regard to case, across built-in and Sideport apps, in both layouts. A square X stays on the right, including while typing Options are open and when there are no results. X or Back clears the query and restores the dock. The header also accepts touch input.
+Start typing on T9 or Mini QWERTY from home. The clock becomes the query field, and the dock becomes the normal typing/suggestions bar. Every letter starts the search, including the Mini QWERTY's T / D / B / J navigation cross, which only moves focus on screens without a search field. Up on the first row also moves into the query field. Search matches visible app names without regard to case, across built-in and Sideport apps, in both layouts. A square X stays on the right, including while typing Options are open and when there are no results. X or Back clears the query and restores the dock. The header also accepts touch input.
 
 ## Verification
 
