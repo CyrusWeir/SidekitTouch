@@ -41,12 +41,14 @@ fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
             onCaseColour = { nav.navigate("${SubApp.Settings.route}/case-colour") },
             onSetup = { nav.navigate("${SubApp.Settings.route}/setup") },
             onHiddenApps = { nav.navigate("${SubApp.Settings.route}/hidden-apps") },
+            onSystem = { nav.navigate("${SubApp.Settings.route}/system") },
             onKeypadMapping = { nav.navigate(keypadMappingRoute()) },
             onArrange = { nav.navigate("${SubApp.Settings.route}/arrange") },
         )
     }
     keypadMappingGraph(nav)
     composable("${SubApp.Settings.route}/hidden-apps") { HiddenAppsScreen { nav.popBackStack() } }
+    composable("${SubApp.Settings.route}/system") { SystemSettingsScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/setup") { OnboardingScreen(onFinish = { nav.popBackStack() }, replay = true) }
     composable("${SubApp.Settings.route}/case-colour") { CaseColourScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/arrange") { ArrangeHomeScreen { nav.popBackStack() } }
@@ -54,7 +56,7 @@ fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
 }
 
 @Composable
-internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}, onKeypadMapping: () -> Unit = {}, onArrange: () -> Unit = {}) {
+internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}, onSystem: () -> Unit = {}, onKeypadMapping: () -> Unit = {}, onArrange: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { SidekitPreferences(context) }
     val caseColour = rememberCaseColour(prefs)
@@ -83,11 +85,27 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
             item { SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = { prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]; keypad?.let { prefs.applyInputDefault(it) }; revision++ }) }
             item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
             item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 6), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
-            itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index + 7), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
-            item { SidekitItem("Hide apps", onClick = onHiddenApps) }
+            item { SidekitItem("Hide apps", showLinkArrow = true, onClick = onHiddenApps) }
+            // Device settings live on their own page, so this screen stays Sidekit's own settings.
+            item { SidekitItem("System settings", showLinkArrow = true, onClick = onSystem) }
             // Advanced: custom mapping for keypads Sidekit doesn't recognise, or keys moved around.
             item { SidekitItem("Keypad mapping", secondary = if (custom != null) "Custom" else null, showLinkArrow = custom == null, onClick = onKeypadMapping) }
-            item { SidekitItem("Setup & keypad tour", onClick = onSetup) }
+            item { SidekitItem("Setup & keypad tour", showLinkArrow = true, onClick = onSetup) }
+            message?.let { item { SidekitCard { SidekitText(it, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } } }
+        }
+    }
+}
+
+/** Device settings (Wi-Fi, display, sound, …), which open Android's own pages. */
+@Composable
+internal fun SystemSettingsScreen(back: () -> Unit) {
+    val context = LocalContext.current
+    var message by remember { mutableStateOf<String?>(null) }
+    fun open(action: String) { try { context.startActivity(Intent(action)) } catch (_: Exception) { message = "This settings screen is unavailable on this device." } }
+    val list = rememberLazyListState()
+    SidekitScaffold("System settings", actions = listOf(SideAction.back("back", "Settings", back))) { padding ->
+        SidekitList(padding, state = list) {
+            itemsIndexed(SettingsUiState().rows) { index, row -> SidekitItem(row.label, Modifier.height(CompactRowHeight).listFade(list, index), secondary = row.value, onClick = { open(row.key.settingsAction()) }) }
             message?.let { item { SidekitCard { SidekitText(it, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } } }
         }
     }
