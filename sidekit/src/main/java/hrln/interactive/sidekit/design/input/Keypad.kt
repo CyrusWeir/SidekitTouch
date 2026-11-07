@@ -63,9 +63,6 @@ class Keypad internal constructor(
     /** True when text is typed on the keypad itself, so the virtual keyboard never opens. */
     val typing: Boolean get() = module.typesOnKeypad
 
-    /** True while a Sidekit text field (a T9 / QWERTY session) owns the keypad's keys. */
-    val isTypingNow: Boolean get() = session != null
-
     @Volatile private var words: T9Words = T9Words.Empty
     private var wordsJob: Job? = null
     private val userWords = T9UserWords()
@@ -105,11 +102,6 @@ class Keypad internal constructor(
     /**
      * Applies the custom mapping to a key event as it arrives (see [KeyMapper.translate]). Every
      * place that receives raw keys calls this first and works with what it returns; null means the
-     * press is being captured and must be dropped.
-     */
-    /**
-     * Applies the custom mapping to a key event as it arrives (see [KeyMapper.translate]). Every
-     * place that receives raw keys calls this first and works with what it returns; null means the
      * press is being captured and must be dropped. This is the raw / custom-only path: typing keys
      * and projection stay untouched, so games and text fields see the keypad exactly as sent.
      */
@@ -121,11 +113,18 @@ class Keypad internal constructor(
      * while the module is auto-detected and no text field owns the keys: custom mapping is the
      * user's deliberate choice, and a typing key (e.g. QWERTY's modifier keys) must stay as it is
      * while a field is focused.
+     *
+     * A default that rewrites a typing key (the mini QWERTY's T / D / B / J cross) also stands down
+     * while the screen has a type-to-search field ([registerFallback]): there, pressing any letter
+     * starts the search, and losing four letters to navigation would break searches that start with
+     * them. The cross navigates on screens with nothing to type into.
      */
     fun translateForUi(raw: KeyEvent): KeyEvent? {
         var event = mapper.translate(raw) ?: return null
         if (mapper.customModule == null && session == null) {
-            NavControls.applyDefault(detected, event.keyCode)?.let { event = event.withCode(it) }
+            NavControls.applyDefault(detected, event.keyCode)
+                ?.takeUnless { fallbacks.isNotEmpty() && isTypingKey(event.keyCode) }
+                ?.let { event = event.withCode(it) }
         }
         return event
     }

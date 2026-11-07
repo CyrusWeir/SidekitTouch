@@ -130,27 +130,25 @@ class LauncherSearchTest {
         compose.mainClock.advanceTimeBy(1000)
         compose.onRoot().captureRoboImage("screenshots/onboarding/12-search-grid.png")
     }
-    @Test fun `QWERTY cross keys navigate the grid instead of typing`() {
+    @Test fun `QWERTY cross letters still start search from home`() {
         launch(KeypadModule.Qwerty, LauncherLayout.Grid)
         focusFirstTile()
         tile("Sidenotes").assertIsFocused()
-        // J is the cross's Right: it moves focus to the next tile and never starts search.
+        // J is part of the navigation cross, but home has a type-to-search field, so it types
+        // (the T9 engine capitalises the first letter of a session, as it does for every key).
         key(KeyEvent.KEYCODE_J)
-        tile("Sideticks").assertIsFocused()
-        compose.onNodeWithTag(LauncherTags.SEARCH).assertTextEquals("")
-        compose.onNodeWithContentDescription("Clear app search").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Clear app search").assertIsDisplayed()
+        compose.onNodeWithTag(LauncherTags.SEARCH).assertTextEquals("J")
     }
 
-    @Test fun `keypad Up on the first row starts search and then the cross keys type`() {
+    @Test fun `keypad Up on the first row starts search`() {
         launch(KeypadModule.Qwerty, LauncherLayout.Grid)
         focusFirstTile()
         tile("Sidenotes").assertIsFocused()
-        // On the first row there is nowhere to go up, so T opens the query field instead.
-        key(KeyEvent.KEYCODE_T)
+        // On the first row there is nowhere to go up, so Up (the QWERTY rocker) opens the query field.
+        key(KeyEvent.KEYCODE_DPAD_UP)
         compose.onNodeWithContentDescription("Clear app search").assertIsDisplayed()
         compose.onNodeWithTag(LauncherTags.CLOCK).assertDoesNotExist()
-        // The field owns the keypad now, so the same cross key types its printed letter (the T9
-        // engine capitalises the first letter of a session, as it does for every other key).
         key(KeyEvent.KEYCODE_T)
         compose.onNodeWithTag(LauncherTags.SEARCH).assertTextEquals("T")
     }

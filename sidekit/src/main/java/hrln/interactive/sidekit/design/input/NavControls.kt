@@ -41,9 +41,8 @@ object NavControls {
      *   so navigation uses a cross of letter keys measured on-device: **T up, D left, B down,
      *   J right**. These are letters while a text field is focused and navigation keys when not
      *   (the session guard in [Keypad.translateForUi] chooses which). Enter is already Confirm.
-     *   A text field that a screen opens on any keypress (the launcher's search) therefore needs a
-     *   way to take focus without a letter: on home, Up on the first row focuses the query field,
-     *   and from then on these four keys type again.
+     *   On a screen with a type-to-search field (the launcher, Apps, Phonebook, …) they stay
+     *   letters, so every letter can start a search; there the rocker still moves up and down.
      */
     val defaultFor: Map<KeypadModule, Map<Int, Int>> = mapOf(
         KeypadModule.T9 to emptyMap(),

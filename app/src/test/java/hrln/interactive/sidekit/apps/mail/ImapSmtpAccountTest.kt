@@ -7,6 +7,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.ConscryptMode
 import javax.mail.Session
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
@@ -14,6 +15,11 @@ import javax.mail.internet.MimeBodyPart
 import java.util.Properties
 
 @RunWith(RobolectricTestRunner::class)
+// GreenMail enables the legacy SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA cipher when it starts its
+// TLS servers. Robolectric's Conscrypt provider does not support it, so the servers fail to start.
+// Robolectric only disables Conscrypt by default on macOS aarch64, so this previously passed only
+// on Apple-silicon Macs. Force it off here so the test behaves the same on every platform.
+@ConscryptMode(ConscryptMode.Mode.OFF)
 class ImapSmtpAccountTest {
     @Test fun `TLS account logs in reads MIME inbox and submits actual SMTP envelope`() = runTest {
         val server = GreenMail(arrayOf(ServerSetup(0,"127.0.0.1","imaps"),ServerSetup(0,"127.0.0.1","smtps")))
