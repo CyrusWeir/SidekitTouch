@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wrapper-validation:
+    name: Gradle wrapper validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+
+  build:
+    name: Build (debug + R8 release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/android-setup
+      - name: Assemble debug and release
+        run: >
+          ./gradlew :app:assembleDebug :app:assembleRelease :sidekit:assembleDebug
+          --stacktrace
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/android-setup
+      # Robolectric downloads its Android runtime jars outside Gradle's cache.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-${{ runner.os }}-
+      - name: Run JVM and Robolectric tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: |
+            **/build/reports/tests/testDebugUnitTest
+            **/build/test-results/testDebugUnitTest
+          retention-days: 7
+          if-no-files-found: ignore
+
+  android-lint:
+    name: Android Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/android-setup
+      - name: Run lint
+        run: ./gradlew lintDebug --stacktrace
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-reports
+          path: |
+            **/build/reports/lint-results-debug.html
+            **/build/reports/lint-results-debug.txt
+            **/build/reports/lint-results-debug.xml
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Upload lint results to code scanning
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: app/build/reports/lint-results-debug.sarif
+          category: android-lint
+
+  kotlin-format:
+    name: Kotlin formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Spotless ratchets against origin/main, so it needs the base ref.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/android-setup
+      - name: Check ktlint formatting of changed files
+        run: ./gradlew spotlessCheck --stacktrace
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

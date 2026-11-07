@@ -1,0 +1,23 @@
+# Shared formatting rules, used by ktlint (through Spotless) and by editors.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+ktlint_code_style = android_studio
+# Existing Sidekit code does not enforce a wrap column; keep it that way.
+max_line_length = off
+# Sidekit imports MMS and WorkManager types wholesale in a few adapters.
+ktlint_standard_no-wildcard-imports = disabled
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
