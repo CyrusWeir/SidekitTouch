@@ -26,6 +26,7 @@ import hrln.interactive.sidekit.apps.tripplanning.TripPlanningScreen
 import hrln.interactive.sidekit.apps.webbrowser.WebBrowserSampleData
 import hrln.interactive.sidekit.apps.webbrowser.WebBrowserScreen
 import hrln.interactive.sidekit.ui.SidekitPreviewFrame
+import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,7 +43,11 @@ class EverydayScreenshotTest {
         compose.onRoot().captureRoboImage("screenshots/$name.png")
     }
 
-    @Test fun calendar() = shoot("calendar_96-420") { CalendarScreen(CalendarUiState(), {}) }
+    // Pinned date: the month grid highlights "today", so a live clock would re-record this
+    // screenshot every midnight and keep the working tree permanently dirty.
+    @Test fun calendar() = shoot("calendar_96-420") {
+        CalendarScreen(CalendarUiState(date = LocalDate.of(2026, 11, 5)), {})
+    }
     @Test fun mail() = shoot("mail_96-499") { MailScreen(MailSampleData.summary, MailSampleData.inbox) }
     @Test fun maps() = shoot("maps_96-563") { MapsScreen(MapsSampleData.destination) }
     @Test fun compass() = shoot("compass_96-629") { CompassScreen(CompassSampleData.reading) }
