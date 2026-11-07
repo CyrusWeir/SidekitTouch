@@ -34,13 +34,13 @@ fun DevBuildPill(label: String, modifier: Modifier = Modifier) {
             .clip(SidekitTheme.shapes.control)
             .background(background)
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clearAndSetSemantics { contentDescription = description },
+            .clearAndSetSemantics { contentDescription = description }
     ) {
         SidekitText(
             text = label,
             // `tiny` with a little tracking reads as a tag rather than as a word in the header.
             style = SidekitTheme.typography.tiny.copy(fontWeight = FontWeight.Medium, letterSpacing = 2.sp),
-            color = SidekitTheme.colors.contentColorFor(background),
+            color = SidekitTheme.colors.contentColorFor(background)
         )
     }
 }

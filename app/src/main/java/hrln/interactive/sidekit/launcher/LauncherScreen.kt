@@ -2,47 +2,47 @@ package hrln.interactive.sidekit.launcher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.*
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.layout.*
-import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
-import hrln.interactive.sidekit.R
-import hrln.interactive.sidekit.apps.settings.*
-import hrln.interactive.sidekit.design.components.SidekitTextField
-import hrln.interactive.sidekit.design.components.SidekitText
-import hrln.interactive.sidekit.design.input.LocalKeypad
-import hrln.interactive.sidekit.design.icons.SidekitIcon
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import hrln.interactive.sidekit.R
+import hrln.interactive.sidekit.apps.settings.*
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
 import hrln.interactive.sidekit.apps.sideport.ui.PortedAppIcon
 import hrln.interactive.sidekit.apps.sideport.ui.PortedTile
-import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.action.LocalChrome
+import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.SidekitIconItem
 import hrln.interactive.sidekit.design.components.SidekitItem
 import hrln.interactive.sidekit.design.components.SidekitItemRow
 import hrln.interactive.sidekit.design.components.SidekitList
 import hrln.interactive.sidekit.design.components.SidekitScaffold
+import hrln.interactive.sidekit.design.components.SidekitText
+import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.components.listFade
+import hrln.interactive.sidekit.design.icons.SidekitIcon
+import hrln.interactive.sidekit.design.input.LocalKeypad
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import hrln.interactive.sidekit.home.HomePreferences
 import hrln.interactive.sidekit.navigation.SubApp
@@ -81,7 +81,7 @@ class PortedEntry(val app: PortedApp) : LauncherEntry {
 internal fun toLauncherEntries(
     ids: List<String>,
     subsById: Map<String, SubApp>,
-    portedById: Map<String, PortedApp>,
+    portedById: Map<String, PortedApp>
 ): List<LauncherEntry> = ids.mapNotNull { id ->
     subsById[id]?.let { BuiltinEntry(it) } ?: portedById[id]?.let { PortedEntry(it) }
 }
@@ -90,7 +90,7 @@ internal fun toLauncherEntries(
 fun LauncherRoute(
     onOpenApp: (SubApp) -> Unit,
     onOpenPorted: (PortedApp) -> Unit = {},
-    viewModel: LauncherViewModel = viewModel(),
+    viewModel: LauncherViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember(context) { SidekitPreferences(context) }
@@ -126,7 +126,7 @@ fun LauncherRoute(
         onToggleLayout = viewModel::toggleLayout,
         home = homeEntries,
         dock = dockEntries,
-        onOpenPorted = onOpenPorted,
+        onOpenPorted = onOpenPorted
     )
 }
 
@@ -145,7 +145,7 @@ fun LauncherScreen(
     home: List<LauncherEntry> = emptyList(),
     onOpenPorted: (PortedApp) -> Unit = {},
     hiddenApps: Set<String> = emptySet(),
-    dock: List<LauncherEntry> = emptyList(),
+    dock: List<LauncherEntry> = emptyList()
 ) {
     val query = rememberTextFieldState()
     val searchFocus = remember { FocusRequester() }
@@ -186,7 +186,9 @@ fun LauncherScreen(
             ) {
                 startSearch()
                 true
-            } else false
+            } else {
+                false
+            }
         },
         header = {
             // The dev build type is the only one with a `build_label`, so the pill (and the width
@@ -196,7 +198,7 @@ fun LauncherScreen(
             Row(
                 modifier = Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.itemPadding),
                 horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap),
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.Top
             ) {
                 Box(Modifier.weight(1f)) {
                     SidekitTextField(
@@ -209,10 +211,17 @@ fun LauncherScreen(
                         onKeypadFocus = { searching = true },
                         singleLine = true,
                         trailingTypingAction = clear,
-                        onDone = { focusManager.clearFocus() },
+                        onDone = { focusManager.clearFocus() }
                     )
                     if (!searching && text.isEmpty()) {
-                        Box(Modifier.fillMaxSize().then(clockGestures(onToggleLayout) { searching = true; searchFocus.requestFocus() })) {
+                        Box(
+                            Modifier.fillMaxSize().then(
+                                clockGestures(onToggleLayout) {
+                                    searching = true
+                                    searchFocus.requestFocus()
+                                }
+                            )
+                        ) {
                             SidekitText(state.time, style = SidekitTheme.typography.title)
                         }
                     }
@@ -226,21 +235,27 @@ fun LauncherScreen(
         },
         // The dock is the launcher's action bar, so opening an app morphs the tapped dock button
         // into the app's first action.
-        actions = if (searching || text.isNotEmpty()) listOf(
-            SideAction("search.query", text.ifEmpty { "Search apps" }, dense = true, onClick = { searchFocus.requestFocus() }),
-        ) else dockActions(dock.ifEmpty { defaultDock() }, hiddenApps, onOpenApp, onOpenPorted),
+        actions = if (searching || text.isNotEmpty()) {
+            listOf(
+                SideAction("search.query", text.ifEmpty { "Search apps" }, dense = true, onClick = { searchFocus.requestFocus() })
+            )
+        } else {
+            dockActions(dock.ifEmpty { defaultDock() }, hiddenApps, onOpenApp, onOpenPorted)
+        },
         trailingAction = if (searching || text.isNotEmpty()) clear else null,
         // Keypad Options key: the long-press gesture, as a button.
         options = listOf(
             SideAction("layout", if (state.layout == LauncherLayout.Grid) "List" else "Grid", contentDescription = "Switch grid or list", onClick = onToggleLayout),
-            SideAction("settings", icon = SubApp.Settings.icon, contentDescription = "Settings") { onOpenApp(SubApp.Settings) },
-        ),
+            SideAction("settings", icon = SubApp.Settings.icon, contentDescription = "Settings") { onOpenApp(SubApp.Settings) }
+        )
     ) { padding ->
         if (visible.isEmpty()) {
             SidekitText(if (text.isNotEmpty()) "No matching apps" else "No apps shown. Use Options → Settings to show apps.", maxLines = Int.MAX_VALUE)
-        } else when (state.layout) {
-            LauncherLayout.Grid -> AppGrid(visible, padding, onOpenApp, onOpenPorted) { focusedRow = it }
-            LauncherLayout.List -> AppList(visible, padding, onOpenApp, onOpenPorted) { focusedRow = it }
+        } else {
+            when (state.layout) {
+                LauncherLayout.Grid -> AppGrid(visible, padding, onOpenApp, onOpenPorted) { focusedRow = it }
+                LauncherLayout.List -> AppList(visible, padding, onOpenApp, onOpenPorted) { focusedRow = it }
+            }
         }
     }
 }
@@ -266,7 +281,7 @@ private fun AppGrid(
     padding: PaddingValues,
     onOpenApp: (SubApp) -> Unit,
     onOpenPorted: (PortedApp) -> Unit,
-    onFocusedRow: (Int) -> Unit,
+    onFocusedRow: (Int) -> Unit
 ) {
     val listState = rememberLazyListState()
     val rows = remember(entries) { entries.chunked(GRID_COLUMNS) }
@@ -292,7 +307,7 @@ private fun AppList(
     padding: PaddingValues,
     onOpenApp: (SubApp) -> Unit,
     onOpenPorted: (PortedApp) -> Unit,
-    onFocusedRow: (Int) -> Unit,
+    onFocusedRow: (Int) -> Unit
 ) {
     val listState = rememberLazyListState()
     SidekitList(padding, Modifier.testTag(LauncherTags.LIST), state = listState) {
@@ -305,7 +320,7 @@ private fun AppList(
                         is BuiltinEntry -> onOpenApp(entry.app)
                         is PortedEntry -> onOpenPorted(entry.app)
                     }
-                },
+                }
             )
         }
     }
@@ -318,7 +333,7 @@ private fun AppTile(app: SubApp, onOpenApp: (SubApp) -> Unit, modifier: Modifier
         contentDescription = app.label,
         modifier = modifier,
         iconSize = SidekitTheme.spacing.tileIconSize,
-        onClick = { onOpenApp(app) },
+        onClick = { onOpenApp(app) }
     )
 }
 
@@ -327,16 +342,17 @@ private fun dockActions(
     dock: List<LauncherEntry>,
     hidden: Set<String>,
     onOpenApp: (SubApp) -> Unit,
-    onOpenPorted: (PortedApp) -> Unit,
+    onOpenPorted: (PortedApp) -> Unit
 ): List<SideAction> = dock.filter { it.id !in hidden }.map { entry ->
     when (entry) {
         is BuiltinEntry -> SideAction("dock.${entry.app.name}", icon = entry.app.icon, contentDescription = entry.app.label) { onOpenApp(entry.app) }
+
         is PortedEntry -> SideAction(
             "dock.${entry.app.packageName}",
             label = entry.app.label,
             contentDescription = entry.app.label,
             artKey = entry.app.packageName,
-            art = { PortedAppIcon(entry.app) },
+            art = { PortedAppIcon(entry.app) }
         ) { onOpenPorted(entry.app) }
     }
 }
