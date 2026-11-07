@@ -347,7 +347,9 @@ internal fun SideportHubContent(
             SideAction("forward", removal.verb, SidekitIcon.DeleteForever, tone = ActionTone.Destructive, weight = 1.2f, motion = ActionMotion.Up, contentDescription = "Confirm ${removal.verb.lowercase()} ${app.label}") {
                 when (removal) {
                     HubRemoval.Remove -> onRemove()
-                    HubRemoval.Uninstall -> onUninstall()
+                    // The uninstaller is another activity: settle the bar first, so returning from it
+                    // (uninstalled or cancelled) shows the hub again, not a stale confirmation.
+                    HubRemoval.Uninstall -> { onCancel(); onUninstall() }
                 }
             },
         )

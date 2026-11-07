@@ -111,6 +111,9 @@ class SideportHubUiTest {
         compose.onNodeWithText("Uninstall app").performClick()
         compose.onNodeWithText("Uninstall").performClick()
         assertEquals(listOf("uninstall"), calls)
+        // Coming back from the uninstaller, the confirmation is gone.
+        compose.mainClock.advanceTimeBy(1000)
+        compose.onNodeWithText("Cancel").assertDoesNotExist()
     }
 
     @Test fun `Options keeps only the system app page`() {
