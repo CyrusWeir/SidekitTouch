@@ -22,6 +22,10 @@ While Sidekit waits for a key, it captures every press, including the release, s
 
 The key tester shows the key code and scan code for each press, the input device that sent it, and the control it becomes. Use it to set up a new keypad or to report how a device's keys behave.
 
+## Sundial holds
+
+The Sundial has no Back or Options key. Hold **Tab** for Back and hold **Enter** for Options. Hold the left/right edges (**Previous** / **Next**) for left/right; a tap on them still sends the media command. All keypad holds use the same threshold, `KeypadTiming.LONG_PRESS_MS` (400 ms).
+
 ## Scope
 
 - Mappings are saved for each input device, by device name. A key from another device isn't remapped, even if it sends the same code. Examples are an external keyboard and a headset button. Device names, unlike device ids, stay the same across restarts and reconnections.

@@ -3,32 +3,34 @@ package hrln.interactive.sidekit.design.input
 import android.content.Context
 import android.content.SharedPreferences
 import android.view.KeyEvent
-import android.view.ViewConfiguration
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.focus.FocusRequester
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.IOException
 
 /** The Sidephone's swappable keypad modules. */
 enum class KeypadModule(val label: String, val typesOnKeypad: Boolean) {
     /** Phone keypad with D-pad, OK and call keys. */
     T9("T9", true),
+
     /** Two letters per key, 20 keys. */
     Qwerty("Mini QWERTY", true),
-    /** Click wheel with a centre button. */
+
+    /** Ring of eight keys with a centre button. */
     Sundial("Sundial", false),
+
     /** D-pad, A / B / X / Y and a shoulder key. */
-    GamePad("Game controller", false),
+    GamePad("Game controller", false)
 }
 
 /**
@@ -53,7 +55,7 @@ class Keypad internal constructor(
     initialModule: KeypadModule,
     val longPressMs: Long = DEFAULT_LONG_PRESS_MS,
     /** Custom key mapping (off unless the user turns it on in Settings). */
-    val mapper: KeyMapper = KeyMapper.forTesting(),
+    val mapper: KeyMapper = KeyMapper.forTesting()
 ) {
     private var detected: KeypadModule by mutableStateOf(initialModule)
 
@@ -168,8 +170,12 @@ class Keypad internal constructor(
         session?.finish()
     }
 
-    internal fun registerFallback(focus: FocusRequester, activate: () -> Unit = {}) { fallbacks.add(TypingTarget(focus, activate)) }
-    internal fun unregisterFallback(focus: FocusRequester) { fallbacks.removeAll { it.focus === focus } }
+    internal fun registerFallback(focus: FocusRequester, activate: () -> Unit = {}) {
+        fallbacks.add(TypingTarget(focus, activate))
+    }
+    internal fun unregisterFallback(focus: FocusRequester) {
+        fallbacks.removeAll { it.focus === focus }
+    }
 
     private fun loadResources() {
         if (wordsJob != null || loadWords == null) return
@@ -219,7 +225,7 @@ class Keypad internal constructor(
         private const val PREF_T9 = "t9"
         private const val PREF_MODULE = "module"
         private const val SAVE_DELAY_MS = 2_000L
-        private const val DEFAULT_LONG_PRESS_MS = 450L
+        private const val DEFAULT_LONG_PRESS_MS = KeypadTiming.LONG_PRESS_MS
 
         fun isTypingKey(code: Int) = code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ||
             code == KeyEvent.KEYCODE_STAR || code == KeyEvent.KEYCODE_POUND || code == KeyEvent.KEYCODE_DEL ||
@@ -238,8 +244,8 @@ class Keypad internal constructor(
                     ?.let { name -> KeypadModule.entries.firstOrNull { it.name == name } }
                     // Before modules were told apart, T9 was the only one that typed.
                     ?: if (prefs.getBoolean(PREF_T9, true)) KeypadModule.T9 else KeypadModule.Sundial,
-                longPressMs = ViewConfiguration.getLongPressTimeout().toLong(),
-                mapper = KeyMapper.create(prefs),
+                longPressMs = KeypadTiming.LONG_PRESS_MS,
+                mapper = KeyMapper.create(prefs)
             )
         }
 
@@ -248,12 +254,11 @@ class Keypad internal constructor(
             scope: CoroutineScope,
             words: T9Words,
             module: KeypadModule = KeypadModule.T9,
-            mapper: KeyMapper = KeyMapper.forTesting(),
+            mapper: KeyMapper = KeyMapper.forTesting()
         ) = Keypad(null, null, scope, null, module, mapper = mapper).also { it.words = words }
     }
 }
 
-internal fun KeyEvent.withCode(code: Int) =
-    KeyEvent(downTime, eventTime, action, code, repeatCount, metaState, deviceId, scanCode, flags, source)
+internal fun KeyEvent.withCode(code: Int) = KeyEvent(downTime, eventTime, action, code, repeatCount, metaState, deviceId, scanCode, flags, source)
 
 val LocalKeypad = staticCompositionLocalOf<Keypad?> { null }

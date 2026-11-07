@@ -1,3 +1,7 @@
+// The key constants read as navigation keys in code; ktlint's property-naming rule would force
+// SCREAMING_SNAKE_CASE for these compile-time constants.
+@file:Suppress("ktlint:standard:property-naming")
+
 package hrln.interactive.sidekit.design.input
 
 import android.view.KeyEvent
@@ -21,6 +25,7 @@ object NavControls {
     const val Down = KeyEvent.KEYCODE_DPAD_DOWN
     const val Left = KeyEvent.KEYCODE_DPAD_LEFT
     const val Right = KeyEvent.KEYCODE_DPAD_RIGHT
+
     /** Select / open the focused control. [KeyEvent.KEYCODE_ENTER] is what T9 calls OK and ListItems act on. */
     const val Confirm = KeyEvent.KEYCODE_ENTER
     const val Back = KeyEvent.KEYCODE_BACK
@@ -49,15 +54,27 @@ object NavControls {
         KeypadModule.Sundial to emptyMap(),
         KeypadModule.GamePad to mapOf(
             KeyEvent.KEYCODE_BUTTON_A to Confirm,
-            KeyEvent.KEYCODE_BUTTON_B to Back,
+            KeyEvent.KEYCODE_BUTTON_B to Back
         ),
         KeypadModule.Qwerty to mapOf(
             // Measured on-device: T / D / B / J around the tablet's centre form a directional cross.
             KeyEvent.KEYCODE_T to Up,
             KeyEvent.KEYCODE_D to Left,
             KeyEvent.KEYCODE_B to Down,
-            KeyEvent.KEYCODE_J to Right,
-        ),
+            KeyEvent.KEYCODE_J to Right
+        )
+    )
+
+    /**
+     * Hold actions for the Sundial's ring. A tap keeps the printed role (media, Tab, Enter); a
+     * hold turns it into the navigation action the module has no dedicated key for. Tab/Enter have
+     * no media role to preserve; Previous/Next keep theirs on a tap.
+     */
+    val sundialHoldFor: Map<Int, Int> = mapOf(
+        KeyEvent.KEYCODE_TAB to Back,
+        KeyEvent.KEYCODE_ENTER to Options,
+        KeyEvent.KEYCODE_MEDIA_PREVIOUS to Left,
+        KeyEvent.KEYCODE_MEDIA_NEXT to Right
     )
 
     /** The canonical navigation key [code] becomes in [module]'s UI, or null to keep it as sent. */
