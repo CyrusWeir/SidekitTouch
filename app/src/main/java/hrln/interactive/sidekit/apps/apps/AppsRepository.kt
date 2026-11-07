@@ -47,9 +47,10 @@ class AppsRepository(private val context: Context) : AppsSource {
     }.conflate().mapLatest { load() }
 
     private suspend fun load(): List<LaunchableApp> = withContext(Dispatchers.IO) {
-        launcher.profiles.flatMap { user ->
+        val all = launcher.profiles.flatMap { user ->
             launcher.getActivityList(null, user).map { LaunchableApp(it.componentName, user, it.label.toString()) }
-        }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
+        }
+        launchableApps(all, context.packageName).sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
     }
 
     override suspend fun icon(app: LaunchableApp): Bitmap? = withContext(Dispatchers.IO) {

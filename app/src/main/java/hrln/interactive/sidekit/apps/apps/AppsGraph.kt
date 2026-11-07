@@ -3,18 +3,11 @@ package hrln.interactive.sidekit.apps.apps
 import android.content.Intent
 import android.net.Uri
 import android.os.Process
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -35,7 +28,6 @@ fun NavGraphBuilder.appsGraph(nav: NavHostController) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AppsScreen(vm: AppsViewModel, back: () -> Unit) {
     val context = LocalContext.current
@@ -54,17 +46,21 @@ internal fun AppsScreen(vm: AppsViewModel, back: () -> Unit) {
     val list = rememberLazyListState()
     SidekitScaffold("Apps", actions = listOf(SideAction.back("back", "Home", back)), options = options) { padding ->
         SidekitList(padding, state = list) {
-            item { SidekitTextField(query, { vm.query.value = it }, placeholder = "Search apps", singleLine = true, onDone = {}, focusOnKeypad = true) }
+            item { AppSearchField(query) { vm.query.value = it } }
             item { SidekitCard { SidekitText(selected?.let { "${it.label} selected. Press Options for app info or uninstall." } ?: "Tap to open · hold an app for Options", style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } }
             (message ?: state.error)?.let { item { SidekitCard(onClick = { message = null }) { SidekitText(it, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } } }
             if (!state.loaded && state.error == null) item { SidekitItem("Loading apps…") }
             if (state.loaded && state.apps.isEmpty()) item { SidekitItem("No matching apps") }
             itemsIndexed(state.apps, key = { _, it -> it.key }) { index, target ->
-                val icon by produceState<android.graphics.Bitmap?>(null, target, state.apps) { value = vm.repository.icon(target) }
-                SidekitItem(target.label, Modifier.listFade(list, index + 2).then(
-                    Modifier.combinedClickable(onClick = { selected = target; perform { vm.repository.launch(target) } }, onLongClick = { selected = target }, onLongClickLabel = "App options")
-                ), secondary = if (target.user != Process.myUserHandle()) "Work profile" else null,
-                    leading = { icon?.let { Image(it.asImageBitmap(), null, Modifier.size(SidekitTheme.spacing.iconSize)) } })
+                AppRow(
+                    target,
+                    vm.repository,
+                    Modifier.listFade(list, index + 2),
+                    secondary = if (target.user != Process.myUserHandle()) "Work profile" else null,
+                    onClick = { selected = target; perform { vm.repository.launch(target) } },
+                    onLongClick = { selected = target },
+                    onLongClickLabel = "App options",
+                )
             }
         }
     }

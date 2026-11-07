@@ -36,7 +36,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import hrln.interactive.sidekit.apps.apps.AppRow
+import hrln.interactive.sidekit.apps.apps.AppSearchField
 import hrln.interactive.sidekit.apps.apps.AppsRepository
+import hrln.interactive.sidekit.apps.apps.LaunchableApp
 import hrln.interactive.sidekit.apps.apps.matchesApp
 import hrln.interactive.sidekit.apps.everyday.CompactRowHeight
 import hrln.interactive.sidekit.apps.sideport.bridge.Bridge
@@ -63,6 +66,7 @@ import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.components.listFade
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.system.SidekitBuild
 import kotlinx.coroutines.launch
 
 /**
@@ -198,6 +202,21 @@ private fun installMessage(status: InstallStatus): String? = when (status) {
     is InstallStatus.Failed -> "Install failed: ${status.message}"
 }
 
+/**
+ * Installed apps that can become Sideport apps: no Sidekit build (Sidekit never ports itself or a
+ * sibling), nothing already ported, one row per package, matching [query].
+ */
+internal fun sideportCandidates(
+    installed: List<LaunchableApp>,
+    ported: List<PortedApp>,
+    query: String,
+): List<LaunchableApp> {
+    val have = ported.map { it.packageName }.toSet()
+    return installed
+        .filter { !SidekitBuild.isSidekit(it.component.packageName) && it.component.packageName !in have && matchesApp(it.label, query) }
+        .distinctBy { it.component.packageName }
+}
+
 /** Install an APK, or turn an app that's already installed into a Sideport app. */
 @Composable
 internal fun SideportAddScreen(onDone: () -> Unit) {
@@ -215,11 +234,7 @@ internal fun SideportAddScreen(onDone: () -> Unit) {
             onDone()
         }
     }
-    val candidates = remember(installed, portedApps, query) {
-        val have = portedApps.map { it.packageName }.toSet()
-        installed.filter { it.component.packageName != context.packageName && it.component.packageName !in have && matchesApp(it.label, query) }
-            .distinctBy { it.component.packageName }
-    }
+    val candidates = remember(installed, portedApps, query) { sideportCandidates(installed, portedApps, query) }
     val list = rememberLazyListState()
     SidekitScaffold("Add app", actions = listOf(SideAction.back("back", "Sideport", onDone))) { padding ->
         SidekitList(padding, state = list) {
@@ -240,9 +255,9 @@ internal fun SideportAddScreen(onDone: () -> Unit) {
                     }
                 }
             }
-            item(key = "search") { SidekitTextField(query, { query = it }, placeholder = "Search installed apps", singleLine = true, focusOnKeypad = true) }
+            item(key = "search") { AppSearchField(query) { query = it } }
             itemsIndexed(candidates, key = { _, a -> a.key }) { i, app ->
-                SidekitItem(app.label, Modifier.listFade(list, i + 2), showLinkArrow = true, onClick = {
+                AppRow(app, repository, Modifier.listFade(list, i + 2), onClick = {
                     ported.add(app.component.packageName, app.label)
                     onDone()
                 })

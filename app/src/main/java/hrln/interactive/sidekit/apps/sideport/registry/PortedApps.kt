@@ -2,6 +2,7 @@ package hrln.interactive.sidekit.apps.sideport.registry
 
 import android.content.Context
 import android.content.SharedPreferences
+import hrln.interactive.sidekit.system.SidekitBuild
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,7 @@ data class PortedApp(val packageName: String, val label: String, val mode: PortM
  * The apps added to Sideport, persisted in shared preferences. One process-wide instance so the
  * launcher, the Sideport screens and the projection service see the same list.
  */
-class PortedApps private constructor(private val prefs: SharedPreferences) {
+class PortedApps internal constructor(private val prefs: SharedPreferences) {
     private val _apps = MutableStateFlow(read())
     val apps: StateFlow<List<PortedApp>> = _apps.asStateFlow()
 
@@ -32,8 +33,9 @@ class PortedApps private constructor(private val prefs: SharedPreferences) {
 
     fun contains(packageName: String) = get(packageName) != null
 
+    /** Adds [packageName], unless it is already there or is a Sidekit build: Sidekit never ports itself. */
     fun add(packageName: String, label: String) {
-        if (contains(packageName)) return
+        if (SidekitBuild.isSidekit(packageName) || contains(packageName)) return
         write(_apps.value + PortedApp(packageName, label, addedAt = System.currentTimeMillis()))
     }
 
@@ -43,7 +45,9 @@ class PortedApps private constructor(private val prefs: SharedPreferences) {
         write(_apps.value.map { if (it.packageName == packageName) it.copy(mode = mode) else it })
 
     private fun write(list: List<PortedApp>) {
-        val sorted = list.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
+        // Sidekit builds are never Sideport apps, including entries saved by an earlier version.
+        val sorted = list.filterNot { SidekitBuild.isSidekit(it.packageName) }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
         _apps.value = sorted
         val array = JSONArray()
         sorted.forEach {
@@ -62,7 +66,7 @@ class PortedApps private constructor(private val prefs: SharedPreferences) {
                 mode = runCatching { PortMode.valueOf(o.optString("mode")) }.getOrDefault(PortMode.Projected),
                 addedAt = o.optLong("added"),
             )
-        }
+        }.filterNot { SidekitBuild.isSidekit(it.packageName) }
     }.getOrDefault(emptyList())
 
     companion object {

@@ -16,6 +16,15 @@ import org.robolectric.annotation.Config
 @Config(sdk = [31])
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppsViewModelTest {
+    @Test fun `Sidekit cannot launch itself, but can launch its dev build`() {
+        val app = { pkg: String -> LaunchableApp(ComponentName(pkg, "Main"), Process.myUserHandle(), pkg) }
+        val apps = listOf(app("hrln.interactive.sidekit"), app("hrln.interactive.sidekit.dev"), app("com.example.chat"))
+        assertEquals(
+            listOf("hrln.interactive.sidekit.dev", "com.example.chat"),
+            launchableApps(apps, selfPackage = "hrln.interactive.sidekit").map { it.component.packageName },
+        )
+    }
+
     @Test fun `search matches names and numeric keypad sequences`() {
         assertTrue(matchesApp("Firefox", "fire"))
         assertTrue(matchesApp("Firefox", "3473"))
