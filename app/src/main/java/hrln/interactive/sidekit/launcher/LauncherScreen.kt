@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
-import hrln.interactive.sidekit.apps.sideport.ui.PortedIcon
+import hrln.interactive.sidekit.apps.sideport.ui.PortedAppIcon
 import hrln.interactive.sidekit.apps.sideport.ui.PortedTile
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.action.LocalChrome
@@ -109,8 +109,10 @@ fun LauncherRoute(
     val homeEntries = remember(homeRevision, known, subsById, portedById) {
         toLauncherEntries(homePrefs.homeOrderFor(known), subsById, portedById)
     }
-    val dockEntries = remember(homeRevision, known, subsById, portedById) {
-        toLauncherEntries(homePrefs.dockFor(known), subsById, portedById)
+    // The dock is the first four *shown* apps, as Arrange apps labels them: a hidden app gives
+    // up its dock slot to the next app instead of leaving the dock one short.
+    val dockEntries = remember(homeRevision, known, hidden, subsById, portedById) {
+        toLauncherEntries(homePrefs.dockFor(known - hidden), subsById, portedById)
     }
     LauncherScreen(
         state = state,
@@ -127,9 +129,8 @@ fun LauncherRoute(
  * The SideKit home screen. Header = clock (long-press to switch grid/list), body = all apps,
  * bottom = the blue dock. With a D-pad, focus starts on the first app: the clock isn't a stop.
  *
- * Search is the one focus stop above the grid: Up on the first row moves into the query field, and
- * from there every key types (including the mini QWERTY cross keys, see [NavControls]). That keeps
- * the cross keys navigating the grid and search reachable from the keypad.
+ * Search is the one focus stop above the grid: Up on the first row moves into the query field.
+ * Typing any letter also starts it; the mini QWERTY cross stays letters here (see [NavControls]).
  */
 @Composable
 fun LauncherScreen(
@@ -173,9 +174,8 @@ fun LauncherScreen(
     SidekitScaffold(
         title = null,
         modifier = Modifier.onPreviewKeyEvent { event ->
-            // Up on the first row steps into search, where the keypad types again. This is also the
-            // only keyboard route to search on the mini QWERTY, whose navigation cross (T/D/B/J)
-            // would otherwise leave those four letters unable to start typing.
+            // Up on the first row steps into search, so the D-pad (or the QWERTY rocker) can reach it
+            // without typing a letter first.
             if (event.type == KeyEventType.KeyDown && !searching && text.isEmpty() && focusedRow == 0 &&
                 event.nativeKeyEvent.repeatCount == 0 && event.key == Key.DirectionUp
             ) {
@@ -316,7 +316,7 @@ private fun dockActions(
             label = entry.app.label,
             contentDescription = entry.app.label,
             artKey = entry.app.packageName,
-            art = { PortedIcon(entry.app) },
+            art = { PortedAppIcon(entry.app) },
         ) { onOpenPorted(entry.app) }
     }
 }
