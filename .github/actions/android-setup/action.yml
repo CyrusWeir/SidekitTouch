@@ -13,10 +13,9 @@ runs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
-        packages: |
-          platform-tools
-          platforms;android-37.0
-          build-tools;37.0.0
+        # setup-android splits this on spaces, so a YAML block scalar arrives as one package name
+        # containing newlines and sdkmanager fails with "Failed to find package".
+        packages: platform-tools platforms;android-37.0 build-tools;37.0.0
 
     - name: Set up Gradle
       uses: gradle/actions/setup-gradle@v4
