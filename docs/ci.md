@@ -38,10 +38,15 @@ project adopt formatting without rewriting untouched code.
 The rules live in [`.editorconfig`](../.editorconfig). `ktlint_code_style =
 android_studio` matches Android Studio's defaults, `max_line_length = off` keeps the
 existing long-line style, and `no-wildcard-imports` is disabled because a few MMS
-and WorkManager adapters intentionally import whole packages.
+and WorkManager adapters intentionally import whole packages. `@Composable`
+functions are exempt from `function-naming`, because screens are PascalCase by
+convention.
 
-ktlint caches the parsed `.editorconfig` inside the Gradle daemon. After editing it,
-run `./gradlew --stop` before the next `spotlessApply` or `spotlessCheck`.
+Spotless does not load `.editorconfig` on its own: `build.gradle.kts` reads the
+ktlint keys from it and passes them as `editorConfigOverride`. Keep editing the
+`.editorconfig` file; the build picks up new keys. ktlint caches the parsed rules
+inside the Gradle daemon, so after editing it run `./gradlew --stop` before the
+next `spotlessApply` or `spotlessCheck`.
 
 CI checks out the full history so the `origin/main` ref that Spotless ratchets
 against exists. Locally, fetch `main` first if the check complains about a missing

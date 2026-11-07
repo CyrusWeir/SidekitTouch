@@ -15,6 +15,8 @@ ktlint_code_style = android_studio
 max_line_length = off
 # Sidekit imports MMS and WorkManager types wholesale in a few adapters.
 ktlint_standard_no-wildcard-imports = disabled
+# Screens are composables with PascalCase names, which is the Compose convention.
+ktlint_function_naming_ignore_when_annotated_with = Composable
 
 [*.{yml,yaml}]
 indent_size = 2
