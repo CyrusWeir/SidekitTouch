@@ -1,5 +1,6 @@
 package hrln.interactive.sidekit
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.view.KeyEvent
 import androidx.lifecycle.lifecycleScope
@@ -67,6 +68,9 @@ class MainActivity : ComponentActivity() {
         hrln.interactive.sidekit.apps.settings.SidekitPreferences(this).applyInputDefault(keypad)
     }
 
+    // Overriding dispatchKeyEvent is the only way to see a keypad event before Compose or the
+    // system consumes it; lint flags the override because ComponentActivity marks it @RestrictTo.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(raw: KeyEvent): Boolean {
         // Detect the module from the raw key before navigation rewrites it, so a first QWERTY press
         // on a letter that is also a navigator (T/D/B/J) still reveals the module.
