@@ -2,29 +2,29 @@ package hrln.interactive.sidekit
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.view.KeyEvent
-import androidx.lifecycle.lifecycleScope
-import hrln.interactive.sidekit.design.action.ChromeState
-import hrln.interactive.sidekit.design.input.Keypad
-import hrln.interactive.sidekit.design.input.SystemKeys
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
-import hrln.interactive.sidekit.onboarding.OnboardingScreen
-import hrln.interactive.sidekit.apps.settings.SidekitPreferences
-import hrln.interactive.sidekit.apps.settings.rememberCaseColour
-import hrln.interactive.sidekit.design.theme.SidekitColors
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import hrln.interactive.sidekit.design.canvas.SidekitCanvas
-import hrln.interactive.sidekit.design.theme.SidekitTheme
-import hrln.interactive.sidekit.navigation.SidekitNavHost
+import androidx.lifecycle.lifecycleScope
+import hrln.interactive.sidekit.apps.settings.SidekitPreferences
+import hrln.interactive.sidekit.apps.settings.rememberCaseColour
 import hrln.interactive.sidekit.apps.sidemessage.IncomingLinks
 import hrln.interactive.sidekit.apps.sideport.SideportLinks
+import hrln.interactive.sidekit.design.action.ChromeState
+import hrln.interactive.sidekit.design.canvas.SidekitCanvas
+import hrln.interactive.sidekit.design.input.Keypad
+import hrln.interactive.sidekit.design.input.SystemKeys
+import hrln.interactive.sidekit.design.theme.SidekitColors
+import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.navigation.SidekitNavHost
+import hrln.interactive.sidekit.onboarding.OnboardingScreen
 
 class MainActivity : ComponentActivity() {
     /** Bumped when Home is pressed while SideKit is already in front; the nav host returns to the launcher. */
@@ -52,8 +52,11 @@ class MainActivity : ComponentActivity() {
             val caseColour = rememberCaseColour(prefs)
             SidekitTheme(colors = caseColour?.palette() ?: SidekitColors()) {
                 SidekitCanvas(chrome = chrome, keypad = keypad) {
-                    if (setupComplete) SidekitNavHost(homeRequests = homeRequests.intValue)
-                    else OnboardingScreen(onFinish = { setupComplete = true })
+                    if (setupComplete) {
+                        SidekitNavHost(homeRequests = homeRequests.intValue)
+                    } else {
+                        OnboardingScreen(onFinish = { setupComplete = true })
+                    }
                 }
             }
         }
@@ -88,6 +91,7 @@ class MainActivity : ComponentActivity() {
                 }
                 return true
             }
+
             // Keypad top-left (CALL) is turned into Back by KeypadAccessibilityService before the
             // system can open the dialer. Without the service only its release reaches us, after
             // the dialer has launched: swallow it so nothing happens twice.
@@ -99,7 +103,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // singleTask: pressing Home while an app is open delivers the HOME intent here.
-        if (intent.hasCategory(Intent.CATEGORY_HOME)) homeRequests.intValue++
-        else if (!SideportLinks.handle(intent)) IncomingLinks.handle(intent)
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) {
+            homeRequests.intValue++
+        } else if (!SideportLinks.handle(intent)) {
+            IncomingLinks.handle(intent)
+        }
     }
 }
