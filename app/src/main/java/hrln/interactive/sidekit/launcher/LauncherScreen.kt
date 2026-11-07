@@ -17,14 +17,18 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import hrln.interactive.sidekit.R
 import hrln.interactive.sidekit.apps.settings.*
 import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.components.SidekitText
 import hrln.interactive.sidekit.design.input.LocalKeypad
 import hrln.interactive.sidekit.design.icons.SidekitIcon
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
@@ -42,6 +46,7 @@ import hrln.interactive.sidekit.design.components.listFade
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import hrln.interactive.sidekit.home.HomePreferences
 import hrln.interactive.sidekit.navigation.SubApp
+import hrln.interactive.sidekit.ui.DevBuildPill
 import hrln.interactive.sidekit.ui.SidekitPreviewFrame
 import hrln.interactive.sidekit.ui.SidephonePreview
 
@@ -184,23 +189,38 @@ fun LauncherScreen(
             } else false
         },
         header = {
-            Box(Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.itemPadding)) {
-                SidekitTextField(
-                    state = query,
-                    focusRequester = searchFocus,
-                    modifier = Modifier.fillMaxWidth().testTag(LauncherTags.SEARCH).focusProperties { canFocus = searching },
-                    textStyle = SidekitTheme.typography.title,
-                    placeholder = if (searching) "Search apps" else null,
-                    focusOnKeypad = true,
-                    onKeypadFocus = { searching = true },
-                    singleLine = true,
-                    trailingTypingAction = clear,
-                    onDone = { focusManager.clearFocus() },
-                )
-                if (!searching && text.isEmpty()) {
-                    Box(Modifier.fillMaxSize().then(clockGestures(onToggleLayout) { searching = true; searchFocus.requestFocus() })) {
-                        SidekitText(state.time, style = SidekitTheme.typography.title)
+            // The dev build type is the only one with a `build_label`, so the pill (and the width
+            // it costs the query field) appears there and nowhere else.
+            val buildLabel = stringResource(R.string.build_label)
+            val titleLine = with(LocalDensity.current) { SidekitTheme.typography.title.lineHeight.toDp() }
+            Row(
+                modifier = Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.itemPadding),
+                horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(Modifier.weight(1f)) {
+                    SidekitTextField(
+                        state = query,
+                        focusRequester = searchFocus,
+                        modifier = Modifier.fillMaxWidth().testTag(LauncherTags.SEARCH).focusProperties { canFocus = searching },
+                        textStyle = SidekitTheme.typography.title,
+                        placeholder = if (searching) "Search apps" else null,
+                        focusOnKeypad = true,
+                        onKeypadFocus = { searching = true },
+                        singleLine = true,
+                        trailingTypingAction = clear,
+                        onDone = { focusManager.clearFocus() },
+                    )
+                    if (!searching && text.isEmpty()) {
+                        Box(Modifier.fillMaxSize().then(clockGestures(onToggleLayout) { searching = true; searchFocus.requestFocus() })) {
+                            SidekitText(state.time, style = SidekitTheme.typography.title)
+                        }
                     }
+                }
+                if (buildLabel.isNotEmpty()) {
+                    // Sits on the title's line box rather than the header's centre, so it stays on the
+                    // clock's baseline whatever the header height is.
+                    Box(Modifier.height(titleLine), contentAlignment = Alignment.Center) { DevBuildPill(buildLabel) }
                 }
             }
         },

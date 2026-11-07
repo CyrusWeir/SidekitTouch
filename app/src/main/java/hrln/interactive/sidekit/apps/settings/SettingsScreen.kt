@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
+import hrln.interactive.sidekit.R
 import hrln.interactive.sidekit.apps.everyday.CompactRowHeight
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -123,6 +125,10 @@ fun SettingsScreen(rows: List<SettingRow>, onRowClick: (SettingKey) -> Unit, onH
 @Composable
 private fun AboutScreen(back: () -> Unit) {
     val context = LocalContext.current
+    // The name comes from resources, so the dev build says "SideKit Dev" instead of the stable
+    // name, and names itself and its package on its own row.
+    val appName = stringResource(R.string.app_name)
+    val devBuild = context.resources.getBoolean(R.bool.is_dev_build)
     var rows by remember { mutableStateOf(listOf("Device" to "${Build.MANUFACTURER} ${Build.MODEL}", "Android" to "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", "Build" to Build.DISPLAY)) }
     LaunchedEffect(Unit) {
         val summaries = withContext(Dispatchers.IO) {
@@ -131,10 +137,14 @@ private fun AboutScreen(back: () -> Unit) {
                 val stats = context.getSystemService(StorageStatsManager::class.java)
                 "${Formatter.formatFileSize(context, stats.getFreeBytes(StorageManager.UUID_DEFAULT))} free / ${Formatter.formatFileSize(context, stats.getTotalBytes(StorageManager.UUID_DEFAULT))}"
             }.getOrDefault("Unavailable")
-            listOf("Sidekit" to context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty(),
-                "Storage" to storage, "RAM" to "${Formatter.formatFileSize(context, memory.availMem)} available / ${Formatter.formatFileSize(context, memory.totalMem)}",
-                "Open-source notices" to "AndroidX / Jetpack Compose — Apache License 2.0. Kotlin — Apache License 2.0.",
-                "T9 word list" to context.assets.open("t9/NOTICE").bufferedReader().use { it.readText() })
+            buildList {
+                add(appName to context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty())
+                if (devBuild) add("Dev build" to "Installs alongside Sidekit as ${context.packageName}")
+                add("Storage" to storage)
+                add("RAM" to "${Formatter.formatFileSize(context, memory.availMem)} available / ${Formatter.formatFileSize(context, memory.totalMem)}")
+                add("Open-source notices" to "AndroidX / Jetpack Compose — Apache License 2.0. Kotlin — Apache License 2.0.")
+                add("T9 word list" to context.assets.open("t9/NOTICE").bufferedReader().use { it.readText() })
+            }
         }
         rows = rows + summaries
     }
