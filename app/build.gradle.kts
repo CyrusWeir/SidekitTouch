@@ -37,6 +37,18 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+        // Development build that installs alongside the stable SideKit as a separate app
+        // (`hrln.interactive.sidekit.dev`), so the stable one can remain the daily driver while
+        // this tracks the current branch/tip for testing. See app/src/dev/res for its distinct
+        // name. It derives from `profile` (R8 + debug signing, no debug Compose checks, baseline
+        // profile) so the on-device testing build doesn't stutter like a raw debug build — it
+        // also falls back to `.sidekit` release. Use `debug` for breakpoint debugging instead.
+        create("dev") {
+            initWith(getByName("profile"))
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            matchingFallbacks += listOf("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
