@@ -3,6 +3,26 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Version metadata is read from git instead of being hand-edited here, so a build always reports
+// the code it was made from: a tagged commit is exactly "1.2.3", anything after it is
+// "1.2.3-3-g<sha>", and uncommitted changes add "-dirty". `versionCode` counts commits, so it only
+// ever grows and a newer build always installs over an older one — including over the 1.2.3 stable
+// build, which was bumped by hand to 6. A checkout without git (exported source, a CI tarball)
+// falls back to the last release; pass -PsidekitVersionName=… / -PsidekitVersionCode=… to override.
+val fallbackVersionName = "1.2.3"
+val fallbackVersionCode = 6
+
+fun git(vararg args: String) = providers.exec {
+    commandLine("git", *args)
+    workingDir = rootDir
+    isIgnoreExitValue = true
+}.standardOutput.asText.map(String::trim)
+
+val gitVersionName = git("describe", "--tags", "--match", "v[0-9]*", "--dirty")
+    .map { it.removePrefix("v").ifEmpty { fallbackVersionName } }
+val gitVersionCode = git("rev-list", "--count", "HEAD")
+    .map { it.toIntOrNull() ?: fallbackVersionCode }
+
 android {
     namespace = "hrln.interactive.sidekit"
     compileSdk {
@@ -13,8 +33,11 @@ android {
         applicationId = "hrln.interactive.sidekit"
         minSdk = 31
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = providers.gradleProperty("sidekitVersionCode")
+            .map(String::toInt)
+            .getOrElse(gitVersionCode.get())
+        versionName = providers.gradleProperty("sidekitVersionName")
+            .getOrElse(gitVersionName.get())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,6 +66,8 @@ android {
         // name. It derives from `profile` (R8 + debug signing, no debug Compose checks, baseline
         // profile) so the on-device testing build doesn't stutter like a raw debug build — it
         // also falls back to `.sidekit` release. Use `debug` for breakpoint debugging instead.
+        // The version comes from git describe, so a dev build names the branch tip it was built
+        // from (e.g. 1.2.3-1-g91da863-dev) rather than a stale hand-written number.
         create("dev") {
             initWith(getByName("profile"))
             applicationIdSuffix = ".dev"
