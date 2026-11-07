@@ -101,6 +101,11 @@ class SideAction(
         label == other.label && icon == other.icon && iconAtEnd == other.iconAtEnd &&
             dense == other.dense && (art == null) == (other.art == null) && artKey == other.artKey
 
+    /** Everything the bar draws or animates is the same; only click handlers (and art lambdas for the same [artKey]) may differ. */
+    internal fun sameLook(other: SideAction): Boolean =
+        sameContent(other) && tone == other.tone && weight == other.weight && square == other.square &&
+            motion == other.motion && contentDescription == other.contentDescription
+
     internal val description: String? get() = contentDescription ?: label
 
     companion object {

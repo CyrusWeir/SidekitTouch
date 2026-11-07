@@ -9,6 +9,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
@@ -42,6 +44,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -190,24 +193,34 @@ fun NowPlayingScreen(
     }
     val position = playback.positionAt(SystemClock.elapsedRealtime() + tick * 0)
     val gap = SidekitTheme.spacing.itemOuterGap
-    SidekitScaffold(
-        title = "Now Playing",
-        actions = backToMusic(onBack),
-        options = listOf(
-            SideAction("shuffle", if (playback.queue.shuffle) "Shuffle: on" else "Shuffle: off", SidekitIcon.Shuffle, onClick = onShuffle),
-            SideAction("repeat", "Repeat: ${playback.queue.repeat.name.lowercase()}", SidekitIcon.Undo, onClick = onRepeat),
-        ),
-    ) { padding ->
+    // Back plus the track's destinations live in the action bar, so the body has room for the art
+    // and one row of full-size playback controls.
+    val actions = remember(onBack, onAlbum, onArtist, onBookmark) {
+        listOf(
+            SideAction.square("back", SidekitIcon.ArrowLeftAlt, "Back to Music", onBack, motion = ActionMotion.Back),
+            SideAction("album", icon = SidekitIcon.Album, contentDescription = "Album", onClick = onAlbum),
+            SideAction("artist", icon = SidekitIcon.Artist, contentDescription = "Artist", onClick = onArtist),
+            SideAction("save", icon = SidekitIcon.Bookmark, contentDescription = "Save", onClick = onBookmark),
+        )
+    }
+    val shuffle = playback.queue.shuffle
+    val repeat = playback.queue.repeat
+    val options = remember(shuffle, repeat, onShuffle, onRepeat) {
+        listOf(
+            SideAction("shuffle", if (shuffle) "Shuffle: on" else "Shuffle: off", SidekitIcon.Shuffle, onClick = onShuffle),
+            SideAction("repeat", "Repeat: ${repeat.name.lowercase()}", SidekitIcon.Undo, onClick = onRepeat),
+        )
+    }
+    val artUri = remember(track?.albumId) { track?.let { albumArtUri(it.albumId) } }
+    SidekitScaffold(title = "Now Playing", actions = actions, options = options) { padding ->
         Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap)) {
-            AlbumArt(LARGE_ART, track?.let { albumArtUri(it.albumId) }, SidekitTheme.shapes.item, false)
+            // The art takes whatever height the text, seek row and controls leave, as a square.
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                AlbumArt(minOf(maxWidth, maxHeight), artUri, SidekitTheme.shapes.item, false)
+            }
             SidekitText(track?.title ?: "Nothing playing", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 2)
             SidekitText(track?.artist.orEmpty(), style = SidekitTheme.typography.label, color = SidekitTheme.colors.surfaceA6, maxLines = 1)
-            MusicSeek(position, playback.durationMs, onSeek)
-            SidekitItemRow {
-                IconTile(SidekitIcon.Album, "Album", onAlbum)
-                IconTile(SidekitIcon.Artist, "Artist", onArtist)
-                IconTile(SidekitIcon.Bookmark, "Save", onBookmark)
-            }
+            MusicSeek(position, playback.durationMs.takeIf { it > 0 } ?: track?.durationMs ?: 0L, onSeek)
             SidekitItemRow {
                 IconTile(SidekitIcon.SkipPrevious, "Previous", onPrevious)
                 IconTile(if (playback.isPlaying) SidekitIcon.Pause else SidekitIcon.PlayArrow, if (playback.isPlaying) "Pause" else "Play", onPlayPause, PlayTileColour.Strong)
@@ -222,8 +235,18 @@ private fun MusicSeek(position: Long, duration: Long, onSeek: (Long) -> Unit) {
     val fraction = if (duration > 0) position / duration.toFloat() else 0f
     val trackColor = SidekitTheme.colors.surfaceA4
     val progressColor = SidekitTheme.colors.light
+    // The bar takes whatever width the two labels leave, so the elapsed label must not change width
+    // as it counts up: otherwise the bar resizes each second and its fill can appear to slip back.
+    // Tabular digits make every digit the same width, and the slot is sized for the longest time
+    // this track can show (its duration's shape, e.g. "00:00" for a 12-minute track).
+    val labelStyle = SidekitTheme.typography.label
+    val timeStyle = remember(labelStyle) { labelStyle.copy(fontFeatureSettings = "tnum") }
+    val widest = remember(duration) { formatDuration(duration).replace(DIGIT, "0") }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SidekitText(formatDuration(position), style = SidekitTheme.typography.label)
+        Box(contentAlignment = Alignment.CenterEnd) {
+            SidekitText(widest, Modifier.alpha(0f).clearAndSetSemantics {}, style = timeStyle)
+            SidekitText(formatDuration(position), style = timeStyle)
+        }
         Box(Modifier.weight(1f).height(36.dp).pointerInput(duration) {
             detectHorizontalDragGestures { change, _ -> if (duration > 0) onSeek(((change.position.x / size.width).coerceIn(0f, 1f) * duration).toLong()) }
         }.drawBehind {
@@ -231,9 +254,11 @@ private fun MusicSeek(position: Long, duration: Long, onSeek: (Long) -> Unit) {
             drawRoundRect(trackColor, Offset(0f, y), Size(size.width, h), CornerRadius(h / 2))
             drawRoundRect(progressColor, Offset(0f, y), Size(size.width * fraction.coerceIn(0f, 1f), h), CornerRadius(h / 2))
         })
-        SidekitText(formatDuration(duration), style = SidekitTheme.typography.label)
+        SidekitText(formatDuration(duration), style = timeStyle)
     }
 }
+
+private val DIGIT = Regex("\\d")
 
 @Composable
 fun MusicSearchScreen(query: String, results: List<LibraryItem>, onQueryChange: (String) -> Unit, actions: MusicActions, onBack: () -> Unit) {
@@ -252,7 +277,6 @@ fun MusicPermissionScreen(access: Access, onBack: () -> Unit) {
 }
 
 private val SMALL_ART = 44.dp
-private val LARGE_ART = 124.dp
 private enum class PlayTileColour { None, Light, Strong }
 
 @Composable
