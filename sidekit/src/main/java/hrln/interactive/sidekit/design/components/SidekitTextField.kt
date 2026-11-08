@@ -1,5 +1,10 @@
 package hrln.interactive.sidekit.design.components
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onInterceptKeyBeforeSoftKeyboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.rememberScrollState
@@ -39,7 +45,10 @@ import hrln.interactive.sidekit.design.action.ActionTone
 import hrln.interactive.sidekit.design.action.PublishActionOverride
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.icons.SidekitIcon
+import hrln.interactive.sidekit.design.input.Dictation
 import hrln.interactive.sidekit.design.input.LocalKeypad
+import hrln.interactive.sidekit.design.input.insertDictated
+import hrln.interactive.sidekit.design.input.rememberDictation
 import hrln.interactive.sidekit.design.input.T9Engine
 import hrln.interactive.sidekit.design.input.T9Mode
 import hrln.interactive.sidekit.design.input.T9Session
@@ -53,8 +62,9 @@ import hrln.interactive.sidekit.design.theme.SidekitTheme
  * inline) and the action bar turns into word completions for the letters so far (tap one, or
  * D-pad left / right and OK, to finish the word).
  *
- * When no word is being typed the bar shows the input mode (tap to switch letters / numbers) and
- * Done, which ends typing and gives the screen its own actions back.
+ * When no word is being typed the bar shows the input mode (tap to switch letters / numbers),
+ * dictation (speak a phrase; it goes in at the cursor) and Done, which ends typing and gives the
+ * screen its own actions back. With the virtual keyboard, dictation is the keyboard's own mic.
  *
  * @param focusOnKeypad make this the screen's main field: typing on the keypad while nothing is
  *   focused starts typing here.
@@ -105,12 +115,30 @@ fun SidekitTextField(
         lastT9 = t9
     }
 
+    val context = LocalContext.current
+    val dictation = rememberDictation()
+    val dictate = { session?.finish(); dictation.start(state::insertDictated) }
+    val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) dictate()
+        else Toast.makeText(context, "Allow the microphone to dictate", Toast.LENGTH_SHORT).show()
+    }
+    // Leaving the field ends dictation; a phrase still in flight would land in the wrong place.
+    LaunchedEffect(focused) { if (!focused) dictation.release() }
+
     if (focused && t9 && keypad != null && session != null) {
         PublishActionOverride(
             t9Actions(
                 maxSuggestions = if (trailingTypingAction == null) MAX_SHOWN else MAX_SHOWN - 1,
                 engine = keypad.engine,
                 session = session,
+                dictation = dictation,
+                onDictate = {
+                    when {
+                        dictation.listening -> dictation.stop()
+                        context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> dictate()
+                        else -> microphone.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
                 onDone = {
                     session.finish()
                     focusManager.clearFocus()
@@ -244,7 +272,7 @@ fun SidekitTextField(
  * are reused as the completions change: each key press swaps labels in place and the strip grows
  * or shrinks between one and three buttons, instead of rebuilding.
  */
-private fun t9Actions(engine: T9Engine, session: T9Session, maxSuggestions: Int, onDone: () -> Unit): List<SideAction> {
+private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation, maxSuggestions: Int, onDictate: () -> Unit, onDone: () -> Unit): List<SideAction> {
     if (engine.composing) {
         return engine.candidates.take(maxSuggestions).mapIndexed { i, word ->
             val chosen = i == engine.selected
@@ -263,7 +291,16 @@ private fun t9Actions(engine: T9Engine, session: T9Session, maxSuggestions: Int,
         SideAction("t9.0", engine.modeLabel, tone = ActionTone.Muted, weight = 0.8f, dense = true, motion = ActionMotion.Up, contentDescription = "Input mode ${engine.modeLabel}") {
             session.setMode(if (engine.mode == T9Mode.MultiTap) T9Mode.Numeric else T9Mode.MultiTap)
         },
-        SideAction("t9.1", "Done", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
+        SideAction(
+            "t9.1",
+            icon = if (dictation.listening) SidekitIcon.MicOff else SidekitIcon.Mic,
+            tone = if (dictation.listening) ActionTone.Primary else ActionTone.Muted,
+            square = true,
+            motion = ActionMotion.Up,
+            contentDescription = if (dictation.listening) "Stop dictating" else "Dictate",
+            onClick = onDictate,
+        ),
+        SideAction("t9.2", "Done", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
     )
 }
 
