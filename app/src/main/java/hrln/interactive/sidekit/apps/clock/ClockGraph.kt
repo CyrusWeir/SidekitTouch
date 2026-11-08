@@ -18,9 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -129,7 +127,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
         // As in Sideticks, Undo takes a place in the bar while a delete can be undone.
         if (deletedPending != null) add(SideAction("undo", "Undo", SidekitIcon.Undo, tone = ActionTone.Muted, onClick = repo::undoDelete))
     }
-    SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (permissionPage) "Clock access" else tab, actions = actions,
+    SidekitScaffold(focusParking = focus, title = if (permissionPage) "Clock access" else tab, actions = actions,
         options = if (permissionPage) emptyList() else listOf(SideAction("access", "Alarm access") { permissionPage = true })) { padding ->
         val list = rememberLazyListState()
         val swipes = rememberSwipeRevealGroup()
@@ -191,7 +189,7 @@ private fun ClockEditor(id: String, onClose: () -> Unit) {
         repo.save((original ?: ClockAlarm()).copy(hour = parsed.hour, minute = parsed.minute, days = selected, enabled = enabled))
         onClose()
     }
-    SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (id == "new") "New alarm" else "Edit alarm",
+    SidekitScaffold(focusParking = focus, title = if (id == "new") "New alarm" else "Edit alarm",
         actions = if (deleting) listOf(SideAction("cancel", "Cancel", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back) { deleting = false }, SideAction("main", "Delete", SidekitIcon.DeleteForever, tone = ActionTone.Destructive) { repo.deleteWithUndo(id); onClose() })
         else listOf(SideAction("cancel", "Cancel", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back, onClick = onClose), SideAction("main", "Save", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, onClick = ::save)),
         options = if (id == "new") emptyList() else listOf(SideAction("delete", "Delete", SidekitIcon.DeleteForever) { deleting = true })) { padding ->

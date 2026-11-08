@@ -1,5 +1,7 @@
 package hrln.interactive.sidekit.design.components
 
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +16,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -66,6 +72,11 @@ fun SidekitHeader(
  * [header] replaces the shared title with custom content drawn in the body (e.g. a search field).
  *
  * [content] receives padding that keeps its last item clear of the action bar.
+ *
+ * [focusParking] is somewhere to put focus when a text field is done with it: clearing focus
+ * instead would hand it straight back to the first field. It is an empty point at the top of the
+ * body that the D-pad never moves onto and moves on from as from any row; a whole-screen
+ * focusable would trap it.
  */
 @Composable
 fun SidekitScaffold(
@@ -77,6 +88,7 @@ fun SidekitScaffold(
     titleModifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
     trailingAction: SideAction? = null,
+    focusParking: FocusRequester? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val spacing = SidekitTheme.spacing
@@ -114,6 +126,12 @@ fun SidekitScaffold(
                     },
             ) {
                 val bottom = if (actions.isNotEmpty()) spacing.actionBarHeight + spacing.pageGap + spacing.pagePadding else spacing.pagePadding
+                // Only parked on purpose (requestFocus), never landed on by the D-pad.
+                if (focusParking != null) Box(
+                    Modifier
+                        .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) cancelFocusChange() } }
+                        .focusGroup(),
+                ) { Box(Modifier.focusRequester(focusParking).focusable()) }
                 CompositionLocalProvider(LocalBodyEntrance provides entrance) {
                     content(PaddingValues(bottom = bottom))
                 }
