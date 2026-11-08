@@ -73,7 +73,10 @@ class WeatherRepository(private val directory: File, scope: CoroutineScope,
         }
         return result
     }
-    fun select(place: Place) = settings.edit { it.copy(places = (it.places.filterNot { p -> p.key == place.key || (place.name == "Current location" && p.name == place.name) } + place).takeLast(30), selected = place.key) }
+    /** A new current-location fix replaces the previous one rather than piling up. */
+    fun select(place: Place) = settings.edit { it.copy(places = (it.places.filterNot { p -> p.key == place.key || (place.isCurrentLocation && p.isCurrentLocation) } + place).takeLast(30), selected = place.key) }
+    /** Renames a saved place in place, without changing which one is selected. */
+    fun rename(place: Place, name: String) = settings.edit { it.copy(places = it.places.map { p -> if (p.key == place.key) p.copy(name = name) else p }) }
     fun delete(place: Place) = settings.edit { val places = it.places.filterNot { p -> p.key == place.key }; it.copy(places = places, selected = if (it.selected == place.key) places.firstOrNull()?.key else it.selected) }
     companion object {
         @Volatile private var instance: WeatherRepository? = null
