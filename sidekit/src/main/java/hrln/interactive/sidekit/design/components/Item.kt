@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import hrln.interactive.sidekit.design.theme.contentColorFor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.design.theme.contentColorFor
 
 /** Item "Colour Variant" from the Item component set (62:950). */
 enum class ItemColour { Primary, Secondary, Destructive, Muted }
@@ -46,7 +46,7 @@ fun SidekitTile(
     onClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
     contentAlignment: Alignment = Alignment.Center,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = modifier
@@ -54,13 +54,16 @@ fun SidekitTile(
             .clip(SidekitTheme.shapes.item)
             .background(color)
             .then(
-                if (onClick != null) Modifier.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick)
-                else Modifier,
+                if (onClick != null) {
+                    Modifier.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick)
+                } else {
+                    Modifier
+                }
             ),
         contentAlignment = contentAlignment,
         content = {
             CompositionLocalProvider(LocalSidekitContentColor provides SidekitTheme.colors.contentColorFor(color)) { content() }
-        },
+        }
     )
 }
 
@@ -78,26 +81,31 @@ fun SidekitItem(
     colour: ItemColour = ItemColour.Primary,
     titleDecoration: TextDecoration? = null,
     onClick: (() -> Unit)? = null,
-    leading: (@Composable RowScope.() -> Unit)? = null,
+    leading: (@Composable RowScope.() -> Unit)? = null
 ) {
     SidekitTile(
         modifier = modifier.fillMaxWidth(),
         color = colour.container(),
         onClick = onClick,
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.CenterStart
     ) {
         Row(
             modifier = Modifier.padding(horizontal = SidekitTheme.spacing.itemPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap),
+            horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap)
         ) {
             leading?.invoke(this)
             if (icon != null) SidekitIconImage(icon)
             SidekitText(title, textDecoration = titleDecoration)
             if (secondary != null) {
                 SidekitText(secondary, Modifier.weight(1f), color = SidekitTheme.colors.surfaceA6)
-            } else if (showLinkArrow) {
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            }
+            // The arrow marks a row that opens another page, whether or not it also shows a value.
+            if (showLinkArrow) {
+                Box(
+                    if (secondary == null) Modifier.weight(1f) else Modifier,
+                    contentAlignment = Alignment.CenterEnd
+                ) {
                     SidekitIconImage(SidekitIcon.ArrowRightAlt)
                 }
             }
@@ -114,7 +122,7 @@ fun SidekitIconItem(
     colour: ItemColour = ItemColour.Primary,
     color: Color = colour.container(),
     iconSize: Dp = SidekitTheme.spacing.iconSize,
-    onClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
 ) {
     SidekitTile(modifier = modifier, color = color, onClick = onClick, onClickLabel = contentDescription) {
         SidekitIconImage(icon, size = iconSize, contentDescription = contentDescription)
@@ -127,7 +135,7 @@ fun SidekitItemRow(modifier: Modifier = Modifier, content: @Composable RowScope.
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemOuterGap),
-        content = content,
+        content = content
     )
 }
 
@@ -137,7 +145,7 @@ fun SidekitCard(
     modifier: Modifier = Modifier,
     color: Color = SidekitTheme.colors.surfaceA3,
     onClick: (() -> Unit)? = null,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = modifier
@@ -147,6 +155,6 @@ fun SidekitCard(
             .padding(SidekitTheme.spacing.itemPadding),
         content = {
             CompositionLocalProvider(LocalSidekitContentColor provides SidekitTheme.colors.contentColorFor(color)) { content() }
-        },
+        }
     )
 }

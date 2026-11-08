@@ -192,7 +192,6 @@ class KeypadMappingUiTest {
         var opened = 0
         show { SettingsHome({}, {}, onKeyboard = { opened++ }) }
         scrollTo("Keyboard")
-        compose.onNodeWithText("Keys & input").assertIsDisplayed()
         // The old separate keypad rows are gone: one entry leads to the Keyboard page.
         compose.onNodeWithText("Input mode").assertDoesNotExist()
         compose.onNodeWithText("Keypad Back key").assertDoesNotExist()
@@ -209,7 +208,7 @@ class KeypadMappingUiTest {
         compose.onNodeWithText("Keypad").assertIsDisplayed()
         compose.onNodeWithText("Input mode").assertIsDisplayed()
         compose.onNodeWithText("Keypad Back key").assertIsDisplayed()
-        compose.onNodeWithText("Keypad mapping").assertIsDisplayed()
+        compose.onNodeWithText("Mapping").assertIsDisplayed()
         // Tapping the keypad row cycles the module, and the diagram follows it.
         compose.onNodeWithText("Keypad").performClick()
         compose.runOnIdle { assertEquals(KeypadModule.Qwerty, keypad.module) }
@@ -218,7 +217,7 @@ class KeypadMappingUiTest {
         scrollTo("Tap a key to learn its action.")
         compose.onNodeWithText("QW").assertIsDisplayed()
         compose.onRoot().captureRoboImage("screenshots/keyboard_settings_page.png")
-        scrollTo("Keypad mapping").performClick()
+        scrollTo("Mapping").performClick()
         assertEquals(1, mapping)
     }
 }

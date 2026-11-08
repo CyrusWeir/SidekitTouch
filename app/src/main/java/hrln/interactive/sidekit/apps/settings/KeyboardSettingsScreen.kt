@@ -93,8 +93,9 @@ internal fun KeyboardSettingsScreen(back: () -> Unit, onKeypadMapping: () -> Uni
             item {
                 SidekitItem(
                     "Keypad Back key",
-                    Modifier.height(CompactRowHeight).listFade(list, 2),
-                    secondary = if (accessibility) "Enabled" else "Enable",
+                    Modifier.listFade(list, 2),
+                    secondary = if (accessibility) "On" else "Off",
+                    showLinkArrow = true,
                     onClick = {
                         try {
                             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -106,10 +107,10 @@ internal fun KeyboardSettingsScreen(back: () -> Unit, onKeypadMapping: () -> Uni
             }
             item {
                 SidekitItem(
-                    "Keypad mapping",
-                    Modifier.height(CompactRowHeight).listFade(list, 3),
-                    secondary = if (custom != null) "Custom" else null,
-                    showLinkArrow = custom == null,
+                    "Mapping",
+                    Modifier.listFade(list, 3),
+                    secondary = if (custom != null) "Custom" else "Automatic",
+                    showLinkArrow = true,
                     onClick = onKeypadMapping
                 )
             }
