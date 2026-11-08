@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         // Opened from an sms: link or a message notification: go to that conversation.
         if (savedInstanceState == null && !SideportLinks.handle(intent)) IncomingLinks.handle(intent)
         enableEdgeToEdge()
-        // The mocks use the whole 480 x 640 display; the launcher header carries the clock.
+        // SideKit uses the whole display; the launcher header carries the clock.
         WindowCompat.getInsetsController(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
