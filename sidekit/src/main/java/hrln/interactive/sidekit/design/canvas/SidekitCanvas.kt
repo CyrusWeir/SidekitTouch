@@ -2,6 +2,7 @@ package hrln.interactive.sidekit.design.canvas
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
@@ -80,6 +85,7 @@ fun SidekitCanvas(
             LocalKeypad provides keypad,
         ) {
             val hasFocus = revealFocusOnKeys()
+            val screenFocus = remember { FocusRequester() }
             Box(
                 modifier = Modifier
                     .size(SidephoneCanvas.WIDTH.dp, SidephoneCanvas.HEIGHT.dp)
@@ -88,7 +94,12 @@ fun SidekitCanvas(
                     .clipToBounds()
                     .background(SidekitTheme.colors.surfaceA1),
             ) {
-                content()
+                // Screens run under the action bar, so D-pad search never finds them above it and
+                // Up from the bar went nowhere. The bar sends Up into this group instead: back to
+                // the item focus left from (lists restore their row too), or the bottom item.
+                Box(Modifier.fillMaxSize().focusRequester(screenFocus).focusRestorer().focusGroup()) {
+                    content()
+                }
                 // Back closes the options bar before it goes back a screen.
                 BackHandler(enabled = chrome.optionsOpen) { chrome.closeOptions() }
                 HeaderHost(
@@ -101,6 +112,7 @@ fun SidekitCanvas(
                     state = chrome,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
+                        .focusProperties { up = screenFocus }
                         .imePadding()
                         .padding(SidekitTheme.spacing.pagePadding),
                 )
