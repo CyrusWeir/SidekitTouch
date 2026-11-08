@@ -132,6 +132,8 @@ fun SidekitTextField(
                 engine = keypad.engine,
                 session = session,
                 dictation = dictation,
+                // A screen's own trailing button leaves no room for Done's label.
+                compact = trailingTypingAction != null,
                 onDictate = {
                     when {
                         dictation.listening -> dictation.stop()
@@ -272,7 +274,7 @@ fun SidekitTextField(
  * are reused as the completions change: each key press swaps labels in place and the strip grows
  * or shrinks between one and three buttons, instead of rebuilding.
  */
-private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation, maxSuggestions: Int, onDictate: () -> Unit, onDone: () -> Unit): List<SideAction> {
+private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation, compact: Boolean, maxSuggestions: Int, onDictate: () -> Unit, onDone: () -> Unit): List<SideAction> {
     if (engine.composing) {
         return engine.candidates.take(maxSuggestions).mapIndexed { i, word ->
             val chosen = i == engine.selected
@@ -300,7 +302,7 @@ private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation
             contentDescription = if (dictation.listening) "Stop dictating" else "Dictate",
             onClick = onDictate,
         ),
-        SideAction("t9.2", "Done", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
+        SideAction("t9.2", if (compact) null else "Done", SidekitIcon.Check, iconAtEnd = !compact, square = compact, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
     )
 }
 
