@@ -68,6 +68,7 @@ internal fun KeyboardSettingsScreen(back: () -> Unit, onKeypadMapping: () -> Uni
                     "Keypad",
                     Modifier.height(CompactRowHeight).listFade(list, 0),
                     secondary = custom?.let { "${it.label} · custom" } ?: module.label,
+                    secondaryToEnd = true,
                     onClick = {
                         if (custom != null) {
                             onKeypadMapping()
@@ -83,6 +84,7 @@ internal fun KeyboardSettingsScreen(back: () -> Unit, onKeypadMapping: () -> Uni
                     "Input mode",
                     Modifier.height(CompactRowHeight).listFade(list, 1),
                     secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters",
+                    secondaryToEnd = true,
                     onClick = {
                         prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]
                         keypad?.let { prefs.applyInputDefault(it) }

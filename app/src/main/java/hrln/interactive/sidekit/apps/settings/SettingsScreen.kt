@@ -68,17 +68,18 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
         SidekitList(padding, state = list) {
             // Toggles act in place: compact rows, no arrow.
             item {
-                SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", onClick = {
+                SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", secondaryToEnd = true, onClick = {
                     prefs.listLayout = !prefs.listLayout
                     revision++
                 })
             }
+            // Opens a floating system dialog rather than a Sidekit page, so it stays a compact row.
+            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = if (home) "Sidekit" else "Choose", secondaryToEnd = true, onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
             // Everything below opens another page: full-height rows with a link arrow.
-            item { SidekitItem("Arrange apps", Modifier.listFade(list, 1), showLinkArrow = true, onClick = onArrange) }
-            item { SidekitItem("Case colour", Modifier.listFade(list, 2), secondary = caseColour?.label ?: "Blue", showLinkArrow = true, onClick = onCaseColour) }
+            item { SidekitItem("Arrange apps", Modifier.listFade(list, 2), showLinkArrow = true, onClick = onArrange) }
+            item { SidekitItem("Case colour", Modifier.listFade(list, 3), secondary = caseColour?.label ?: "Blue", showLinkArrow = true, onClick = onCaseColour) }
             // All keypad preferences live together on the Keyboard page, with the key diagram.
-            item { SidekitItem("Keyboard", Modifier.listFade(list, 3), showLinkArrow = true, onClick = onKeyboard) }
-            item { SidekitItem("Home app", Modifier.listFade(list, 4), secondary = if (home) "Sidekit" else "Choose", showLinkArrow = true, onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
+            item { SidekitItem("Keyboard", Modifier.listFade(list, 4), showLinkArrow = true, onClick = onKeyboard) }
             item { SidekitItem("Hide apps", showLinkArrow = true, onClick = onHiddenApps) }
             // Device settings live on their own page, so this screen stays Sidekit's own settings.
             item { SidekitItem("System settings", showLinkArrow = true, onClick = onSystem) }

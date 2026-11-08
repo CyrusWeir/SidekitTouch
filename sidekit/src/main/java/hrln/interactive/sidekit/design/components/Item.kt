@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import hrln.interactive.sidekit.design.icons.SidekitIcon
@@ -76,6 +77,8 @@ fun SidekitItem(
     title: String,
     modifier: Modifier = Modifier,
     secondary: String? = null,
+    /** Put the secondary value at the row's trailing edge (toggles and compact state rows). */
+    secondaryToEnd: Boolean = false,
     icon: SidekitIcon? = null,
     showLinkArrow: Boolean = false,
     colour: ItemColour = ItemColour.Primary,
@@ -98,7 +101,12 @@ fun SidekitItem(
             if (icon != null) SidekitIconImage(icon)
             SidekitText(title, textDecoration = titleDecoration)
             if (secondary != null) {
-                SidekitText(secondary, Modifier.weight(1f), color = SidekitTheme.colors.surfaceA6)
+                SidekitText(
+                    secondary,
+                    Modifier.weight(1f),
+                    color = SidekitTheme.colors.surfaceA6,
+                    textAlign = if (secondaryToEnd) TextAlign.End else null
+                )
             }
             // The arrow marks a row that opens another page, whether or not it also shows a value.
             if (showLinkArrow) {
