@@ -132,7 +132,8 @@ fun SidekitTextField(
                 engine = keypad.engine,
                 session = session,
                 dictation = dictation,
-                // A screen's own trailing button leaves no room for Done's label.
+                // With a screen's own (square) trailing button there's no room for Done's label:
+                // the other three share the rest of the bar equally, like the home dock.
                 compact = trailingTypingAction != null,
                 onDictate = {
                     when {
@@ -290,19 +291,20 @@ private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation
         }
     }
     return listOf(
-        SideAction("t9.0", engine.modeLabel, tone = ActionTone.Muted, weight = 0.8f, dense = true, motion = ActionMotion.Up, contentDescription = "Input mode ${engine.modeLabel}") {
+        SideAction("t9.0", engine.modeLabel, tone = ActionTone.Muted, weight = if (compact) 1f else 0.8f, dense = true, motion = ActionMotion.Up, contentDescription = "Input mode ${engine.modeLabel}") {
             session.setMode(if (engine.mode == T9Mode.MultiTap) T9Mode.Numeric else T9Mode.MultiTap)
         },
         SideAction(
             "t9.1",
             icon = if (dictation.listening) SidekitIcon.MicOff else SidekitIcon.Mic,
             tone = if (dictation.listening) ActionTone.Primary else ActionTone.Muted,
-            square = true,
+            // Crowded, the bar's buttons take equal shares, like the home dock.
+            square = !compact,
             motion = ActionMotion.Up,
             contentDescription = if (dictation.listening) "Stop dictating" else "Dictate",
             onClick = onDictate,
         ),
-        SideAction("t9.2", if (compact) null else "Done", SidekitIcon.Check, iconAtEnd = !compact, square = compact, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
+        SideAction("t9.2", if (compact) null else "Done", SidekitIcon.Check, iconAtEnd = !compact, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
     )
 }
 
