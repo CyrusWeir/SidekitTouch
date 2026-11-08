@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -41,6 +42,14 @@ private class HeaderModel {
         val newScreen = top !== owner
         owner = top
         current = spec
+        // A screen without the shared title draws its own header in that place (the launcher's
+        // clock): the old title goes at once, as fading it there would draw it over that header.
+        if (spec == null) {
+            job?.cancel()
+            previous = null
+            progress = 1f
+            return
+        }
         // A screen updating its own title (the clock ticking, a note saved) changes in place; only a
         // new screen plays the swap.
         if (newScreen && old?.title != spec?.title && (old != null || spec != null)) {
@@ -66,6 +75,11 @@ internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
     val top = state.top
     val spec = top?.header
     SideEffect { if (top != null) model.sync(top, spec, scope) }
+    // Publishers notify in the frame a screen changes, so the title never trails the body by a frame.
+    DisposableEffect(state, model) {
+        state.onHeaderChange = { state.top?.let { model.sync(it, it.header, scope) } }
+        onDispose { state.onHeaderChange = null }
+    }
 
     val travel = with(LocalDensity.current) { TITLE_TRAVEL.toPx() }
     val current = model.current
@@ -98,7 +112,8 @@ internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
                 textAlign = current.align,
                 modifier = Modifier.graphicsLayer {
                     val p = progress()
-                    alpha = ((p - HANDOFF) / (1f - HANDOFF)).coerceIn(0f, 1f)
+                    // Composition hasn't caught up with a screen that has no shared title: hide it now.
+                    alpha = if (model.current == null) 0f else ((p - HANDOFF) / (1f - HANDOFF)).coerceIn(0f, 1f)
                     translationY = (1f - p) * travel
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 },

@@ -213,6 +213,14 @@ class ChromeState {
      */
     internal var onChange: (() -> Unit)? = null
 
+    /** Set by the title host, for the same reason as [onChange]. */
+    internal var onHeaderChange: (() -> Unit)? = null
+
+    internal fun changed() {
+        onChange?.invoke()
+        onHeaderChange?.invoke()
+    }
+
     /**
      * False for the moment between one screen leaving and the next attaching. Hosts hold their
      * state through it rather than animating towards "nothing".
@@ -303,15 +311,15 @@ private fun Publish(chrome: ChromeState, into: MutableList<ChromePublisher>, upd
         // briefly read as "this screen has an empty bar" and start the wrong animation.
         update(publisher)
         into.add(publisher)
-        chrome.onChange?.invoke()
+        chrome.changed()
         onDispose {
             into.remove(publisher)
             chrome.detached(publisher)
-            chrome.onChange?.invoke()
+            chrome.changed()
         }
     }
     SideEffect {
         update(publisher)
-        chrome.onChange?.invoke()
+        chrome.changed()
     }
 }
