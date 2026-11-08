@@ -48,7 +48,7 @@ private class HeaderModel {
             progress = 0f
             job?.cancel()
             job = scope.launch {
-                animate(0f, 1f, animationSpec = SidekitMotion.content) { v, _ -> progress = v }
+                animate(0f, 1f, animationSpec = SidekitMotion.title) { v, _ -> progress = v }
                 previous = null
             }
         }
