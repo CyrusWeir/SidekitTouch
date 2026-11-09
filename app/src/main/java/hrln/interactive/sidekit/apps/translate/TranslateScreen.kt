@@ -140,6 +140,8 @@ private fun TranslateBody(
                         placeholder = "Type or speak",
                         focusOnKeypad = true,
                         autoFocus = true,
+                        // Translate has its own mic, which listens in the chosen source language.
+                        dictation = false,
                     )
                 }
             } else TextRow(if (state.translating) "Translating…" else pane.text.ifEmpty { "Translation" })

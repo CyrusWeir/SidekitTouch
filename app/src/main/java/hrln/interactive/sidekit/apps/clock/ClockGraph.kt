@@ -156,7 +156,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
                     "Timer" -> {
                         item { SidekitItem(durationText(current.timer.remainingAt(now, elapsed)), Modifier.listFade(list, 3)) }
                         if (current.timer.endAt == null && current.timer.remaining == 0L) item { SidekitCard(Modifier.listFade(list, 4).fillMaxWidth()) {
-                            SidekitTextField(minutes, { minutes = it }, placeholder = "Minutes", singleLine = true, focusOnKeypad = true, onDone = { focus.requestFocus() })
+                            SidekitTextField(minutes, { minutes = it }, placeholder = "Minutes", singleLine = true, dictation = false, focusOnKeypad = true, onDone = { focus.requestFocus() })
                         } }
                     }
                     else -> {
@@ -195,7 +195,7 @@ private fun ClockEditor(id: String, onClose: () -> Unit) {
         options = if (id == "new") emptyList() else listOf(SideAction("delete", "Delete", SidekitIcon.DeleteForever) { deleting = true })) { padding ->
         val list = rememberLazyListState()
         SidekitList(padding, state = list) {
-            item { SidekitCard(Modifier.listFade(list, 0).fillMaxWidth()) { SidekitTextField(time, { time = it }, placeholder = "HH:mm", singleLine = true, focusOnKeypad = true, autoFocus = id == "new", onDone = { focus.requestFocus() }) } }
+            item { SidekitCard(Modifier.listFade(list, 0).fillMaxWidth()) { SidekitTextField(time, { time = it }, placeholder = "HH:mm", singleLine = true, dictation = false, focusOnKeypad = true, autoFocus = id == "new", onDone = { focus.requestFocus() }) } }
             item { SidekitItem(if (enabled) "Alarm on" else "Alarm off", Modifier.listFade(list, 1), onClick = { enabled = !enabled }) }
             error?.let { item { SidekitItem(it, Modifier.listFade(list, 2)) } }
             (1..7).forEach { day -> item { SidekitItem(java.time.DayOfWeek.of(day).name.lowercase().replaceFirstChar { it.uppercase() }, Modifier.listFade(list, day + 2), secondary = if (day in selected) "Repeat" else "", onClick = { days = (if (day in selected) selected - day else selected + day).sorted().joinToString(",") }) } }

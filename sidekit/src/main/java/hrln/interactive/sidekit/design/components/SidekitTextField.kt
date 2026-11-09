@@ -2,6 +2,7 @@ package hrln.interactive.sidekit.design.components
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,6 +69,8 @@ import hrln.interactive.sidekit.design.theme.SidekitTheme
  *
  * @param focusOnKeypad make this the screen's main field: typing on the keypad while nothing is
  *   focused starts typing here.
+ * @param dictation offer the typing bar's mic. Off for fields that take numbers or a fixed format,
+ *   for private text that shouldn't go to a speech service, and for screens with their own mic.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -83,6 +86,7 @@ fun SidekitTextField(
     autoFocus: Boolean = false,
     trailingTypingAction: SideAction? = null,
     onKeypadFocus: (() -> Unit)? = null,
+    dictation: Boolean = true,
 ) {
     val keypad = LocalKeypad.current
     val scope = rememberCoroutineScope()
@@ -116,14 +120,19 @@ fun SidekitTextField(
     }
 
     val context = LocalContext.current
-    val dictation = rememberDictation()
-    val dictate = { session?.finish(); dictation.start(state::insertDictated) }
+    val speech = rememberDictation()
+    // Checked up front so phones without a recogniser never show a mic that can only fail.
+    val canDictate = dictation && remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
+    // A word started on the keypad while listening is finished before the phrase goes in, so the
+    // phrase never lands inside it.
+    val dictate = { session?.finish(); speech.start { session?.finish(); state.insertDictated(it) } }
     val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) dictate()
+        // Focus can move while the permission dialog is up; then the phrase has nowhere to go.
+        if (granted) { if (focused) dictate() }
         else Toast.makeText(context, "Allow the microphone to dictate", Toast.LENGTH_SHORT).show()
     }
     // Leaving the field ends dictation; a phrase still in flight would land in the wrong place.
-    LaunchedEffect(focused) { if (!focused) dictation.release() }
+    LaunchedEffect(focused) { if (!focused) speech.release() }
 
     if (focused && t9 && keypad != null && session != null) {
         PublishActionOverride(
@@ -131,13 +140,13 @@ fun SidekitTextField(
                 maxSuggestions = if (trailingTypingAction == null) MAX_SHOWN else MAX_SHOWN - 1,
                 engine = keypad.engine,
                 session = session,
-                dictation = dictation,
+                dictation = speech.takeIf { canDictate },
                 // With a screen's own (square) trailing button there's no room for Done's label:
                 // the other three share the rest of the bar equally, like the home dock.
                 compact = trailingTypingAction != null,
                 onDictate = {
                     when {
-                        dictation.listening -> dictation.stop()
+                        speech.listening -> speech.stop()
                         context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> dictate()
                         else -> microphone.launch(Manifest.permission.RECORD_AUDIO)
                     }
@@ -258,6 +267,7 @@ fun SidekitTextField(
     singleLine: Boolean = false,
     onDone: (() -> Unit)? = null,
     autoFocus: Boolean = false,
+    dictation: Boolean = true,
 ) {
     val state = rememberTextFieldState(value)
     val latest by rememberUpdatedState(onValueChange)
@@ -267,7 +277,7 @@ fun SidekitTextField(
     LaunchedEffect(value) {
         if (state.text.toString() != value) state.setTextAndPlaceCursorAtEnd(value)
     }
-    SidekitTextField(state, modifier, textStyle, placeholder, focusRequester, focusOnKeypad, singleLine, onDone, autoFocus)
+    SidekitTextField(state, modifier, textStyle, placeholder, focusRequester, focusOnKeypad, singleLine, onDone, autoFocus, dictation = dictation)
 }
 
 /**
@@ -275,7 +285,7 @@ fun SidekitTextField(
  * are reused as the completions change: each key press swaps labels in place and the strip grows
  * or shrinks between one and three buttons, instead of rebuilding.
  */
-private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation, compact: Boolean, maxSuggestions: Int, onDictate: () -> Unit, onDone: () -> Unit): List<SideAction> {
+private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation?, compact: Boolean, maxSuggestions: Int, onDictate: () -> Unit, onDone: () -> Unit): List<SideAction> {
     if (engine.composing) {
         return engine.candidates.take(maxSuggestions).mapIndexed { i, word ->
             val chosen = i == engine.selected
@@ -290,20 +300,25 @@ private fun t9Actions(engine: T9Engine, session: T9Session, dictation: Dictation
             ) { session.pick(i) }
         }
     }
-    return listOf(
+    return listOfNotNull(
         SideAction("t9.0", engine.modeLabel, tone = ActionTone.Muted, weight = if (compact) 1f else 0.8f, dense = true, motion = ActionMotion.Up, contentDescription = "Input mode ${engine.modeLabel}") {
             session.setMode(if (engine.mode == T9Mode.MultiTap) T9Mode.Numeric else T9Mode.MultiTap)
         },
-        SideAction(
-            "t9.1",
-            icon = if (dictation.listening) SidekitIcon.MicOff else SidekitIcon.Mic,
-            tone = if (dictation.listening) ActionTone.Primary else ActionTone.Muted,
-            // Crowded, the bar's buttons take equal shares, like the home dock.
-            square = !compact,
-            motion = ActionMotion.Up,
-            contentDescription = if (dictation.listening) "Stop dictating" else "Dictate",
-            onClick = onDictate,
-        ),
+        // No mic for digits: a number is quicker to key than to say.
+        if (dictation != null && engine.mode != T9Mode.Numeric) {
+            SideAction(
+                "t9.1",
+                icon = if (dictation.listening) SidekitIcon.MicOff else SidekitIcon.Mic,
+                tone = if (dictation.listening) ActionTone.Primary else ActionTone.Muted,
+                // Crowded, the bar's buttons take equal shares, like the home dock.
+                square = !compact,
+                motion = ActionMotion.Up,
+                contentDescription = if (dictation.listening) "Stop dictating" else "Dictate",
+                onClick = onDictate,
+            )
+        } else {
+            null
+        },
         SideAction("t9.2", if (compact) null else "Done", SidekitIcon.Check, iconAtEnd = !compact, tone = ActionTone.Secondary, motion = ActionMotion.Up, contentDescription = "Done typing", onClick = onDone),
     )
 }

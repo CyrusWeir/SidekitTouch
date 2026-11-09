@@ -83,7 +83,7 @@ fun SideticksScreen(
             if (needsNotifications && state.dueText != null) row("permission") { SidekitItem("Allow notifications for due reminders", it) }
             if (state.dueText != null) row("due") { modifier ->
                 SidekitCard(modifier.fillMaxWidth()) {
-                    SidekitTextField(state.dueText, { onDue(it) }, placeholder = "YYYY-MM-DD HH:mm", singleLine = true, onDone = { screenFocus.requestFocus() })
+                    SidekitTextField(state.dueText, { onDue(it) }, placeholder = "YYYY-MM-DD HH:mm", singleLine = true, dictation = false, onDone = { screenFocus.requestFocus() })
                 }
             }
             if (state.draft != null) row("draft") { DraftRow(state.draft, onDraftChange, { screenFocus.requestFocus() }, it) }

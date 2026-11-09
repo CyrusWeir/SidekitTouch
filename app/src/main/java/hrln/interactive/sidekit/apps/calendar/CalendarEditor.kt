@@ -100,11 +100,11 @@ fun CalendarEditor(id: Long?, date: LocalDate, onClose: () -> Unit) {
                     item { SidekitCard(Modifier.listFade(list, 1).fillMaxWidth()) { SidekitTextField(title.orEmpty(), { title = it }, placeholder = "Title", focusOnKeypad = true, autoFocus = id == null, singleLine = true, onDone = { focus.requestFocus() }) } }
                     item { SidekitCard(Modifier.listFade(list, 2).fillMaxWidth()) { Column {
                         SidekitText("Start · YYYY-MM-DD HH:mm", style = SidekitTheme.typography.caption)
-                        SidekitTextField(start.orEmpty(), { start = it }, singleLine = true, onDone = { focus.requestFocus() })
+                        SidekitTextField(start.orEmpty(), { start = it }, singleLine = true, dictation = false, onDone = { focus.requestFocus() })
                     } } }
                     item { SidekitCard(Modifier.listFade(list, 3).fillMaxWidth()) { Column {
                         SidekitText("End · YYYY-MM-DD HH:mm", style = SidekitTheme.typography.caption)
-                        SidekitTextField(end.orEmpty(), { end = it }, singleLine = true, onDone = { focus.requestFocus() })
+                        SidekitTextField(end.orEmpty(), { end = it }, singleLine = true, dictation = false, onDone = { focus.requestFocus() })
                     } } }
                     item { SidekitItem(if (allDay) "All day · End date is exclusive" else "Timed event", Modifier.listFade(list, 4), onClick = { allDay = !allDay }) }
                     item { SidekitItem(calendars.find { it.id == calendarId }?.name ?: "No writable calendar", Modifier.listFade(list, 5), onClick = { choosingCalendar = true }) }

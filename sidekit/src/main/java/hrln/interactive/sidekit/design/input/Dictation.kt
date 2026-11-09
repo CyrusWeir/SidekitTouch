@@ -80,7 +80,10 @@ class Dictation internal constructor(private val context: Context) {
         override fun onError(error: Int) {
             release()
             when (error) {
-                SpeechRecognizer.ERROR_CLIENT -> Unit
+                // Our own cancel() destroys the recogniser first, so this is a real start failure.
+                SpeechRecognizer.ERROR_CLIENT -> tell("Couldn't start dictation")
+                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> tell("Dictation is busy. Try again.")
+                SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> tell("Dictation isn't available in this language")
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT, SpeechRecognizer.ERROR_NO_MATCH -> tell("Didn't hear anything")
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> tell("Allow the microphone to dictate")
                 SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> tell("Dictation needs a connection")
