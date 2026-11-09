@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -151,6 +152,35 @@ class LauncherSearchTest {
         compose.onNodeWithTag(LauncherTags.CLOCK).assertDoesNotExist()
         key(KeyEvent.KEYCODE_T)
         compose.onNodeWithTag(LauncherTags.SEARCH).assertTextEquals("T")
+    }
+
+    private fun dockButton(label: String) =
+        compose.onNode(hasContentDescription(label) and !hasAnyAncestor(hasTestTag(LauncherTags.GRID)))
+
+    @Test fun `keypad Up from the dock enters the grid`() {
+        launch(KeypadModule.Qwerty, LauncherLayout.Grid)
+        // Reached by touch, so there is no tile to go back to: Up still leaves the dock.
+        dockButton("Sidenotes").requestFocus()
+        compose.waitForIdle()
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        dockButton("Sidenotes").assertIsNotFocused()
+        compose.onNode(isFocused() and hasAnyAncestor(hasTestTag(LauncherTags.GRID))).assertExists()
+    }
+
+    @Test fun `keypad Down into the dock and Up again returns to the same tile`() {
+        launch(KeypadModule.Qwerty, LauncherLayout.Grid)
+        focusFirstTile()
+        val inGrid = isFocused() and hasAnyAncestor(hasTestTag(LauncherTags.GRID))
+        // Down until focus leaves the grid for the dock, remembering the last tile it was on.
+        var last: String? = null
+        repeat(20) {
+            val focused = compose.onAllNodes(inGrid).fetchSemanticsNodes().singleOrNull() ?: return@repeat
+            last = focused.config[SemanticsProperties.ContentDescription].single()
+            key(KeyEvent.KEYCODE_DPAD_DOWN)
+        }
+        compose.onAllNodes(inGrid).assertCountEquals(0)
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        tile(last!!).assertIsFocused()
     }
 
     @Test fun `clear remains square and rightmost in typing options`() {

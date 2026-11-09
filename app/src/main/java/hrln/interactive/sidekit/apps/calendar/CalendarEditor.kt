@@ -3,9 +3,7 @@ package hrln.interactive.sidekit.apps.calendar
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
@@ -77,7 +75,7 @@ fun CalendarEditor(id: Long?, date: LocalDate, onClose: () -> Unit) {
         }
     }
     BackHandler(choosingCalendar || deleting || busy) { if (!busy) { choosingCalendar = false; deleting = false } }
-    SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (choosingCalendar) "Choose calendar" else if (id == null) "New event" else "Edit event",
+    SidekitScaffold(focusParking = focus, title = if (choosingCalendar) "Choose calendar" else if (id == null) "New event" else "Edit event",
         actions = when {
             busy -> listOf(SideAction("main", "Saving…") {})
             choosingCalendar -> listOf(SideAction("main", "Back") { choosingCalendar = false })

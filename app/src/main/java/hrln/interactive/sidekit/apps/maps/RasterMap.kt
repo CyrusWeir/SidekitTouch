@@ -1,11 +1,13 @@
 package hrln.interactive.sidekit.apps.maps
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.*
 import hrln.interactive.sidekit.design.components.*
 import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.design.theme.drawFocusRing
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.File
@@ -47,6 +50,20 @@ fun RasterMap(center: Place, current: Place?, destination: Place?, zoomChange: I
     LaunchedEffect(zoomChange) { if (zoomChange != 0) viewport = viewport.zoomBy(if (zoomChange > 0) 1 else -1) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    // The D-pad moves focus past the map like any row; OK on the map hands it the arrows to pan
+    // with, and OK or Back hands them back.
+    var focused by remember { mutableStateOf(false) }
+    var panning by remember { mutableStateOf(false) }
+    BackHandler(enabled = panning) { panning = false }
+    var tilesMissing by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(tilesMissing, panning) {
+        onStatus(when {
+            tilesMissing == null -> return@LaunchedEffect
+            tilesMissing == true -> "Some tiles unavailable · location and search still work"
+            panning -> "Panning · d-pad moves the map; OK or Back to stop"
+            else -> "Map ready · drag, or OK to pan with the d-pad; Options to zoom"
+        })
+    }
     val colors = SidekitTheme.colors
     WhileVisible(repository) {
         try {
@@ -65,18 +82,20 @@ fun RasterMap(center: Place, current: Place?, destination: Place?, zoomChange: I
                     if (bitmap != null) tiles[key] = bitmap else missing = true
                 }
                 loaded = tiles
-                onStatus(if (missing) "Some tiles unavailable · location and search still work" else "Map ready · drag or use d-pad; Options to zoom")
+                tilesMissing = missing
             }
         } finally { repository.clearMemory(); loaded = emptyMap() }
     }
     SidekitTile(Modifier.fillMaxWidth().height(263.dp)) {
         Canvas(Modifier.fillMaxSize().onSizeChanged { canvasSize = it }.focusRequester(focus)
+            .onFocusChanged { focused = it.isFocused; if (!it.isFocused) panning = false }
             .onKeyEvent { e ->
                 if (e.type != KeyEventType.KeyDown) false else when (e.key) {
-                    Key.DirectionLeft -> { viewport = viewport.pan(-.5, 0.0); true }
-                    Key.DirectionRight -> { viewport = viewport.pan(.5, 0.0); true }
-                    Key.DirectionUp -> { viewport = viewport.pan(0.0, -.5); true }
-                    Key.DirectionDown -> { viewport = viewport.pan(0.0, .5); true }
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { if (e.nativeKeyEvent.repeatCount == 0) panning = !panning; true }
+                    Key.DirectionLeft -> panning.also { if (it) viewport = viewport.pan(-.5, 0.0) }
+                    Key.DirectionRight -> panning.also { if (it) viewport = viewport.pan(.5, 0.0) }
+                    Key.DirectionUp -> panning.also { if (it) viewport = viewport.pan(0.0, -.5) }
+                    Key.DirectionDown -> panning.also { if (it) viewport = viewport.pan(0.0, .5) }
                     Key.Plus, Key.Equals -> { viewport = viewport.zoomBy(1); true }
                     Key.Minus -> { viewport = viewport.zoomBy(-1); true }
                     else -> false
@@ -102,6 +121,7 @@ fun RasterMap(center: Place, current: Place?, destination: Place?, zoomChange: I
             }
             current?.let { marker(it, colors.primaryA1) }
             destination?.let { marker(it, colors.dangerA1) }
+            if (focused) drawFocusRing(1f)
         }
         Box(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).background(colors.surfaceA1).clickable {
             try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.openstreetmap.org/copyright"))) } catch (_: android.content.ActivityNotFoundException) { }

@@ -1,6 +1,5 @@
 package hrln.interactive.sidekit.apps.sideticks
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import hrln.interactive.sidekit.design.components.SidekitSwipeRow
 import hrln.interactive.sidekit.design.components.rememberSwipeRevealGroup
@@ -21,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextDecoration
 import hrln.interactive.sidekit.design.components.ItemColour
 import hrln.interactive.sidekit.design.components.SidekitCard
@@ -59,7 +57,7 @@ fun SideticksScreen(
 ) {
     val screenFocus = remember { FocusRequester() }
     SidekitScaffold(
-        modifier = Modifier.focusRequester(screenFocus).focusable(),
+        focusParking = screenFocus,
         title = "My Sideticks",
         actions = buildList {
             add(

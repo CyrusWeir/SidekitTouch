@@ -15,6 +15,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -103,7 +104,8 @@ fun SidekitList(
     }
     CompositionLocalProvider(LocalBringIntoViewSpec provides focusScroll) {
         LazyColumn(
-            modifier = modifier.fillMaxSize(),
+            // Coming back to the list (Up from the action bar) lands on the row focus left from.
+            modifier = modifier.fillMaxSize().focusRestorer(),
             state = state,
             contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(spacing.itemOuterGap),
