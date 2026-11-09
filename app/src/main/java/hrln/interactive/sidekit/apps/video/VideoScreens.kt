@@ -141,7 +141,7 @@ private const val HIDE_AFTER_MS = 3_000L
 private const val TICK_MS = 500L
 
 /**
- * Full-screen player. The picture fills the whole 480 x 640 panel (letterboxed to its aspect).
+ * Full-screen player. The picture fills the whole canvas (letterboxed to its aspect).
  *
  * The bar is "← | ▶ Play / ❚❚ Pause | ⏭ +10 s" with a progress line and times just above it;
  * dragging or tapping the line seeks. While playing, bar and line slide away after 3 s without

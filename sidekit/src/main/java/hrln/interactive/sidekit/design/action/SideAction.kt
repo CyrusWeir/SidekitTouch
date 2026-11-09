@@ -12,10 +12,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.theme.SidekitColors
@@ -154,6 +156,12 @@ class ChromeState {
     /** Temporary bars that take over from the screen's (T9 suggestions while typing). */
     internal val overrides = mutableStateListOf<ChromePublisher>()
 
+    /** Key handlers screens registered with [KeysFromActionBar]; the newest one is asked first. */
+    internal val barKeys = mutableStateListOf<(KeyEvent) -> Boolean>()
+
+    /** Offers a key pressed while focus is in the action bar to the screen that asked for it. */
+    internal fun barKey(event: KeyEvent): Boolean = barKeys.lastOrNull()?.invoke(event) ?: false
+
     internal val top: ChromePublisher? get() = publishers.lastOrNull()
 
     /** Whose options are showing in the bar, if any (see [toggleOptions]). */
@@ -213,6 +221,14 @@ class ChromeState {
      */
     internal var onChange: (() -> Unit)? = null
 
+    /** Set by the title host, for the same reason as [onChange]. */
+    internal var onHeaderChange: (() -> Unit)? = null
+
+    internal fun changed() {
+        onChange?.invoke()
+        onHeaderChange?.invoke()
+    }
+
     /**
      * False for the moment between one screen leaving and the next attaching. Hosts hold their
      * state through it rather than animating towards "nothing".
@@ -264,6 +280,22 @@ internal class ChromePublisher {
 val LocalChrome = staticCompositionLocalOf<ChromeState?> { null }
 
 /**
+ * Lets the current screen see key presses while focus is in the action bar. The bar is drawn by
+ * the canvas, outside the screen's body, so a key handler on the body never hears them: a screen
+ * that takes keypad digits anywhere (the contacts search) registers them here too.
+ */
+@Composable
+fun KeysFromActionBar(onKey: (KeyEvent) -> Boolean) {
+    val chrome = LocalChrome.current ?: return
+    val latest by rememberUpdatedState(onKey)
+    DisposableEffect(chrome) {
+        val handler: (KeyEvent) -> Boolean = { latest(it) }
+        chrome.barKeys += handler
+        onDispose { chrome.barKeys -= handler }
+    }
+}
+
+/**
  * Publishes this screen's title and actions while it is composed.
  *
  * Last attached wins, so the screen that most recently appeared owns the chrome. A screen that is
@@ -303,15 +335,15 @@ private fun Publish(chrome: ChromeState, into: MutableList<ChromePublisher>, upd
         // briefly read as "this screen has an empty bar" and start the wrong animation.
         update(publisher)
         into.add(publisher)
-        chrome.onChange?.invoke()
+        chrome.changed()
         onDispose {
             into.remove(publisher)
             chrome.detached(publisher)
-            chrome.onChange?.invoke()
+            chrome.changed()
         }
     }
     SideEffect {
         update(publisher)
-        chrome.onChange?.invoke()
+        chrome.changed()
     }
 }

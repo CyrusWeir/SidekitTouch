@@ -80,7 +80,7 @@
         android:theme="@style/Theme.Sidekit">
 
         <!--
-            configChanges: SideKit draws a fixed 480 x 640 canvas, so no configuration change
+            configChanges: SideKit draws its own 480-wide canvas, so no configuration change
             needs new resources. Handling them in place avoids tearing down and rebuilding the
             whole Compose tree (hundreds of ms on the MT8766) when e.g. a keyboard is attached,
             the font scale or dark mode changes.

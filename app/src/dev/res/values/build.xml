@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Dev build only. `hrln.interactive.sidekit.dev` installs alongside the stable Sidekit, and
+    these overrides are what stops the two being confused on the device: the launcher header
+    carries a DEV pill and Settings → About names the build.
+-->
+<resources>
+    <string name="build_label" translatable="false">DEV</string>
+    <bool name="is_dev_build">true</bool>
+</resources>

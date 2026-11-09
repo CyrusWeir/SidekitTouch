@@ -24,12 +24,28 @@ data class SidekitSpacing(
     // Measured from components
     val itemPadding: Dp = 30.dp,
     val itemContentGap: Dp = 14.dp,
+    /** Space above the header title. The Figma frame uses [itemPadding]; compact mode trims it. */
+    val headerPaddingTop: Dp = 30.dp,
     val headerHeight: Dp = 103.dp,
     val itemHeight: Dp = 104.dp,
     val actionBarHeight: Dp = 112.dp,
     val iconSize: Dp = 40.dp,
     val tileIconSize: Dp = 44.dp,
-)
+) {
+    companion object {
+        /**
+         * The measured Figma sizes, except the top and bottom chrome: the header title sits 14
+         * above its line box (a 75 tall header, 28 less than the mock) and the action bar is 12
+         * shorter. Slightly tighter insets buy body space on the 480 x 640 display without
+         * touching the type scale. Chosen from Settings → Compact layout.
+         */
+        val Compact: SidekitSpacing = SidekitSpacing(
+            headerPaddingTop = 14.dp,
+            headerHeight = 75.dp,
+            actionBarHeight = 100.dp,
+        )
+    }
+}
 
 @Immutable
 data class SidekitShapes(

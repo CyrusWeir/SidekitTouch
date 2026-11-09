@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import hrln.interactive.sidekit.design.action.KeysFromActionBar
 import java.util.Locale
 
 /**
@@ -122,8 +123,12 @@ object PhoneFormat {
 
 /**
  * Keypad digits for screens that take a number, not text (the contacts search and the dial pad).
- * The screen's body takes focus so presses reach it; `0`-`9`, `*`, `#` and Delete are delivered on
- * key down, and holding `0` asks for a "+".
+ * `0`-`9`, `*`, `#` and Delete are delivered on key down, and holding `0` asks for a "+".
+ *
+ * By default the element takes focus itself so presses reach it: right for a screen that is only
+ * a number. A screen with rows to move between passes its scaffold's [parking] spot instead and
+ * puts this on the scaffold: presses then reach it from the parking spot or from any row, and
+ * the D-pad still walks the rows (a focusable list would hold focus as one invisible block).
  */
 @Composable
 fun Modifier.keypadDigits(
@@ -131,32 +136,34 @@ fun Modifier.keypadDigits(
     onDelete: () -> Unit,
     onLongZero: (() -> Unit)? = null,
     enabled: Boolean = true,
+    parking: FocusRequester? = null,
 ): Modifier {
     if (!enabled) return this
-    val focus = remember { FocusRequester() }
+    val focus = parking ?: remember { FocusRequester() }
     val key by rememberUpdatedState(onKey)
     val delete by rememberUpdatedState(onDelete)
     val longZero by rememberUpdatedState(onLongZero)
     LaunchedEffect(focus) { runCatching { focus.requestFocus() } }
-    return this
-        .focusRequester(focus)
-        .onPreviewKeyEvent { e ->
-            val native = e.nativeKeyEvent
-            val c = when (native.keyCode) {
-                in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> '0' + (native.keyCode - KeyEvent.KEYCODE_0)
-                KeyEvent.KEYCODE_STAR -> '*'
-                KeyEvent.KEYCODE_POUND -> '#'
-                KeyEvent.KEYCODE_DEL -> '\b'
-                else -> return@onPreviewKeyEvent false
-            }
-            if (native.action == KeyEvent.ACTION_DOWN) {
-                when {
-                    native.repeatCount == 0 -> if (c == '\b') delete() else key(c)
-                    native.repeatCount == 1 && c == '0' -> longZero?.invoke()
-                    native.repeatCount > 0 && c == '\b' -> delete()
-                }
-            }
-            true
+    val handle: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = handle@{ e ->
+        val native = e.nativeKeyEvent
+        val c = when (native.keyCode) {
+            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> '0' + (native.keyCode - KeyEvent.KEYCODE_0)
+            KeyEvent.KEYCODE_STAR -> '*'
+            KeyEvent.KEYCODE_POUND -> '#'
+            KeyEvent.KEYCODE_DEL -> '\b'
+            else -> return@handle false
         }
-        .focusable()
+        if (native.action == KeyEvent.ACTION_DOWN) {
+            when {
+                native.repeatCount == 0 -> if (c == '\b') delete() else key(c)
+                native.repeatCount == 1 && c == '0' -> longZero?.invoke()
+                native.repeatCount > 0 && c == '\b' -> delete()
+            }
+        }
+        true
+    }
+    // With rows to move between, focus can also reach the action bar, which is outside this element.
+    if (parking != null) KeysFromActionBar(handle)
+    val digits = Modifier.onPreviewKeyEvent(handle)
+    return if (parking != null) then(digits) else focusRequester(focus).then(digits).focusable()
 }

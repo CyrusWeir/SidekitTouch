@@ -2,7 +2,9 @@
 <!--
     Overrides applied only to the `dev` build type (installs as a separate app,
     hrln.interactive.sidekit.dev, so it can run alongside the stable SideKit).
-    Only app_name is overridden; every other string is inherited from src/main.
+    Only app_name is overridden here; every other string is inherited from src/main. The rest of
+    what marks the UI as dev (the header pill, the About row) lives in
+    app/src/dev/res/values/build.xml.
 -->
 <resources>
     <string name="app_name">SideKit Dev</string>

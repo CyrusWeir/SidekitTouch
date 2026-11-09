@@ -63,7 +63,7 @@ fun LiveHealth(page: String, onHistory: () -> Unit, onGoals: () -> Unit, onBack:
         SidekitList(padding, state = list) {
             when (page) {
                 "goals" -> {
-                    item { SidekitTile(Modifier.listFade(list, 0)) { SidekitTextField(goal, { goal = it }, Modifier.fillMaxWidth().padding(SidekitTheme.spacing.itemPadding), placeholder = "Steps per day", singleLine = true, focusOnKeypad = true, autoFocus = true, onDone = { if (vm.saveGoal(goal)) onBack() else message = "Enter a goal from 1 to 100000" }) } }
+                    item { SidekitTile(Modifier.listFade(list, 0)) { SidekitTextField(goal, { goal = it }, Modifier.fillMaxWidth().padding(SidekitTheme.spacing.itemPadding), placeholder = "Steps per day", singleLine = true, dictation = false, focusOnKeypad = true, autoFocus = true, onDone = { if (vm.saveGoal(goal)) onBack() else message = "Enter a goal from 1 to 100000" }) } }
                     item { OutdoorInfo(message, modifier = Modifier.listFade(list, 1)) }
                 }
                 "history" -> {

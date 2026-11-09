@@ -138,6 +138,6 @@ private fun VaultEditor(note: PrivateNote, onText: (String) -> Unit) {
     val latest by rememberUpdatedState(onText)
     LaunchedEffect(text) { snapshotFlow { text.text.toString() }.collect { latest(it) } }
     CompositionLocalProvider(hrln.interactive.sidekit.design.input.LocalKeypad provides privateKeypad) {
-        SidekitCard { SidekitTextField(text, placeholder = "Private note…", focusOnKeypad = true, autoFocus = true) }
+        SidekitCard { SidekitTextField(text, placeholder = "Private note…", focusOnKeypad = true, autoFocus = true, dictation = false) }
     }
 }

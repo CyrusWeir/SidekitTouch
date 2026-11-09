@@ -37,9 +37,9 @@ fun MailAccountScreen(account: ImapSmtpAccount, onBack: () -> Unit, onConnected:
             item { SidekitTextField(username, { username = it }, Modifier.fillMaxWidth(), placeholder = "Username (or email)", singleLine = true) }
             item { hrln.interactive.sidekit.apps.integrations.SecretField(password, { password = it }, if (config == null) "App password" else "App password (blank keeps saved)") }
             item { SidekitTextField(imap, { imap = it }, Modifier.fillMaxWidth(), placeholder = "IMAP host", singleLine = true) }
-            item { SidekitTextField(imapPort, { imapPort = it }, Modifier.fillMaxWidth(), placeholder = "IMAP TLS port (993)", singleLine = true) }
+            item { SidekitTextField(imapPort, { imapPort = it }, Modifier.fillMaxWidth(), placeholder = "IMAP TLS port (993)", singleLine = true, dictation = false) }
             item { SidekitTextField(smtp, { smtp = it }, Modifier.fillMaxWidth(), placeholder = "SMTP host", singleLine = true) }
-            item { SidekitTextField(port, { port = it }, Modifier.fillMaxWidth(), placeholder = "SMTP port (465 or 587)", singleLine = true) }
+            item { SidekitTextField(port, { port = it }, Modifier.fillMaxWidth(), placeholder = "SMTP port (465 or 587)", singleLine = true, dictation = false) }
         }
     }
 }

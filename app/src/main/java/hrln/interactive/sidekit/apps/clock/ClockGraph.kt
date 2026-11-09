@@ -18,9 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -129,7 +127,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
         // As in Sideticks, Undo takes a place in the bar while a delete can be undone.
         if (deletedPending != null) add(SideAction("undo", "Undo", SidekitIcon.Undo, tone = ActionTone.Muted, onClick = repo::undoDelete))
     }
-    SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (permissionPage) "Clock access" else tab, actions = actions,
+    SidekitScaffold(focusParking = focus, title = if (permissionPage) "Clock access" else tab, actions = actions,
         options = if (permissionPage) emptyList() else listOf(SideAction("access", "Alarm access") { permissionPage = true })) { padding ->
         val list = rememberLazyListState()
         val swipes = rememberSwipeRevealGroup()
@@ -158,7 +156,7 @@ internal fun ClockScreen(onEdit: (String) -> Unit, repository: ClockRepository? 
                     "Timer" -> {
                         item { SidekitItem(durationText(current.timer.remainingAt(now, elapsed)), Modifier.listFade(list, 3)) }
                         if (current.timer.endAt == null && current.timer.remaining == 0L) item { SidekitCard(Modifier.listFade(list, 4).fillMaxWidth()) {
-                            SidekitTextField(minutes, { minutes = it }, placeholder = "Minutes", singleLine = true, focusOnKeypad = true, onDone = { focus.requestFocus() })
+                            SidekitTextField(minutes, { minutes = it }, placeholder = "Minutes", singleLine = true, dictation = false, focusOnKeypad = true, onDone = { focus.requestFocus() })
                         } }
                     }
                     else -> {
@@ -191,13 +189,13 @@ private fun ClockEditor(id: String, onClose: () -> Unit) {
         repo.save((original ?: ClockAlarm()).copy(hour = parsed.hour, minute = parsed.minute, days = selected, enabled = enabled))
         onClose()
     }
-    SidekitScaffold(modifier = Modifier.focusRequester(focus).focusable(), title = if (id == "new") "New alarm" else "Edit alarm",
+    SidekitScaffold(focusParking = focus, title = if (id == "new") "New alarm" else "Edit alarm",
         actions = if (deleting) listOf(SideAction("cancel", "Cancel", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back) { deleting = false }, SideAction("main", "Delete", SidekitIcon.DeleteForever, tone = ActionTone.Destructive) { repo.deleteWithUndo(id); onClose() })
         else listOf(SideAction("cancel", "Cancel", SidekitIcon.ArrowLeftAlt, motion = ActionMotion.Back, onClick = onClose), SideAction("main", "Save", SidekitIcon.Check, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up, onClick = ::save)),
         options = if (id == "new") emptyList() else listOf(SideAction("delete", "Delete", SidekitIcon.DeleteForever) { deleting = true })) { padding ->
         val list = rememberLazyListState()
         SidekitList(padding, state = list) {
-            item { SidekitCard(Modifier.listFade(list, 0).fillMaxWidth()) { SidekitTextField(time, { time = it }, placeholder = "HH:mm", singleLine = true, focusOnKeypad = true, autoFocus = id == "new", onDone = { focus.requestFocus() }) } }
+            item { SidekitCard(Modifier.listFade(list, 0).fillMaxWidth()) { SidekitTextField(time, { time = it }, placeholder = "HH:mm", singleLine = true, dictation = false, focusOnKeypad = true, autoFocus = id == "new", onDone = { focus.requestFocus() }) } }
             item { SidekitItem(if (enabled) "Alarm on" else "Alarm off", Modifier.listFade(list, 1), onClick = { enabled = !enabled }) }
             error?.let { item { SidekitItem(it, Modifier.listFade(list, 2)) } }
             (1..7).forEach { day -> item { SidekitItem(java.time.DayOfWeek.of(day).name.lowercase().replaceFirstChar { it.uppercase() }, Modifier.listFade(list, day + 2), secondary = if (day in selected) "Repeat" else "", onClick = { days = (if (day in selected) selected - day else selected + day).sorted().joinToString(",") }) } }
