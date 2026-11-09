@@ -2,6 +2,7 @@ package hrln.interactive.sidekit.apps.sideweather
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import hrln.interactive.sidekit.apps.maps.Place
+import hrln.interactive.sidekit.apps.maps.currentLocationName
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
@@ -52,6 +53,22 @@ class WeatherRepositoryTest {
             assertNotNull(vm.forecast.value)
             job.cancelAndJoin()
             assertTrue(job.isCompleted)
+        } finally { scope.cancel() }
+    }
+    @Test fun `current location keeps one entry and takes its city name`() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            val repo = WeatherRepository(Files.createTempDirectory("weather-here").toFile(), scope, { payload() })
+            val sydney = Place("Sydney", -33.8, 151.2)
+            repo.select(sydney)
+            repo.select(Place("Current location · Madrid", 40.4, -3.7))
+            val fix = Place(currentLocationName(null), 41.4, 2.2)
+            repo.select(fix)
+            repo.select(sydney)
+            repo.rename(fix, currentLocationName("Barcelona"))
+            val settings = withTimeout(3_000) { repo.settings.state.first { s -> s?.places?.any { it.name.endsWith("Barcelona") } == true } }!!
+            assertEquals(listOf("Current location · Barcelona", "Sydney"), settings.places.map { it.name })
+            assertEquals(sydney.key, settings.selected)
         } finally { scope.cancel() }
     }
 }

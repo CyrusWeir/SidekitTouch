@@ -88,14 +88,21 @@ private fun ConditionsCard(current: CurrentConditions) {
 
 /** "Hourly forecast" (94:385) and "5-day forecast" (94:447). */
 @Composable
-fun ForecastScreen(title: String, rows: List<WeatherRow>, onBack: () -> Unit, onLocations: () -> Unit) {
+fun ForecastScreen(title: String, rows: List<WeatherRow>, onBack: () -> Unit, onLocations: () -> Unit, place: String? = null) {
     SidekitScaffold(
         title = title,
         actions = listOf(SideAction.back("back", "Back", onBack), SideAction.forward("forward", "Locations", onLocations)),
     ) { padding ->
         val list = rememberLazyListState()
+        val offset = if (place != null) 1 else 0
         SidekitList(padding, state = list) {
-            itemsIndexed(rows) { i, row -> SidekitItem(title = row.label, secondary = row.detail, modifier = Modifier.height(ForecastRowHeight).listFade(list, i)) }
+            // Which place this forecast is for, captioned like the home card.
+            if (place != null) item {
+                Box(Modifier.fillMaxWidth().padding(horizontal = SidekitTheme.spacing.itemPadding, vertical = 6.dp).listFade(list, 0)) {
+                    SidekitText(place, style = SidekitTheme.typography.caption, maxLines = 1)
+                }
+            }
+            itemsIndexed(rows) { i, row -> SidekitItem(title = row.label, secondary = row.detail, modifier = Modifier.height(ForecastRowHeight).listFade(list, i + offset)) }
         }
     }
 }

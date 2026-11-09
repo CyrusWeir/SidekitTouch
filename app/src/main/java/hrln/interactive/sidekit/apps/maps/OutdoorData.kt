@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.CancellationSignal
 import android.util.AtomicFile
 import androidx.core.content.ContextCompat
@@ -128,7 +131,36 @@ suspend fun locate(context: Context): Place? = withTimeoutOrNull(15_000) {
             send(location)
         } }
     }.firstOrNull { it != null }
-    fix?.let { Place("Current location", it.latitude, it.longitude) }
+    fix?.let { Place(CURRENT_LOCATION, it.latitude, it.longitude) }
+}
+
+const val CURRENT_LOCATION = "Current location"
+
+/** "Current location · Madrid", or just "Current location" when the town is unknown. */
+fun currentLocationName(city: String?) = if (city.isNullOrBlank()) CURRENT_LOCATION else "$CURRENT_LOCATION · $city"
+
+/** A fix from [locate], whether or not its town has been looked up yet. */
+val Place.isCurrentLocation get() = name == CURRENT_LOCATION || name.startsWith("$CURRENT_LOCATION · ")
+
+/**
+ * The town or city at [place], from the platform geocoder. Null when the device has no geocoder,
+ * is offline, or nothing comes back within a few seconds.
+ */
+suspend fun cityName(context: Context, place: Place): String? = withTimeoutOrNull(5_000) {
+    if (!Geocoder.isPresent()) return@withTimeoutOrNull null
+    val geocoder = Geocoder(context)
+    val address: Address? = try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) suspendCancellableCoroutine { continuation ->
+            geocoder.getFromLocation(place.latitude, place.longitude, 1, object : Geocoder.GeocodeListener {
+                override fun onGeocode(addresses: MutableList<Address>) { if (continuation.isActive) continuation.resume(addresses.firstOrNull()) }
+                override fun onError(errorMessage: String?) { if (continuation.isActive) continuation.resume(null) }
+            })
+        } else withContext(Dispatchers.IO) {
+            @Suppress("DEPRECATION")
+            geocoder.getFromLocation(place.latitude, place.longitude, 1)?.firstOrNull()
+        }
+    } catch (_: java.io.IOException) { null } catch (_: IllegalArgumentException) { null }
+    address?.run { locality ?: subAdminArea ?: adminArea }?.takeIf(String::isNotBlank)
 }
 
 fun openDirections(context: Context, to: Place): Boolean {
