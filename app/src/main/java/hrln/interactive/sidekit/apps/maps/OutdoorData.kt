@@ -155,9 +155,16 @@ suspend fun cityName(context: Context, place: Place): String? = withTimeoutOrNul
                 override fun onGeocode(addresses: MutableList<Address>) { if (continuation.isActive) continuation.resume(addresses.firstOrNull()) }
                 override fun onError(errorMessage: String?) { if (continuation.isActive) continuation.resume(null) }
             })
-        } else withContext(Dispatchers.IO) {
-            @Suppress("DEPRECATION")
-            geocoder.getFromLocation(place.latitude, place.longitude, 1)?.firstOrNull()
+        } else suspendCancellableCoroutine { continuation ->
+            // Not withContext(IO): that would wait out the blocking call even after the timeout,
+            // so the 5 s cap would never apply. A resume after cancellation is ignored.
+            Dispatchers.IO.asExecutor().execute {
+                val found = try {
+                    @Suppress("DEPRECATION")
+                    geocoder.getFromLocation(place.latitude, place.longitude, 1)?.firstOrNull()
+                } catch (_: java.io.IOException) { null } catch (_: IllegalArgumentException) { null }
+                continuation.resume(found)
+            }
         }
     } catch (_: java.io.IOException) { null } catch (_: IllegalArgumentException) { null }
     address?.run { locality ?: subAdminArea ?: adminArea }?.takeIf(String::isNotBlank)

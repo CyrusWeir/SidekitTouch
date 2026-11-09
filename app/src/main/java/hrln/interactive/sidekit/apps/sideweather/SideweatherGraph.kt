@@ -64,7 +64,7 @@ fun NavGraphBuilder.sideweatherGraph(nav: NavHostController) {
                 val error by vm.repository.settings.error.collectAsStateWithLifecycle()
                 val place = settings?.places?.firstOrNull { it.key == settings?.selected }
                 val imperial = settings?.fahrenheit == true
-                if (page in listOf("home", "hourly", "five-day")) WhileVisible(place) { vm.visible(place) }
+                if (page in listOf("home", "hourly", "five-day")) WhileVisible(place?.key) { vm.visible(place) }
                 val back = { nav.popBackStack(); Unit }
                 val locations = { nav.navigate("$root/locations") { launchSingleTop = true }; Unit }
                 val options = listOf(SideAction("locations", "Locations", onClick = locations), SideAction("units", if (imperial) "Use °C" else "Use °F") { vm.repository.settings.edit { it.copy(fahrenheit = !it.fahrenheit) } })
