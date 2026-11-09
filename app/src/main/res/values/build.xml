@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Which build the UI is running in. The `dev` build type overrides these in
+    app/src/dev/res/values/build.xml; every other build keeps the quiet defaults below, so
+    stable installs never mark themselves.
+-->
+<resources>
+    <!-- Pill text in the launcher header. Empty means "draw no pill at all". -->
+    <string name="build_label" translatable="false"></string>
+    <!-- What a screen reader says for the pill instead of spelling out the letters. -->
+    <string name="build_pill_description" translatable="false">Development build</string>
+    <!-- True only in the dev build: Settings → About then names the build and its package. -->
+    <bool name="is_dev_build">false</bool>
+</resources>
