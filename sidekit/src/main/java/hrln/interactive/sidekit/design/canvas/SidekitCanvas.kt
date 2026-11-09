@@ -6,6 +6,8 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -28,6 +30,7 @@ import androidx.compose.ui.platform.LocalView
 import android.view.ViewTreeObserver
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import hrln.interactive.sidekit.design.action.ActionBarHost
 import hrln.interactive.sidekit.design.action.ChromeState
 import hrln.interactive.sidekit.design.action.HeaderHost
@@ -43,7 +46,7 @@ object SidephoneCanvas {
 
     /**
      * Density that fits the 480 x 640 design inside [widthPx] x [heightPx], so 1.dp in SideKit code
-     * is exactly 1 Figma px. The canvas then grows along the other axis to fill the screen.
+     * is exactly 1 Figma px. On a screen taller than 3:4 the canvas then grows down to fill it.
      */
     fun density(widthPx: Int, heightPx: Int): Float =
         minOf(widthPx / WIDTH.toFloat(), heightPx / HEIGHT.toFloat())
@@ -52,9 +55,10 @@ object SidephoneCanvas {
 /**
  * Lays [content] out on a canvas that fills the whole screen, scaled so the 480 x 640 design fits.
  * On the Sidephone this is exactly 480 x 640 and a 1:1 mapping to physical pixels whatever density
- * the system reports; on other screens the shorter axis stays at the design size (480 wide or 640
- * tall) and the other one grows to use the rest of the display. Font scale is pinned to 1 because
- * sizes follow the design, not the system font setting.
+ * the system reports. The canvas is always 480 wide: on a taller screen it grows in height to use
+ * the rest of the display, and on a wider one (landscape, a tablet) it stays 640 tall and is
+ * centred between dark side bars, since rows and the action bar would only stretch sideways.
+ * Font scale is pinned to 1 because sizes follow the design, not the system font setting.
  *
  * The canvas also owns the system chrome every screen shares: the title ([HeaderHost]) and the
  * action bar ([ActionBarHost]), drawn above the screens so they morph between them instead of
@@ -62,7 +66,7 @@ object SidephoneCanvas {
  * to text fields here.
  *
  * Overdraw: the activity drops its window background, so the canvas is the only full-screen
- * fill.
+ * fill. The dark side bars are only painted when there are side bars.
  */
 @Composable
 fun SidekitCanvas(
@@ -76,6 +80,7 @@ fun SidekitCanvas(
         contentAlignment = Alignment.Center,
     ) {
         val scale = SidephoneCanvas.density(constraints.maxWidth, constraints.maxHeight)
+        if (constraints.maxWidth - SidephoneCanvas.WIDTH * scale >= 1f) Box(Modifier.fillMaxSize().background(SidekitTheme.colors.dark))
         CompositionLocalProvider(
             LocalDensity provides Density(density = scale, fontScale = 1f),
             LocalChrome provides chrome,
@@ -85,8 +90,10 @@ fun SidekitCanvas(
             val screenFocus = remember { FocusRequester() }
             Box(
                 modifier = Modifier
-                    // Fill the screen; with this density one axis is exactly the design size.
-                    .fillMaxSize()
+                    // Design width, full height: with this density the width is exactly 480 on any
+                    // screen at least 3:4 tall, and the height is 640 or more.
+                    .width(SidephoneCanvas.WIDTH.dp)
+                    .fillMaxHeight()
                     .onFocusChanged { hasFocus.value = it.hasFocus }
                     // Screens slide during navigation; keep them inside the panel.
                     .clipToBounds()
