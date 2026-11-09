@@ -18,10 +18,23 @@ fun git(vararg args: String) = providers.exec {
     isIgnoreExitValue = true
 }.standardOutput.asText.map(String::trim)
 
-val gitVersionName = git("describe", "--tags", "--match", "v[0-9]*", "--dirty")
-    .map { it.removePrefix("v").ifEmpty { fallbackVersionName } }
+// `--always` prints the bare sha when no release tag is reachable (a shallow clone, say), so such a
+// build reads "0.0.0-g<sha>" rather than passing itself off as the last release.
+val gitVersionName = git("describe", "--tags", "--match", "v[0-9]*", "--dirty", "--always")
+    .map { described ->
+        val name = described.removePrefix("v")
+        when {
+            name.isEmpty() -> fallbackVersionName
+            name.first().isDigit() -> name
+            else -> "0.0.0-g$name"
+        }
+    }
 val gitVersionCode = git("rev-list", "--count", "HEAD")
     .map { it.toIntOrNull() ?: fallbackVersionCode }
+
+// A machine without a `git` binary makes the exec itself throw, rather than exit non-zero.
+fun versionCodeFromGit() = runCatching { gitVersionCode.get() }.getOrDefault(fallbackVersionCode)
+fun versionNameFromGit() = runCatching { gitVersionName.get() }.getOrDefault(fallbackVersionName)
 
 android {
     namespace = "hrln.interactive.sidekit"
@@ -35,9 +48,9 @@ android {
         targetSdk = 36
         versionCode = providers.gradleProperty("sidekitVersionCode")
             .map(String::toInt)
-            .getOrElse(gitVersionCode.get())
+            .getOrElse(versionCodeFromGit())
         versionName = providers.gradleProperty("sidekitVersionName")
-            .getOrElse(gitVersionName.get())
+            .getOrElse(versionNameFromGit())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
