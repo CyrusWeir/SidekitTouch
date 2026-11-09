@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import hrln.interactive.sidekit.design.action.KeysFromActionBar
 import java.util.Locale
 
 /**
@@ -143,14 +144,14 @@ fun Modifier.keypadDigits(
     val delete by rememberUpdatedState(onDelete)
     val longZero by rememberUpdatedState(onLongZero)
     LaunchedEffect(focus) { runCatching { focus.requestFocus() } }
-    val digits = onPreviewKeyEvent { e ->
+    val handle: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = handle@{ e ->
         val native = e.nativeKeyEvent
         val c = when (native.keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> '0' + (native.keyCode - KeyEvent.KEYCODE_0)
             KeyEvent.KEYCODE_STAR -> '*'
             KeyEvent.KEYCODE_POUND -> '#'
             KeyEvent.KEYCODE_DEL -> '\b'
-            else -> return@onPreviewKeyEvent false
+            else -> return@handle false
         }
         if (native.action == KeyEvent.ACTION_DOWN) {
             when {
@@ -161,5 +162,8 @@ fun Modifier.keypadDigits(
         }
         true
     }
-    return if (parking != null) digits else focusRequester(focus).then(digits).focusable()
+    // With rows to move between, focus can also reach the action bar, which is outside this element.
+    if (parking != null) KeysFromActionBar(handle)
+    val digits = Modifier.onPreviewKeyEvent(handle)
+    return if (parking != null) then(digits) else focusRequester(focus).then(digits).focusable()
 }

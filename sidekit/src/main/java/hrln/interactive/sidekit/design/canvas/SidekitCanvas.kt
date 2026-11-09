@@ -25,6 +25,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import android.view.ViewTreeObserver
@@ -118,6 +119,7 @@ fun SidekitCanvas(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .focusProperties { up = screenFocus }
+                        .onPreviewKeyEvent(chrome::barKey)
                         .imePadding()
                         .padding(SidekitTheme.spacing.pagePadding),
                 )

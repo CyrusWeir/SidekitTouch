@@ -23,6 +23,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -132,7 +133,7 @@ fun SidekitScaffold(
                     Modifier
                         .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) cancelFocusChange() } }
                         .focusGroup(),
-                ) { Box(Modifier.focusRequester(focusParking).focusable()) }
+                ) { Box(Modifier.focusRequester(focusParking).focusable().clearAndSetSemantics {}) }
                 CompositionLocalProvider(LocalBodyEntrance provides entrance) {
                     content(PaddingValues(bottom = bottom))
                 }

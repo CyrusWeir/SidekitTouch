@@ -8,6 +8,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -53,6 +55,8 @@ fun RasterMap(center: Place, current: Place?, destination: Place?, zoomChange: I
     // The D-pad moves focus past the map like any row; OK on the map hands it the arrows to pan
     // with, and OK or Back hands them back.
     var focused by remember { mutableStateOf(false) }
+    // The map takes focus as it opens, even by touch; the ring only means something on the D-pad.
+    val keyboardMode = LocalInputModeManager.current.inputMode == InputMode.Keyboard
     var panning by remember { mutableStateOf(false) }
     BackHandler(enabled = panning) { panning = false }
     var tilesMissing by remember { mutableStateOf<Boolean?>(null) }
@@ -121,7 +125,7 @@ fun RasterMap(center: Place, current: Place?, destination: Place?, zoomChange: I
             }
             current?.let { marker(it, colors.primaryA1) }
             destination?.let { marker(it, colors.dangerA1) }
-            if (focused) drawFocusRing(1f)
+            if (focused && keyboardMode) drawFocusRing(1f)
         }
         Box(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).background(colors.surfaceA1).clickable {
             try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.openstreetmap.org/copyright"))) } catch (_: android.content.ActivityNotFoundException) { }
