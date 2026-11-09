@@ -9,7 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.semantics.Role
 import hrln.interactive.sidekit.design.components.SidekitItem
 import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.theme.SidekitTheme
@@ -30,7 +32,7 @@ internal fun rememberAppIcon(source: AppsSource, app: LaunchableApp): Bitmap? {
 /** The search field both app lists start with, so the two match down to the placeholder. */
 @Composable
 internal fun AppSearchField(query: String, onQuery: (String) -> Unit) {
-    SidekitTextField(query, onQuery, placeholder = "Search apps", singleLine = true, focusOnKeypad = true)
+    SidekitTextField(query, onQuery, placeholder = "Search apps", singleLine = true, onDone = {}, focusOnKeypad = true)
 }
 
 /**
@@ -52,7 +54,10 @@ internal fun AppRow(
     val icon = rememberAppIcon(source, app)
     SidekitItem(
         title = app.label,
-        modifier = modifier.combinedClickable(
+        // Clip before the clickable, as SidekitItem does for its own onClick, so the press
+        // highlight keeps the row's rounded corners.
+        modifier = modifier.clip(SidekitTheme.shapes.item).combinedClickable(
+            role = Role.Button,
             onClick = onClick,
             onLongClick = onLongClick,
             onLongClickLabel = onLongClickLabel
