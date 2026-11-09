@@ -72,9 +72,11 @@ private class HeaderModel {
 internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
     val model = remember { HeaderModel() }
     val scope = rememberCoroutineScope()
-    val top = state.top
-    val spec = top?.header
-    SideEffect { if (top != null) model.sync(top, spec, scope) }
+    // Read here only to subscribe: HeaderHost recomposes whenever the top screen or its title changes.
+    state.top?.header
+    // Read at apply time, not from this composition: a screen attaching in the same frame has
+    // already synced through onHeaderChange, and syncing back to the stale `top` would undo it.
+    SideEffect { state.top?.let { model.sync(it, it.header, scope) } }
     // Publishers notify in the frame a screen changes, so the title never trails the body by a frame.
     DisposableEffect(state, model) {
         state.onHeaderChange = { state.top?.let { model.sync(it, it.header, scope) } }
