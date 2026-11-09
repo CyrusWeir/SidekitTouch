@@ -53,7 +53,7 @@ class Keypad internal constructor(
     private val scope: CoroutineScope,
     private val loadWords: (suspend () -> T9Words)?,
     initialModule: KeypadModule,
-    val longPressMs: Long = DEFAULT_LONG_PRESS_MS,
+    val longPressMs: Long = KeypadTiming.LONG_PRESS_MS,
     /** Custom key mapping (off unless the user turns it on in Settings). */
     val mapper: KeyMapper = KeyMapper.forTesting()
 ) {
@@ -225,7 +225,6 @@ class Keypad internal constructor(
         private const val PREF_T9 = "t9"
         private const val PREF_MODULE = "module"
         private const val SAVE_DELAY_MS = 2_000L
-        private const val DEFAULT_LONG_PRESS_MS = KeypadTiming.LONG_PRESS_MS
 
         fun isTypingKey(code: Int) = code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ||
             code == KeyEvent.KEYCODE_STAR || code == KeyEvent.KEYCODE_POUND || code == KeyEvent.KEYCODE_DEL ||

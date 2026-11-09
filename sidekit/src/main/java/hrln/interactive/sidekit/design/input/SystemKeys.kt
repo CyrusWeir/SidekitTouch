@@ -18,6 +18,10 @@ object SystemKeys {
 
     fun isOptions(event: KeyEvent): Boolean = event.keyCode == KeyEvent.KEYCODE_ENDCALL || event.keyCode == KeyEvent.KEYCODE_MENU
 
-    /** Hold the Back key this long to open the dialer instead. */
-    const val LONG_PRESS_MS = KeypadTiming.LONG_PRESS_MS
+    /**
+     * Hold the Back key this long to open the dialer instead. Kept separate from
+     * [KeypadTiming.LONG_PRESS_MS]: opening the dialer is a deliberate, destructive-feeling
+     * gesture, so it stays longer than an ordinary keypad hold.
+     */
+    const val LONG_PRESS_MS = 600L
 }

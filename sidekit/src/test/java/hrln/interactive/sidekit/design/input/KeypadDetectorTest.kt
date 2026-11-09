@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The keypad is told from other input devices by its `gxa535_*` name. */
+/** The keypad is told from other input devices by the module device's name. */
 class KeypadDetectorTest {
 
     @Test fun acceptsEveryModuleName() {
@@ -14,11 +14,20 @@ class KeypadDetectorTest {
             "gxa535_qwerty",
             "gxa535_t9",
             "gxa535_gamepad",
-            "gxa535_phone",
             "gxa535_keyboard"
         )) {
             assertTrue(name, KeypadDetector.isKeypadDevice(name, deviceId = 3))
         }
+    }
+
+    @Test fun rejectsThePhonesOwnKeys() {
+        // Same gxa535_ prefix, but this device carries the phone's keys, not a swappable module.
+        assertFalse(KeypadDetector.isKeypadDevice("gxa535_phone", deviceId = 3))
+    }
+
+    @Test fun rejectsUnknownModuleNames() {
+        // A new module must be added to the allowlist deliberately.
+        assertFalse(KeypadDetector.isKeypadDevice("gxa535_future", deviceId = 3))
     }
 
     @Test fun rejectsOtherDevices() {

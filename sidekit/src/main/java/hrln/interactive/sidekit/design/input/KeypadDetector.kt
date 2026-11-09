@@ -6,10 +6,10 @@ import android.view.KeyEvent
 /**
  * Tells the attached keypad module from the keys it sends.
  *
- * Every module appears as an input device named `gxa535_*`. This phone reports `gxa535_media`,
- * `gxa535_qwerty`, `gxa535_t9`, `gxa535_gamepad` and `gxa535_phone`; older firmware exposed
- * everything as `gxa535_keyboard`. The module is recognised by keys only it has. Measured with
- * `getevent`:
+ * Each swappable module appears as its own input device: `gxa535_media`, `gxa535_qwerty`,
+ * `gxa535_t9` and `gxa535_gamepad`. Older firmware exposed everything as `gxa535_keyboard`.
+ * `gxa535_phone` is the phone's own key device, not a module, so it is not trusted here. The
+ * module is recognised by keys only it has. Measured with `getevent`:
  *
  * - T9: digits, `*`, `#` (plus D-pad, OK = `KEY_ENTER`, left soft key = Home, right = Delete).
  * - Mini QWERTY: letters, one per key (`KEY_Q` for QW...), Space, Ctrl / Alt / Shift.
@@ -20,10 +20,22 @@ import android.view.KeyEvent
  * Keys shared between modules (D-pad, Enter, call keys, Delete) say nothing.
  */
 internal object KeypadDetector {
-    const val DEVICE_PREFIX = "gxa535_"
+    /**
+     * The input devices that carry a swappable module. An allowlist, not a `gxa535_*` prefix:
+     * `gxa535_phone` shares the prefix but sends the phone's own keys, and a future device should
+     * be added deliberately rather than trusted by name alone.
+     */
+    private val MODULE_DEVICES = setOf(
+        "gxa535_media",
+        "gxa535_qwerty",
+        "gxa535_t9",
+        "gxa535_gamepad",
+        // Older firmware exposed every module under this one name.
+        "gxa535_keyboard"
+    )
 
     /** True for a keypad module, the virtual keyboard, or an event with no readable device. */
-    internal fun isKeypadDevice(name: String?, deviceId: Int): Boolean = name == null || name.startsWith(DEVICE_PREFIX) || deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
+    internal fun isKeypadDevice(name: String?, deviceId: Int): Boolean = name == null || name in MODULE_DEVICES || deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
 
     fun moduleFor(event: KeyEvent): KeypadModule? {
         // Headset buttons send Play/Pause too: only trust the keypad (or injected / remapped keys,

@@ -22,9 +22,11 @@ While Sidekit waits for a key, it captures every press, including the release, s
 
 The key tester shows the key code and scan code for each press, the input device that sent it, and the control it becomes. Use it to set up a new keypad or to report how a device's keys behave.
 
+Sidekit only treats the keypad modules' own input devices as keypads. A headset button or an external keyboard is ignored for module detection, even when it sends the same key code.
+
 ## Sundial holds
 
-The Sundial has no Back or Options key. Hold **Tab** for Back and hold **Enter** for Options. Hold the left/right edges (**Previous** / **Next**) for left/right; a tap on them still sends the media command. All keypad holds use the same threshold, `KeypadTiming.LONG_PRESS_MS` (400 ms).
+The Sundial has no Back or Options key. Hold **Tab** for Back and hold **Enter** for Options. Hold the left/right edges (**Previous** / **Next**) for left/right; a tap on them still sends the media command. Keypad holds follow Android's long-press timeout (`ViewConfiguration.getLongPressTimeout()`, 400 ms by default), so a device or accessibility tool that changes the system value also changes them. The Back-to-dialer hold stays at 600 ms.
 
 ## Scope
 
