@@ -7,18 +7,20 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
+import java.io.File
+import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.util.zip.ZipFile
 
 sealed interface InstallStatus {
     data object Idle : InstallStatus
     data class Working(val step: String) : InstallStatus
+
     /** Android is showing its install confirmation. */
     data class Confirming(val label: String) : InstallStatus
     data class Installed(val packageName: String, val label: String) : InstallStatus
@@ -40,7 +42,9 @@ object ApkInstaller {
     private val _status = MutableStateFlow<InstallStatus>(InstallStatus.Idle)
     val status: StateFlow<InstallStatus> = _status.asStateFlow()
 
-    fun clear() { _status.value = InstallStatus.Idle }
+    fun clear() {
+        _status.value = InstallStatus.Idle
+    }
 
     fun canInstall(context: Context) = context.packageManager.canRequestPackageInstalls()
 
@@ -52,7 +56,10 @@ object ApkInstaller {
     }
 
     private fun stageAndCommit(context: Context, uri: Uri) {
-        val dir = File(context.cacheDir, "sideport-install").apply { deleteRecursively(); mkdirs() }
+        val dir = File(context.cacheDir, "sideport-install").apply {
+            deleteRecursively()
+            mkdirs()
+        }
         val download = File(dir, "download")
         context.contentResolver.openInputStream(uri).use { input ->
             requireNotNull(input) { "Couldn't open the file" }
@@ -114,7 +121,13 @@ object ApkInstaller {
             val pkg = intent.getStringExtra(EXTRA_PACKAGE).orEmpty()
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                    val confirm = intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+                    // The typed overload is API 33; minSdk is 31, so fall back to the deprecated one.
+                    val confirm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(Intent.EXTRA_INTENT)
+                    }
                     if (confirm == null) {
                         _status.value = InstallStatus.Failed("Android didn't ask to confirm the install")
                         return
@@ -122,12 +135,14 @@ object ApkInstaller {
                     _status.value = InstallStatus.Confirming(label)
                     context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
+
                 PackageInstaller.STATUS_SUCCESS -> {
                     PortedApps.get(context).add(pkg, label)
                     _status.value = InstallStatus.Installed(pkg, label)
                 }
+
                 else -> _status.value = InstallStatus.Failed(
-                    intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: describe(status),
+                    intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: describe(status)
                 )
             }
         }
