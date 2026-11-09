@@ -19,6 +19,9 @@ object SidekitMotion {
     /** Label and icon swap inside a button. Under-damped so arrows overshoot toward their direction. */
     val content = spring<Float>(dampingRatio = 0.68f, stiffness = 520f)
 
+    /** Screen title swap. Critically damped: the title rises into its fixed place and stops there. */
+    val title = spring<Float>(dampingRatio = 1f, stiffness = 520f)
+
     /** Bar sliding in from / out to the bottom edge when a screen gains or loses actions. */
     val enter = spring<Float>(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)
 
