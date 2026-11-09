@@ -1,8 +1,7 @@
-package hrln.interactive.sidekit.apps.settings
+package hrln.interactive.sidekit.design.input
 
 import android.view.KeyEvent
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import hrln.interactive.sidekit.design.input.HoldToAct
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
