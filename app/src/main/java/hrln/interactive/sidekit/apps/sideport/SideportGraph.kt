@@ -36,7 +36,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import hrln.interactive.sidekit.apps.apps.AppRow
+import hrln.interactive.sidekit.apps.apps.AppSearchField
 import hrln.interactive.sidekit.apps.apps.AppsRepository
+import hrln.interactive.sidekit.apps.apps.LaunchableApp
 import hrln.interactive.sidekit.apps.apps.matchesApp
 import hrln.interactive.sidekit.apps.everyday.CompactRowHeight
 import hrln.interactive.sidekit.apps.sideport.bridge.Bridge
@@ -63,6 +66,7 @@ import hrln.interactive.sidekit.design.components.SidekitTextField
 import hrln.interactive.sidekit.design.components.listFade
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.system.SidekitBuild
 import kotlinx.coroutines.launch
 
 /**
@@ -76,7 +80,7 @@ fun NavGraphBuilder.sideportGraph(nav: NavHostController) {
             SideportHomeScreen(
                 onHome = { nav.popBackStack() },
                 onAdd = { nav.navigate(SideportRoutes.ADD) { launchSingleTop = true } },
-                onHub = { nav.navigate(SideportRoutes.hub(it)) { launchSingleTop = true } },
+                onHub = { nav.navigate(SideportRoutes.hub(it)) { launchSingleTop = true } }
             )
         }
         composable(SideportRoutes.ADD) { SideportAddScreen(onDone = { nav.popBackStack() }) }
@@ -86,7 +90,7 @@ fun NavGraphBuilder.sideportGraph(nav: NavHostController) {
                 pkg,
                 onBack = { nav.popBackStack() },
                 onChat = { nav.navigate(SideportRoutes.chat(it)) },
-                onPlayer = { nav.navigate(SideportRoutes.player(pkg)) },
+                onPlayer = { nav.navigate(SideportRoutes.player(pkg)) }
             )
         }
         composable(SideportRoutes.CHAT) { entry ->
@@ -108,10 +112,12 @@ private fun Context.openSettings(action: String, data: Uri? = null): Boolean = t
 /** Opens a ported app, explaining what's missing if it can't. Returns a message to show, if any. */
 fun openPorted(context: Context, app: PortedApp): String? = when (Sideport.open(context, app)) {
     OpenResult.Opened -> null
+
     OpenResult.NeedsService -> {
         context.openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         "Turn on \"Sideport projection\" in Accessibility, then open ${app.label} again."
     }
+
     OpenResult.NotInstalled -> "${app.label} isn't installed any more. Hold it in Sideport and choose Remove from Sideport."
 }
 
@@ -133,14 +139,17 @@ internal fun SideportHomeScreen(onHome: () -> Unit, onAdd: () -> Unit, onHub: (S
     val list = rememberLazyListState()
     SidekitScaffold(
         "Sideport",
-        actions = listOf(SideAction.back("home", "Home", onHome), SideAction.forward("add", "Add app", onAdd)),
+        actions = listOf(SideAction.back("home", "Home", onHome), SideAction.forward("add", "Add app", onAdd))
     ) { padding ->
         SidekitList(padding, state = list) {
             var index = 0
             (message ?: installMessage(install))?.let { text ->
                 val i = index++
                 item(key = "message") {
-                    SidekitCard(Modifier.fillMaxWidth().listFade(list, i), onClick = { message = null; ApkInstaller.clear() }) {
+                    SidekitCard(Modifier.fillMaxWidth().listFade(list, i), onClick = {
+                        message = null
+                        ApkInstaller.clear()
+                    }) {
                         SidekitText(text, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE)
                     }
                 }
@@ -152,7 +161,7 @@ internal fun SideportHomeScreen(onHome: () -> Unit, onAdd: () -> Unit, onHub: (S
                         SidekitText(
                             "Add an Android app and it opens here as a Sidekit app: its screens redrawn with Sidekit's lists and action bar, its chats and music right in Sidekit.",
                             style = SidekitTheme.typography.label,
-                            maxLines = Int.MAX_VALUE,
+                            maxLines = Int.MAX_VALUE
                         )
                     }
                 }
@@ -164,26 +173,30 @@ internal fun SideportHomeScreen(onHome: () -> Unit, onAdd: () -> Unit, onHub: (S
                     Modifier.listFade(list, start + i).combinedClickable(
                         onClick = { message = openPorted(context, app) },
                         onLongClick = { onHub(app.packageName) },
-                        onLongClickLabel = "${app.label} messages, media and options",
+                        onLongClickLabel = "${app.label} messages, media and options"
                     ),
                     secondary = if (app.mode == PortMode.Original) "Original" else null,
-                    icon = SidekitIcon.DeployedCode,
+                    icon = SidekitIcon.DeployedCode
                 )
             }
             index += apps.size
             val setup = index
             item(key = "projection") {
                 SidekitItem(
-                    "Projection", Modifier.listFade(list, setup), colour = ItemColour.Muted,
+                    "Projection",
+                    Modifier.listFade(list, setup),
+                    colour = ItemColour.Muted,
                     secondary = if (projection) "On" else "Turn on",
-                    onClick = { context.openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS) },
+                    onClick = { context.openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS) }
                 )
             }
             item(key = "bridge") {
                 SidekitItem(
-                    "Chats & media", Modifier.listFade(list, setup + 1), colour = ItemColour.Muted,
+                    "Chats & media",
+                    Modifier.listFade(list, setup + 1),
+                    colour = ItemColour.Muted,
                     secondary = if (bridge) "On" else "Turn on",
-                    onClick = { context.openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
+                    onClick = { context.openSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
                 )
             }
         }
@@ -196,6 +209,21 @@ private fun installMessage(status: InstallStatus): String? = when (status) {
     is InstallStatus.Confirming -> "Confirm installing ${status.label}."
     is InstallStatus.Installed -> "${status.label} installed and added."
     is InstallStatus.Failed -> "Install failed: ${status.message}"
+}
+
+/**
+ * Installed apps that can become Sideport apps: no Sidekit build (Sidekit never ports itself or a
+ * sibling), nothing already ported, one row per package, matching [query].
+ */
+internal fun sideportCandidates(
+    installed: List<LaunchableApp>,
+    ported: List<PortedApp>,
+    query: String
+): List<LaunchableApp> {
+    val have = ported.map { it.packageName }.toSet()
+    return installed
+        .filter { !SidekitBuild.isSidekit(it.component.packageName) && it.component.packageName !in have && matchesApp(it.label, query) }
+        .distinctBy { it.component.packageName }
 }
 
 /** Install an APK, or turn an app that's already installed into a Sideport app. */
@@ -215,11 +243,7 @@ internal fun SideportAddScreen(onDone: () -> Unit) {
             onDone()
         }
     }
-    val candidates = remember(installed, portedApps, query) {
-        val have = portedApps.map { it.packageName }.toSet()
-        installed.filter { it.component.packageName != context.packageName && it.component.packageName !in have && matchesApp(it.label, query) }
-            .distinctBy { it.component.packageName }
-    }
+    val candidates = remember(installed, portedApps, query) { sideportCandidates(installed, portedApps, query) }
     val list = rememberLazyListState()
     SidekitScaffold("Add app", actions = listOf(SideAction.back("back", "Sideport", onDone))) { padding ->
         SidekitList(padding, state = list) {
@@ -240,9 +264,9 @@ internal fun SideportAddScreen(onDone: () -> Unit) {
                     }
                 }
             }
-            item(key = "search") { SidekitTextField(query, { query = it }, placeholder = "Search installed apps", singleLine = true, focusOnKeypad = true) }
+            item(key = "search") { AppSearchField(query) { query = it } }
             itemsIndexed(candidates, key = { _, a -> a.key }) { i, app ->
-                SidekitItem(app.label, Modifier.listFade(list, i + 2), showLinkArrow = true, onClick = {
+                AppRow(app, repository, Modifier.listFade(list, i + 2), onClick = {
                     ported.add(app.component.packageName, app.label)
                     onDone()
                 })
@@ -257,7 +281,7 @@ internal enum class HubRemoval(val verb: String) {
     Remove("Remove"),
 
     /** Hand the app to Android's uninstaller. */
-    Uninstall("Uninstall"),
+    Uninstall("Uninstall")
 }
 
 /** What a ported app's hub shows. [version] is null while the app isn't installed. */
@@ -268,7 +292,7 @@ internal data class SideportHubUiState(
     val mediaTitle: String? = null,
     val bridgeOn: Boolean = false,
     val message: String? = null,
-    val confirming: HubRemoval? = null,
+    val confirming: HubRemoval? = null
 )
 
 /**
@@ -296,7 +320,10 @@ internal fun SideportHubScreen(pkg: String, onBack: () -> Unit, onChat: (String)
     var message by remember { mutableStateOf<String?>(null) }
     var confirming by remember { mutableStateOf<HubRemoval?>(null) }
     // Coming back from the system uninstaller, the header says whether the app is still there.
-    LifecycleResumeEffect(pkg) { version = appVersion(context, pkg); onPauseOrDispose {} }
+    LifecycleResumeEffect(pkg) {
+        version = appVersion(context, pkg)
+        onPauseOrDispose {}
+    }
     val mediaTitle = media[pkg]?.let { it.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Now playing" }
     SideportHubContent(
         SideportHubUiState(app, version, chats, mediaTitle, bridgeOn, message, confirming),
@@ -310,8 +337,11 @@ internal fun SideportHubScreen(pkg: String, onBack: () -> Unit, onChat: (String)
         onDismissMessage = { message = null },
         onAsk = { confirming = it },
         onCancel = { confirming = null },
-        onRemove = { ported.remove(pkg); onBack() },
-        onUninstall = { context.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
+        onRemove = {
+            ported.remove(pkg)
+            onBack()
+        },
+        onUninstall = { context.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     )
 }
 
@@ -335,7 +365,7 @@ internal fun SideportHubContent(
     onAsk: (HubRemoval) -> Unit,
     onCancel: () -> Unit,
     onRemove: () -> Unit,
-    onUninstall: () -> Unit,
+    onUninstall: () -> Unit
 ) {
     val app = state.app
     val list = rememberLazyListState()
@@ -347,15 +377,19 @@ internal fun SideportHubContent(
             SideAction("forward", removal.verb, SidekitIcon.DeleteForever, tone = ActionTone.Destructive, weight = 1.2f, motion = ActionMotion.Up, contentDescription = "Confirm ${removal.verb.lowercase()} ${app.label}") {
                 when (removal) {
                     HubRemoval.Remove -> onRemove()
+
                     // The uninstaller is another activity: settle the bar first, so returning from it
                     // (uninstalled or cancelled) shows the hub again, not a stale confirmation.
-                    HubRemoval.Uninstall -> { onCancel(); onUninstall() }
+                    HubRemoval.Uninstall -> {
+                        onCancel()
+                        onUninstall()
+                    }
                 }
-            },
+            }
         )
     } ?: listOf(
         SideAction.square("back", SidekitIcon.ArrowLeftAlt, "Back", onBack, tone = ActionTone.Muted, motion = ActionMotion.Back),
-        SideAction.forward("open", "Open", onOpen),
+        SideAction.forward("open", "Open", onOpen)
     )
     // Everything frequent is in the body; Options keeps the one rare action, the system app page.
     val options = if (state.version != null) listOf(SideAction("info", "App info", SidekitIcon.Settings) { onInfo() }) else emptyList()
@@ -376,27 +410,30 @@ internal fun SideportHubContent(
                 val mode = index++
                 item(key = "mode") {
                     SidekitItem(
-                        "Open as", Modifier.height(CompactRowHeight).listFade(list, mode),
+                        "Open as",
+                        Modifier.height(CompactRowHeight).listFade(list, mode),
                         secondary = if (app.mode == PortMode.Projected) "Sideport" else "Original",
-                        onClick = onMode,
+                        onClick = onMode
                     )
                 }
             }
             val remove = index++
             item(key = "remove") {
                 SidekitLineButton(
-                    "Remove from Sideport", { onAsk(HubRemoval.Remove) },
+                    "Remove from Sideport",
+                    { onAsk(HubRemoval.Remove) },
                     Modifier.height(CompactRowHeight).listFade(list, remove),
-                    variant = LineButtonVariant.Secondary,
+                    variant = LineButtonVariant.Secondary
                 )
             }
             if (state.version != null) {
                 val uninstall = index++
                 item(key = "uninstall") {
                     SidekitLineButton(
-                        "Uninstall app", { onAsk(HubRemoval.Uninstall) },
+                        "Uninstall app",
+                        { onAsk(HubRemoval.Uninstall) },
                         Modifier.height(CompactRowHeight).listFade(list, uninstall),
-                        variant = LineButtonVariant.Destructive,
+                        variant = LineButtonVariant.Destructive
                     )
                 }
             }
@@ -434,8 +471,11 @@ private fun SideportHeader(app: PortedApp, version: String?, modifier: Modifier 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap)) {
             PortedAppIcon(app, size = 56.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (version != null) SidekitText("Version $version", style = SidekitTheme.typography.body)
-                else SidekitText("Not installed", style = SidekitTheme.typography.body, color = SidekitTheme.colors.dangerA2)
+                if (version != null) {
+                    SidekitText("Version $version", style = SidekitTheme.typography.body)
+                } else {
+                    SidekitText("Not installed", style = SidekitTheme.typography.body, color = SidekitTheme.colors.dangerA2)
+                }
                 SidekitText(app.packageName, style = SidekitTheme.typography.tiny, color = SidekitTheme.colors.surfaceA5)
             }
         }
@@ -454,11 +494,16 @@ internal fun SideportChatScreen(key: String, onBack: () -> Unit) {
     val canReply = chat?.reply != null
     val actions = buildList {
         add(SideAction.square("back", SidekitIcon.ArrowLeftAlt, "Back", onBack, tone = ActionTone.Muted, motion = ActionMotion.Back))
-        if (canReply) add(SideAction("send", "Send", SidekitIcon.ArrowUpward, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up) {
-            if (draft.isBlank()) return@SideAction
-            if (Bridge.reply(context, key, draft.trim())) draft = "" else message = "This chat can't be answered from Sidekit any more. Open the app to reply."
-        })
-        else chat?.open?.let { open -> add(SideAction.forward("open", "Open chat", { runCatching { open.send() } })) }
+        if (canReply) {
+            add(
+                SideAction("send", "Send", SidekitIcon.ArrowUpward, iconAtEnd = true, tone = ActionTone.Secondary, motion = ActionMotion.Up) {
+                    if (draft.isBlank()) return@SideAction
+                    if (Bridge.reply(context, key, draft.trim())) draft = "" else message = "This chat can't be answered from Sidekit any more. Open the app to reply."
+                }
+            )
+        } else {
+            chat?.open?.let { open -> add(SideAction.forward("open", "Open chat", { runCatching { open.send() } })) }
+        }
     }
     SidekitScaffold(chat?.title ?: "Chat", actions = actions) { padding ->
         SidekitList(padding, state = list) {
@@ -486,8 +531,12 @@ internal fun SideportPlayerScreen(pkg: String, onBack: () -> Unit) {
     var playback by remember(controller) { mutableStateOf(controller?.playbackState) }
     DisposableEffect(controller) {
         val callback = object : MediaController.Callback() {
-            override fun onMetadataChanged(m: MediaMetadata?) { metadata = m }
-            override fun onPlaybackStateChanged(s: PlaybackState?) { playback = s }
+            override fun onMetadataChanged(m: MediaMetadata?) {
+                metadata = m
+            }
+            override fun onPlaybackStateChanged(s: PlaybackState?) {
+                playback = s
+            }
         }
         controller?.registerCallback(callback)
         onDispose { controller?.unregisterCallback(callback) }
@@ -498,9 +547,11 @@ internal fun SideportPlayerScreen(pkg: String, onBack: () -> Unit) {
         add(SideAction.square("back", SidekitIcon.ArrowLeftAlt, "Back", onBack, tone = ActionTone.Muted, motion = ActionMotion.Back))
         if (transport != null) {
             add(SideAction.square("prev", SidekitIcon.SkipPrevious, "Previous", { transport.skipToPrevious() }, tone = ActionTone.Muted))
-            add(SideAction(if (playing) "pause" else "play", icon = if (playing) SidekitIcon.Pause else SidekitIcon.PlayArrow, contentDescription = if (playing) "Pause" else "Play") {
-                if (playing) transport.pause() else transport.play()
-            })
+            add(
+                SideAction(if (playing) "pause" else "play", icon = if (playing) SidekitIcon.Pause else SidekitIcon.PlayArrow, contentDescription = if (playing) "Pause" else "Play") {
+                    if (playing) transport.pause() else transport.play()
+                }
+            )
             add(SideAction.square("next", SidekitIcon.SkipNext, "Next", { transport.skipToNext() }, tone = ActionTone.Muted))
         }
     }
