@@ -110,7 +110,14 @@ class MainActivity : ComponentActivity() {
         return dispatchTranslated(translated)
     }
 
-    /** Performs a Sundial hold after the timer fires or the key is released late. */
+    /**
+     * Performs a Sundial hold after the timer fires or the key is released late.
+     *
+     * Back comes from holding a hardware key, not from a system back gesture, so the
+     * predictive-back lint does not apply; the dispatcher still routes through registered
+     * callbacks.
+     */
+    @SuppressLint("GestureBackNavigation")
     private fun performSundialHold(action: Int, source: KeyEvent) {
         when (action) {
             KeyEvent.KEYCODE_BACK -> onBackPressedDispatcher.onBackPressed()
@@ -145,6 +152,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Routes an already-translated event; also used for the tap released by [sundialHold]. */
+    @SuppressLint("RestrictedApi")
     private fun dispatchTranslated(event: KeyEvent): Boolean {
         when {
             // Keypad top-right: the universal Options key. Acts on release; the press is consumed
