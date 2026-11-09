@@ -7,7 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
+import androidx.core.content.IntentCompat
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
 import java.io.File
 import java.util.zip.ZipFile
@@ -121,13 +121,8 @@ object ApkInstaller {
             val pkg = intent.getStringExtra(EXTRA_PACKAGE).orEmpty()
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                    // The typed overload is API 33; minSdk is 31, so fall back to the deprecated one.
-                    val confirm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(Intent.EXTRA_INTENT)
-                    }
+                    // The typed overload is API 33 (and buggy there); IntentCompat picks the safe call per version.
+                    val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
                     if (confirm == null) {
                         _status.value = InstallStatus.Failed("Android didn't ask to confirm the install")
                         return

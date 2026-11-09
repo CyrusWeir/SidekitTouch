@@ -31,7 +31,8 @@ allprojects {
     apply(plugin = "com.diffplug.spotless")
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
-        ratchetFrom("origin/main")
+        // A fork clone or a checkout without that ref can point it elsewhere: -PspotlessRatchet=upstream/main
+        ratchetFrom(providers.gradleProperty("spotlessRatchet").getOrElse("origin/main"))
         kotlin {
             target("src/**/*.kt")
             ktlint(libs.versions.ktlint.get()).editorConfigOverride(ktlintRulesFromEditorConfig)

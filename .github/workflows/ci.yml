@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only supersede PR runs; every push to main keeps its own status.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   wrapper-validation:
@@ -27,7 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # versionName/versionCode come from `git describe` and the commit count, so a shallow
+      # clone would build a release that claims versionCode 1.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/android-setup
       - name: Assemble debug and release
         run: >
@@ -86,7 +91,7 @@ jobs:
       - name: Upload lint results to code scanning
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: app/build/reports/lint-results-debug.sarif
           category: android-lint
