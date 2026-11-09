@@ -326,7 +326,7 @@ private fun backToMusic(onBack: () -> Unit) = listOf(SideAction.back("back", "Mu
 @Composable
 private fun SearchHeader(query: String, onQueryChange: (String) -> Unit, focusRequester: FocusRequester) {
     val spacing = SidekitTheme.spacing
-    Box(Modifier.fillMaxWidth().height(spacing.headerHeight).padding(horizontal = spacing.itemPadding).padding(top = spacing.itemPadding)) {
+    Box(Modifier.fillMaxWidth().height(spacing.headerHeight).padding(horizontal = spacing.itemPadding).padding(top = spacing.headerPaddingTop)) {
         SidekitTextField(query, onQueryChange, Modifier.fillMaxWidth().semantics { contentDescription = "Search music" }, textStyle = SidekitTheme.typography.title, placeholder = "Search here", focusRequester = focusRequester, focusOnKeypad = true, singleLine = true, autoFocus = true)
     }
 }

@@ -30,7 +30,8 @@ import hrln.interactive.sidekit.design.theme.SidekitTheme
 
 /**
  * Header frame (62:898): 460 x 103, title inset 30/30. Drawn by the shared title host; screens
- * use it directly only for a custom header.
+ * use it directly only for a custom header. The spacing token `headerPaddingTop` shortens it
+ * (with `headerHeight`) in compact mode.
  */
 @Composable
 fun SidekitHeader(
@@ -43,7 +44,7 @@ fun SidekitHeader(
             .fillMaxWidth()
             .height(SidekitTheme.spacing.headerHeight)
             .padding(horizontal = SidekitTheme.spacing.itemPadding)
-            .padding(top = SidekitTheme.spacing.itemPadding),
+            .padding(top = SidekitTheme.spacing.headerPaddingTop),
     ) {
         SidekitText(
             text = title,

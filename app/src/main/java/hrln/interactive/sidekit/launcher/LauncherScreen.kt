@@ -196,7 +196,7 @@ fun LauncherScreen(
             val buildLabel = stringResource(R.string.build_label)
             val titleLine = with(LocalDensity.current) { SidekitTheme.typography.title.lineHeight.toDp() }
             Row(
-                modifier = Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.itemPadding),
+                modifier = Modifier.fillMaxWidth().height(SidekitTheme.spacing.headerHeight).padding(horizontal = SidekitTheme.spacing.itemPadding).padding(top = SidekitTheme.spacing.headerPaddingTop),
                 horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap),
                 verticalAlignment = Alignment.Top
             ) {

@@ -14,6 +14,7 @@ import hrln.interactive.sidekit.apps.sidenotes.SidenotesSampleData
 import hrln.interactive.sidekit.apps.sidenotes.SidenotesUiState
 import hrln.interactive.sidekit.apps.sideticks.SideticksScreen
 import hrln.interactive.sidekit.apps.sideticks.SideticksUiState
+import hrln.interactive.sidekit.design.canvas.SidekitCanvas
 import hrln.interactive.sidekit.launcher.LauncherLayout
 import hrln.interactive.sidekit.launcher.LauncherScreen
 import hrln.interactive.sidekit.launcher.LauncherUiState
@@ -49,6 +50,15 @@ class ScreenshotTest {
     @Test fun launcherGridAtSidephoneAvdDensity() = shoot("launcher_grid_avd_320dpi", launcher(LauncherUiState()))
 
     @Test fun launcherList() = shoot("launcher_list_36-2", launcher(LauncherUiState(layout = LauncherLayout.List)))
+    /** The same frame with Settings → Compact layout on: header 75 instead of 103, bar 100 instead of 112. */
+    @Test fun launcherGridCompact() {
+        compose.setContent {
+            hrln.interactive.sidekit.design.theme.SidekitTheme(
+                spacing = hrln.interactive.sidekit.design.theme.SidekitSpacing.Compact,
+            ) { SidekitCanvas { LauncherScreen(LauncherUiState(), {}, {}) } }
+        }
+        compose.onRoot().captureRoboImage("screenshots/launcher_grid_compact.png")
+    }
     @Test fun sidenotes() = shoot("sidenotes_1-278") { SidenotesListScreen(SidenotesUiState(SidenotesSampleData.notes), {}, {}, {}, {}) }
     @Test fun sidenotesUndo() = shoot("sidenotes_undo") {
         SidenotesListScreen(SidenotesUiState(SidenotesSampleData.notes.drop(1), recentlyDeleted = SidenotesSampleData.notes.first()), {}, {}, {}, {})

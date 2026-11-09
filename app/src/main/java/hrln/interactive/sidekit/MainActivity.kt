@@ -15,6 +15,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import hrln.interactive.sidekit.apps.settings.SidekitPreferences
 import hrln.interactive.sidekit.apps.settings.rememberCaseColour
+import hrln.interactive.sidekit.apps.settings.rememberCompactLayout
 import hrln.interactive.sidekit.apps.sidemessage.IncomingLinks
 import hrln.interactive.sidekit.apps.sideport.SideportLinks
 import hrln.interactive.sidekit.design.action.ChromeState
@@ -22,6 +23,7 @@ import hrln.interactive.sidekit.design.canvas.SidekitCanvas
 import hrln.interactive.sidekit.design.input.Keypad
 import hrln.interactive.sidekit.design.input.SystemKeys
 import hrln.interactive.sidekit.design.theme.SidekitColors
+import hrln.interactive.sidekit.design.theme.SidekitSpacing
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import hrln.interactive.sidekit.navigation.SidekitNavHost
 import hrln.interactive.sidekit.onboarding.OnboardingScreen
@@ -50,7 +52,10 @@ class MainActivity : ComponentActivity() {
             val prefs = remember { SidekitPreferences(this) }
             var setupComplete by remember { mutableStateOf(prefs.setupComplete) }
             val caseColour = rememberCaseColour(prefs)
-            SidekitTheme(colors = caseColour?.palette() ?: SidekitColors()) {
+            // Compact layout (Settings) trims the header and the action bar on every screen.
+            val compact = rememberCompactLayout(prefs)
+            val spacing = remember(compact) { if (compact) SidekitSpacing.Compact else SidekitSpacing() }
+            SidekitTheme(colors = caseColour?.palette() ?: SidekitColors(), spacing = spacing) {
                 SidekitCanvas(chrome = chrome, keypad = keypad) {
                     if (setupComplete) {
                         SidekitNavHost(homeRequests = homeRequests.intValue)

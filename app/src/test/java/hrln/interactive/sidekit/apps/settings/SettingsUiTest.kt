@@ -72,6 +72,34 @@ class SettingsUiTest {
         compose.onNodeWithText("List").assertIsDisplayed()
     }
 
+    @Test fun `compact layout row saves the choice and raises the body`() {
+        val prefs = SidekitPreferences(ApplicationProvider.getApplicationContext<Context>())
+        prefs.compactLayout = false
+        val compact = androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent {
+            // SidekitTheme directly, not SidekitPreviewFrame: the frame installs its own (standard)
+            // spacing and would override the one under test.
+            hrln.interactive.sidekit.design.theme.SidekitTheme(
+                spacing = if (compact.value) hrln.interactive.sidekit.design.theme.SidekitSpacing.Compact
+                else hrln.interactive.sidekit.design.theme.SidekitSpacing(),
+            ) {
+                hrln.interactive.sidekit.design.canvas.SidekitCanvas { SettingsHome({}, {}) }
+            }
+        }
+        compose.mainClock.advanceTimeBy(1000)
+        val bodyTop = compose.onNodeWithText("Launcher default").getUnclippedBoundsInRoot().top
+        compose.onNodeWithText("Compact layout").performClick()
+        compose.runOnIdle { assertTrue(SidekitPreferences(ApplicationProvider.getApplicationContext()).compactLayout) }
+        compose.onNodeWithText("On").assertIsDisplayed()
+        // The preference listener is what MainActivity follows: flip the state as it would.
+        compose.runOnIdle { compact.value = true }
+        compose.mainClock.advanceTimeBy(1000)
+        compose.onRoot().captureRoboImage("screenshots/settings_compact.png")
+        val compactTop = compose.onNodeWithText("Launcher default").getUnclippedBoundsInRoot().top
+        // Header 103 -> 75, so the body starts 28 dp higher (1 dp == 1 px on this canvas).
+        assertEquals(28f, (bodyTop - compactTop).value, 1f)
+    }
+
     @Test fun `system settings live on their own page`() {
         var opened = 0
         compose.setContent { SidekitPreviewFrame { SettingsHome({}, {}, onSystem = { opened++ }) } }
