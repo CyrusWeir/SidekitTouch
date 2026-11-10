@@ -89,7 +89,10 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     val firstRow = remember { FocusRequester() }
     val selectedRow = remember { FocusRequester() }
     val list = rememberLazyListState()
-    LaunchedEffect(Unit) { withFrameNanos { }; runCatching { firstRow.requestFocus() } }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { firstRow.requestFocus() }
+    }
     // Keep the selected app in context while it moves: scroll to the row just before it, so the
     // selected app sits in the second slot with at least one neighbour above and the rest below.
     // requestScrollToItem applies the scroll in the same measure pass as the reorder, so the row
@@ -113,17 +116,21 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     val actions = if (confirmingDiscard) {
         listOf(
             SideAction.cancel("cancel", "Cancel", onClick = { confirmingDiscard = false }),
-            SideAction("discard", "Discard", icon = SidekitIcon.Undo, tone = ActionTone.Destructive, motion = ActionMotion.Up, onClick = ::discard),
+            SideAction("discard", "Discard", icon = SidekitIcon.Undo, tone = ActionTone.Destructive, motion = ActionMotion.Up, onClick = ::discard)
         )
     } else {
         listOf(
             SideAction.back("back", "Settings", ::requestBack),
-            SideAction.forward("done", "Done", ::done, icon = SidekitIcon.Check),
+            SideAction.forward("done", "Done", ::done, icon = SidekitIcon.Check)
         )
     }
-    val options = if (confirmingDiscard) emptyList() else listOf(
-        SideAction("reset", "Reset", icon = SidekitIcon.Undo, tone = ActionTone.Muted, onClick = { arranger.reset() }),
-    )
+    val options = if (confirmingDiscard) {
+        emptyList()
+    } else {
+        listOf(
+            SideAction("reset", "Reset", icon = SidekitIcon.Undo, tone = ActionTone.Muted, onClick = { arranger.reset() })
+        )
+    }
     SidekitScaffold(
         "Arrange apps",
         // With nothing selected, Up/Down are left to focus traversal, so the keypad walks the app
@@ -136,14 +143,24 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
             val native = event.nativeKeyEvent
             if (selected != null && !confirmingDiscard && native.action == KeyEvent.ACTION_DOWN) {
                 when (native.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_UP -> { arranger.moveSelected(-1); true }
-                    KeyEvent.KEYCODE_DPAD_DOWN -> { arranger.moveSelected(+1); true }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        arranger.moveSelected(-1)
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        arranger.moveSelected(+1)
+                        true
+                    }
+
                     else -> false
                 }
-            } else false
+            } else {
+                false
+            }
         },
         actions = actions,
-        options = options,
+        options = options
     ) { padding ->
         SidekitList(padding, state = list) {
             item { ArrangeHint() }
@@ -158,7 +175,7 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                 Row(
                     Modifier.fillMaxWidth().height(76.dp).listFade(list, index + 1),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap),
+                    horizontalArrangement = Arrangement.spacedBy(SidekitTheme.spacing.itemContentGap)
                 ) {
                     SidekitItem(
                         title = label,
@@ -167,7 +184,7 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                                 isSelected -> Modifier.focusRequester(selectedRow)
                                 index == 0 -> Modifier.focusRequester(firstRow)
                                 else -> Modifier
-                            },
+                            }
                         ),
                         secondary = when {
                             isSelected -> "Selected"
@@ -175,7 +192,7 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                             else -> null
                         },
                         colour = if (isSelected) ItemColour.Secondary else ItemColour.Primary,
-                        onClick = { arranger.select(id) },
+                        onClick = { arranger.select(id) }
                     )
                     if (isSelected) {
                         Column {
@@ -209,18 +226,18 @@ private fun ArrangeHint() {
                 if (focused) drawFocusRing(1f, cornerRadius = 12.dp.toPx())
             }
             .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             KeyCap("Enter")
             SidekitText(": Select App", style = SidekitTheme.typography.label)
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             KeyCap("Up")
             SidekitText("/", style = SidekitTheme.typography.label)
@@ -236,7 +253,7 @@ private fun KeyCap(label: String) {
         Modifier
             .clip(RoundedCornerShape(6.dp))
             .background(SidekitTheme.colors.surfaceA3)
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         SidekitText(label, style = SidekitTheme.typography.small, color = SidekitTheme.colors.light)
     }
@@ -251,12 +268,12 @@ private fun ItemArrow(up: Boolean, enabled: Boolean, contentDescription: String,
             .clip(RoundedCornerShape(50))
             .alpha(if (enabled) 1f else 0.3f)
             .then(if (enabled) Modifier.clickable(onClickLabel = contentDescription, onClick = onClick) else Modifier),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         SidekitIconImage(
             SidekitIcon.ArrowUpward,
             contentDescription = contentDescription,
-            modifier = if (up) Modifier else Modifier.graphicsLayer { rotationZ = 180f },
+            modifier = if (up) Modifier else Modifier.graphicsLayer { rotationZ = 180f }
         )
     }
 }

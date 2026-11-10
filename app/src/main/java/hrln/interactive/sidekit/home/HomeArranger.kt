@@ -56,7 +56,10 @@ class HomeArranger(private val home: HomePreferences, known: Iterable<String>) {
         if (index < 0) return
         val target = (index + delta).coerceIn(0, order.lastIndex)
         if (target == index) return
-        order = order.toMutableList().apply { removeAt(index); add(target, id) }
+        order = order.toMutableList().apply {
+            removeAt(index)
+            add(target, id)
+        }
     }
 
     /** Moves the currently selected app by [delta]; no-op when nothing is selected. */
