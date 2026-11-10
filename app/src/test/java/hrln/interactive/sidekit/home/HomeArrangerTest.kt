@@ -123,6 +123,33 @@ class HomeArrangerTest {
     }
 
     @Test
+    fun `pending changes track the buffer, not the selection`() {
+        val home = HomePreferences(context)
+        val arranger = HomeArranger(home, known)
+        assertFalse(arranger.hasPendingChanges)
+
+        arranger.select(photos)
+        assertFalse(arranger.hasPendingChanges)        // selecting is not an edit
+
+        arranger.moveSelected(-1)
+        assertTrue(arranger.hasPendingChanges)
+
+        arranger.moveSelected(+1)                      // back to the seeded order
+        assertFalse(arranger.hasPendingChanges)
+    }
+
+    @Test
+    fun `reset is a pending change when it differs from the seeded order`() {
+        val home = HomePreferences(context)
+        home.move(photos, 2)
+        val arranger = HomeArranger(home, known)
+        assertFalse(arranger.hasPendingChanges)
+
+        arranger.reset()
+        assertTrue(arranger.hasPendingChanges)
+    }
+
+    @Test
     fun `reset keeps only the known apps, so filtered apps stay out`() {
         val home = HomePreferences(context)
         val visibleKnown = known - photos
