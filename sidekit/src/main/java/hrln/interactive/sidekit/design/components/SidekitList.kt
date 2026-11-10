@@ -88,23 +88,17 @@ fun SidekitList(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
-    /**
-     * How many row slots above the focused row stay visible. The default keeps it in the second
-     * slot; screens that need more context around a focused row (Arrange apps) pass 2.
-     */
-    focusBandSlots: Int = 1,
     content: LazyListScope.() -> Unit,
 ) {
     // Rows stagger their own entrance (see listFade), so the body shouldn't also fade as a block.
     LocalBodyEntrance.current?.listDriven = true
     val density = LocalDensity.current
     val spacing = SidekitTheme.spacing
-    val focusScroll = remember(contentPadding, density, spacing, focusBandSlots) {
+    val focusScroll = remember(contentPadding, density, spacing) {
         with(density) {
             FocusBand(
                 top = contentPadding.calculateTopPadding().toPx(),
                 pitch = (spacing.itemHeight + spacing.itemOuterGap).toPx(),
-                slots = focusBandSlots,
             )
         }
     }
@@ -125,9 +119,9 @@ fun SidekitList(
  * title, where the list fade is lightest and the action bar is far away. Moving down a long list
  * scrolls it a row at a time, like a wheel menu.
  */
-private class FocusBand(private val top: Float, private val pitch: Float, private val slots: Int = 1) : BringIntoViewSpec {
+private class FocusBand(private val top: Float, private val pitch: Float) : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-        val bandEnd = top + pitch * slots
+        val bandEnd = top + pitch
         return when {
             offset < top -> offset - top
             offset > bandEnd -> offset - bandEnd

@@ -69,14 +69,14 @@ class ArrangeHomeTest {
     }
 
     @Test
-    fun `renders every app with the short keypad hint and no dock labels`() {
+    fun `renders every app with the two-row keypad hint and dock labels`() {
         arrange()
         compose.onNodeWithText("Enter").assertIsDisplayed()
-        compose.onNodeWithText(": Select App,").assertIsDisplayed()
+        compose.onNodeWithText(": Select App").assertIsDisplayed()
         compose.onNodeWithText("Up").assertIsDisplayed()
         compose.onNodeWithText("Down").assertIsDisplayed()
         compose.onNodeWithText(": Move App").assertIsDisplayed()
-        compose.onAllNodesWithText("In dock").assertCountEquals(0)
+        compose.onAllNodesWithText("In dock").assertCountEquals(HomePreferences.DOCK_MAX)
         SubApp.dock.forEach { compose.onNodeWithText(it.label).assertIsDisplayed() }
         compose.onNodeWithText("Photos").assertExists()
     }

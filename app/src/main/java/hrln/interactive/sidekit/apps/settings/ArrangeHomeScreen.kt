@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -88,24 +86,24 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     val selectedRow = remember { FocusRequester() }
     val list = rememberLazyListState()
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { firstRow.requestFocus() } }
-    // Keep the selected app in context while it moves: at least two rows above and below it stay
-    // visible, so the user can judge its position instead of it sticking to the top of the list.
-    // Only scroll when that context is missing, and put the selected row third from the top.
-    LaunchedEffect(selected, order) {
-        val id = selected ?: return@LaunchedEffect
-        val index = order.indexOf(id)
-        if (index < 0) return@LaunchedEffect
-        val listIndex = index + 1
-        val visible = list.layoutInfo.visibleItemsInfo
-        val selectedVisible = visible.any { it.index == listIndex }
-        val above = visible.count { it.index < listIndex }
-        val below = visible.count { it.index > listIndex }
-        if (!selectedVisible || above < 2 || below < 2) {
-            list.scrollToItem((listIndex - 2).coerceAtLeast(0))
-            withFrameNanos { }
+    // Keep the selected app in context while it moves: scroll to the row just before it, so the
+    // selected app sits in the second slot with at least one neighbour above and the rest below.
+    // requestScrollToItem applies the scroll in the same measure pass as the reorder, so the row
+    // never draws at its old position for a frame (which looked like it sat on top of its neighbour).
+    val scrollTarget = selected?.let(order::indexOf)?.takeIf { it >= 0 }
+    var lastScrollTarget by remember { mutableStateOf<Int?>(null) }
+    SideEffect {
+        if (scrollTarget == null) {
+            lastScrollTarget = null
+        } else if (scrollTarget != lastScrollTarget) {
+            list.requestScrollToItem(scrollTarget)
+            lastScrollTarget = scrollTarget
         }
-        // Reordering moves the keyed row; focus can be dropped even though the row still looks
-        // selected. Put it back so holding Up/Down never leaves the highlight behind.
+    }
+    LaunchedEffect(selected, order) {
+        if (selected == null) return@LaunchedEffect
+        // Let the requested scroll land first, then restore focus to the keyed row that moved.
+        withFrameNanos { }
         runCatching { selectedRow.requestFocus() }
     }
     val actions = if (confirmingDiscard) {
@@ -143,7 +141,7 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
         actions = actions,
         options = options,
     ) { padding ->
-        SidekitList(padding, state = list, focusBandSlots = 2) {
+        SidekitList(padding, state = list) {
             item { ArrangeHint() }
             val last = order.lastIndex
             itemsIndexed(order, key = { _, id -> id }) { index, id ->
@@ -167,7 +165,11 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                                 else -> Modifier
                             },
                         ),
-                        secondary = if (isSelected) "Selected" else null,
+                        secondary = when {
+                            isSelected -> "Selected"
+                            arranger.isInDock(id) -> "In dock"
+                            else -> null
+                        },
                         colour = if (isSelected) ItemColour.Secondary else ItemColour.Primary,
                         onClick = { arranger.select(id) },
                     )
@@ -184,20 +186,25 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
 }
 
 /** The keypad hint, with key names in small grey caps so they read as keys, not prose. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ArrangeHint() {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        itemVerticalAlignment = Alignment.CenterVertically,
-    ) {
-        KeyCap("Enter")
-        SidekitText(": Select App,", style = SidekitTheme.typography.label)
-        KeyCap("Up")
-        SidekitText("/", style = SidekitTheme.typography.label)
-        KeyCap("Down")
-        SidekitText(": Move App", style = SidekitTheme.typography.label)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            KeyCap("Enter")
+            SidekitText(": Select App", style = SidekitTheme.typography.label)
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            KeyCap("Up")
+            SidekitText("/", style = SidekitTheme.typography.label)
+            KeyCap("Down")
+            SidekitText(": Move App", style = SidekitTheme.typography.label)
+        }
     }
 }
 
