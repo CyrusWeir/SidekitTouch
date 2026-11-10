@@ -115,7 +115,14 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     }
     val actions = if (confirmingDiscard) {
         listOf(
-            SideAction.cancel("cancel", "Cancel", onClick = { confirmingDiscard = false }),
+            SideAction(
+                "cancel",
+                "Cancel",
+                icon = SidekitIcon.ArrowLeftAlt,
+                tone = ActionTone.Muted,
+                motion = ActionMotion.Back,
+                onClick = { confirmingDiscard = false }
+            ),
             SideAction("discard", "Discard", icon = SidekitIcon.Undo, tone = ActionTone.Destructive, motion = ActionMotion.Up, onClick = ::discard)
         )
     } else {
