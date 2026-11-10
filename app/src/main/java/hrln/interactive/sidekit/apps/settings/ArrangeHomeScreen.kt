@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +37,7 @@ import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
 import hrln.interactive.sidekit.design.icons.SidekitIcon
 import hrln.interactive.sidekit.design.theme.SidekitTheme
+import hrln.interactive.sidekit.design.theme.drawFocusRing
 import hrln.interactive.sidekit.home.HomeArranger
 import hrln.interactive.sidekit.home.HomePreferences
 import hrln.interactive.sidekit.navigation.SubApp
@@ -185,10 +189,28 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
     }
 }
 
-/** The keypad hint, with key names in small grey caps so they read as keys, not prose. */
+/**
+ * The keypad hint, with key names in small grey caps so they read as keys, not prose.
+ *
+ * It is focusable even though it does nothing: otherwise Up from the first app stops there and the
+ * hint can never be brought back into view after the list has scrolled down. Focusing it lets the
+ * list's bring-into-view scroll it back to the top; Down returns to the first app.
+ */
 @Composable
 private fun ArrangeHint() {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    var focused by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .focusable()
+            .onFocusChanged { focused = it.isFocused }
+            .drawWithContent {
+                drawContent()
+                if (focused) drawFocusRing(1f, cornerRadius = 12.dp.toPx())
+            }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),

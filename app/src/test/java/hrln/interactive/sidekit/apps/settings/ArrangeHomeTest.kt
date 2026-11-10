@@ -122,6 +122,20 @@ class ArrangeHomeTest {
     }
 
     @Test
+    fun `keypad can reach the hint above the first app`() {
+        arrangeWithKeypad()
+        compose.onNodeWithText("Sidemessage").assertIsFocused()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.waitForIdle()
+        compose.onNode(hasText("Enter") and hasAnyAncestor(isFocused())).assertExists()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Sidemessage").assertIsFocused()
+    }
+
+    @Test
     fun `hidden apps are omitted from the rearrangement list`() {
         SidekitPreferences(context).hiddenApps = setOf("builtin:Sidenotes")
         arrange()
