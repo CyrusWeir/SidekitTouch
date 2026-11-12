@@ -3,6 +3,7 @@ package hrln.interactive.sidekit
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -97,7 +98,10 @@ class MainActivity : ComponentActivity() {
         // Keypad mapping first, plus each module's default navigation, so Options, Back, focus and
         // typing all see the mapped key.
         val translated = keypad.translateForUi(event) ?: return true
-        when (val hold = sundialHold.handle(translated, ::sundialHoldAction)) {
+        // Holds belong to the Sundial ring only: Tab/Enter on a Bluetooth keyboard or Next on a headset
+        // keep their normal behaviour, as does a T9 OK if the remembered module is stale.
+        val fromSundial = event.device?.name in SUNDIAL_DEVICES || event.deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
+        when (val hold = sundialHold.handle(translated) { code -> if (fromSundial) sundialHoldAction(code) else null }) {
             HoldToAct.Result.Pass -> Unit
 
             HoldToAct.Result.Consume -> return true
@@ -181,5 +185,10 @@ class MainActivity : ComponentActivity() {
         } else if (!SideportLinks.handle(intent)) {
             IncomingLinks.handle(intent)
         }
+    }
+
+    private companion object {
+        /** Input devices that carry the Sundial ring (newer media module, older combined keyboard). */
+        val SUNDIAL_DEVICES = setOf("gxa535_media", "gxa535_keyboard")
     }
 }

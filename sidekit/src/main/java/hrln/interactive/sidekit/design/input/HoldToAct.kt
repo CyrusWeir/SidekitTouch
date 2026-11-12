@@ -51,7 +51,8 @@ class HoldToAct(
     fun handle(event: KeyEvent, holdAction: (Int) -> Int?): Result {
         val action = holdAction(event.keyCode)
         if (action == null) {
-            clear()
+            // Pressing another key drops the pending tap; releasing one (a rolled press) must not.
+            if (event.action == KeyEvent.ACTION_DOWN) clear()
             return Result.Pass
         }
         if (event.isCanceled) {
@@ -79,6 +80,9 @@ class HoldToAct(
 
             KeyEvent.ACTION_UP -> {
                 val down = pending
+                // The release of a hold key that isn't the pending one (its press was dropped):
+                // swallow it and leave the pending key's timer running.
+                if (down == null || down.keyCode != event.keyCode) return Result.Consume
                 timer?.cancel()
                 timer = null
                 if (fired) {
@@ -86,24 +90,20 @@ class HoldToAct(
                     fired = false
                     return Result.Consume
                 }
-                if (down != null && down.keyCode == event.keyCode) {
-                    // Releasing after the threshold without a timer still counts as a hold.
-                    if (event.eventTime - down.downTime >= holdMs) {
-                        fire(action, down)
-                        pending = null
-                        fired = false
-                        return Result.Consume
-                    }
+                // Releasing after the threshold without a timer still counts as a hold.
+                if (event.eventTime - down.downTime >= holdMs) {
+                    fire(action, down)
                     pending = null
-                    val up = KeyEvent(
-                        down.downTime, event.eventTime, KeyEvent.ACTION_UP, down.keyCode,
-                        event.repeatCount, event.metaState, event.deviceId, event.scanCode,
-                        event.flags, event.source
-                    )
-                    return Result.Deliver(listOf(down, up))
+                    fired = false
+                    return Result.Consume
                 }
                 pending = null
-                return Result.Consume
+                val up = KeyEvent(
+                    down.downTime, event.eventTime, KeyEvent.ACTION_UP, down.keyCode,
+                    event.repeatCount, event.metaState, event.deviceId, event.scanCode,
+                    event.flags, event.source
+                )
+                return Result.Deliver(listOf(down, up))
             }
 
             else -> return Result.Pass

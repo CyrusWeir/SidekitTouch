@@ -85,4 +85,26 @@ class HoldToActTest {
         scheduler.fire()
         assertEquals(emptyList<Int>(), holds.map { it.first })
     }
+
+    @Test fun releasingAnotherKeyKeepsThePendingTap() {
+        val hold = hold()
+        val down = KeyEvent.ACTION_DOWN
+        val up = KeyEvent.ACTION_UP
+        assertEquals(HoldToAct.Result.Pass, hold.handle(event(down, KeyEvent.KEYCODE_DPAD_DOWN, 0), ::action))
+        assertEquals(HoldToAct.Result.Consume, hold.handle(event(down, KeyEvent.KEYCODE_TAB, 10), ::action))
+        assertEquals(HoldToAct.Result.Pass, hold.handle(event(up, KeyEvent.KEYCODE_DPAD_DOWN, 20), ::action))
+        val result = hold.handle(event(up, KeyEvent.KEYCODE_TAB, 100), ::action)
+        assertTrue(result is HoldToAct.Result.Deliver)
+    }
+
+    @Test fun releasingADroppedHoldKeyKeepsTheNewHold() {
+        val hold = hold()
+        val down = KeyEvent.ACTION_DOWN
+        val up = KeyEvent.ACTION_UP
+        hold.handle(event(down, KeyEvent.KEYCODE_TAB, 0), ::action)
+        hold.handle(event(down, KeyEvent.KEYCODE_ENTER, 10), ::action)
+        assertEquals(HoldToAct.Result.Consume, hold.handle(event(up, KeyEvent.KEYCODE_TAB, 20), ::action))
+        scheduler.fire()
+        assertEquals(listOf(KeyEvent.KEYCODE_ENDCALL), holds.map { it.first })
+    }
 }
