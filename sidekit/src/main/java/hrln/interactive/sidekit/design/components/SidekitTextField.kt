@@ -25,9 +25,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
@@ -198,8 +203,16 @@ fun SidekitTextField(
                     keypad.session = null
                 }
             }
-            // Before the IME: on the Sidephone the virtual keyboard stays connected even when hidden,
-            // and must not see keypad presses while T9 is typing.
+            // Show/hide the virtual keyboard when the text field is focused/unfocused.
+            .onFocusChanged { focusState ->
+                val keyboardController = LocalSoftwareKeyboardController.current
+                if (focusState.isFocused) {
+                    keyboardController?.show()
+                } else {
+                    keyboardController?.hide()
+                }
+            }
+            // Handle physical keyboard input (fallback for devices with keyboards).
             .onInterceptKeyBeforeSoftKeyboard { event ->
                 if (keypad == null || session == null) return@onInterceptKeyBeforeSoftKeyboard false
                 val native = keypad.translate(event.nativeKeyEvent) ?: return@onInterceptKeyBeforeSoftKeyboard true
@@ -207,9 +220,7 @@ fun SidekitTextField(
                 if (!keypad.typing) return@onInterceptKeyBeforeSoftKeyboard false
                 val enter = native.keyCode == android.view.KeyEvent.KEYCODE_ENTER || native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER
                 if (enter && singleLine) {
-                    // OK takes a highlighted completion first; otherwise it submits.
                     if (session.handleOk(native)) return@onInterceptKeyBeforeSoftKeyboard true
-                    // A one-line field has no newline: Enter / OK submits it.
                     if (native.action == android.view.KeyEvent.ACTION_DOWN && native.repeatCount == 0) {
                         session.finish()
                         onDone?.invoke()
@@ -328,3 +339,10 @@ private const val MAX_SHOWN = 3
 /** Whether T9 typing is active anywhere (for screens that adapt, e.g. to keep their title visible). */
 @Composable
 fun rememberT9Active(): Boolean = LocalKeypad.current?.typing == true
+@Composable
+fun VirtualKeyboardToggle() {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    IconButton(onClick = { keyboardController?.show() }) {
+        Icon(Icons.Default.Keyboard, contentDescription = "Show Keyboard")
+    }
+}
