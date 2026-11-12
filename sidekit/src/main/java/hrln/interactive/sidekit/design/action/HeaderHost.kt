@@ -65,8 +65,9 @@ private class HeaderModel {
 }
 
 /**
- * The shared screen title. On navigation the old title lifts and fades while the new one rises
- * into place: both are single text layers moved in the draw phase, measured once.
+ * The shared screen title. On navigation the old title fades out and the new one fades in, both
+ * in the same fixed place: the title is the screen's anchor, so it never moves. Both are single
+ * text layers faded in the draw phase, measured once.
  */
 @Composable
 internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
@@ -124,7 +125,8 @@ internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
     }
 }
 
-private val TITLE_TRAVEL = 28.dp
+/** How far the titles slide during a swap: none, so the title keeps a fixed position. */
+private val TITLE_TRAVEL = 0.dp
 
 /** Fraction of the swap spent fading the old title out before the new one starts fading in. */
 private const val HANDOFF = 0.35f
