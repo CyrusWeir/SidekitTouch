@@ -69,5 +69,5 @@ enum class SidekitIcon(@DrawableRes val drawable: Int) {
     Undo(R.drawable.sk_ic_undo),
     Travel(R.drawable.sk_ic_travel),
     TravelExplore(R.drawable.sk_ic_travel_explore),
-    Videocam(R.drawable.sk_ic_videocam),
+    Videocam(R.drawable.sk_ic_videocam)
 }

@@ -41,7 +41,7 @@ fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
             onHiddenApps = { nav.navigate("${SubApp.Settings.route}/hidden-apps") },
             onSystem = { nav.navigate("${SubApp.Settings.route}/system") },
             onKeyboard = { nav.navigate(keyboardSettingsRoute()) },
-            onArrange = { nav.navigate("${SubApp.Settings.route}/arrange") },
+            onArrange = { nav.navigate("${SubApp.Settings.route}/arrange") }
         )
     }
     keyboardSettingsGraph(nav)
@@ -61,7 +61,10 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
     val caseColour = rememberCaseColour(prefs)
     var revision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
-    LifecycleResumeEffect(Unit) { revision++; onPauseOrDispose {} }
+    LifecycleResumeEffect(Unit) {
+        revision++
+        onPauseOrDispose {}
+    }
     val home = remember(revision) { context.getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_HOME) }
     fun open(action: String) {
         try {
@@ -83,7 +86,12 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
                 })
             }
             // Shorter header and action bar on every screen: more room for the body.
-            item { SidekitItem("Compact layout", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = if (compactLayout) "On" else "Off", secondaryToEnd = true, onClick = { prefs.compactLayout = !prefs.compactLayout; revision++ }) }
+            item {
+                SidekitItem("Compact layout", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = if (compactLayout) "On" else "Off", secondaryToEnd = true, onClick = {
+                    prefs.compactLayout = !prefs.compactLayout
+                    revision++
+                })
+            }
             // Opens a floating system dialog rather than a Sidekit page, so it stays a compact row.
             item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = if (home) "Sidekit" else "Choose", secondaryToEnd = true, onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
             // Everything below opens another page: full-height rows with a link arrow.

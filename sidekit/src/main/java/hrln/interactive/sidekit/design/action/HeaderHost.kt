@@ -1,8 +1,6 @@
 package hrln.interactive.sidekit.design.action
 
 import androidx.compose.animation.core.animate
-import androidx.compose.runtime.mutableFloatStateOf
-import kotlinx.coroutines.Job
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,6 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
@@ -25,12 +24,14 @@ import hrln.interactive.sidekit.design.components.SidekitHeader
 import hrln.interactive.sidekit.design.motion.SidekitMotion
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @Stable
 private class HeaderModel {
     var current: HeaderSpec? by mutableStateOf(null, referentialEqualityPolicy())
     var previous: HeaderSpec? by mutableStateOf(null, referentialEqualityPolicy())
+
     /** Swap progress; reset synchronously (see ActionSlot.contentProgress). */
     var progress by mutableFloatStateOf(1f)
         private set
@@ -94,7 +95,7 @@ internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(SidekitTheme.spacing.headerHeight)
-            .then(current?.modifier ?: Modifier),
+            .then(current?.modifier ?: Modifier)
     ) {
         previous?.let { old ->
             SidekitHeader(
@@ -106,7 +107,7 @@ internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
                     alpha = (1f - p / HANDOFF).coerceIn(0f, 1f)
                     translationY = -p * travel
                     compositingStrategy = CompositingStrategy.ModulateAlpha
-                },
+                }
             )
         }
         if (current != null) {
@@ -119,7 +120,7 @@ internal fun HeaderHost(state: ChromeState, modifier: Modifier = Modifier) {
                     alpha = if (model.current == null) 0f else ((p - HANDOFF) / (1f - HANDOFF)).coerceIn(0f, 1f)
                     translationY = (1f - p) * travel
                     compositingStrategy = CompositingStrategy.ModulateAlpha
-                },
+                }
             )
         }
     }
