@@ -107,11 +107,24 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
             lastScrollTarget = scrollTarget
         }
     }
+    // Only a keyed Up/Down move pulls focus back to the row. A press on the row's own arrows also
+    // reorders, but focus must stay on that arrow so the next Confirm moves the app again instead
+    // of landing on the row and deselecting it.
+    var refocusAfterKeyMove by remember { mutableStateOf(false) }
     LaunchedEffect(selected, order) {
-        if (selected == null) return@LaunchedEffect
+        if (selected == null || !refocusAfterKeyMove) return@LaunchedEffect
+        refocusAfterKeyMove = false
         // Let the requested scroll land first, then restore focus to the keyed row that moved.
         withFrameNanos { }
         runCatching { selectedRow.requestFocus() }
+    }
+    // While the Discard bar is up, Up/Down walk focus freely; put it back on the selected row
+    // when the bar closes so highlight and focus agree again.
+    LaunchedEffect(confirmingDiscard) {
+        if (!confirmingDiscard && arranger.selected != null) {
+            withFrameNanos { }
+            runCatching { selectedRow.requestFocus() }
+        }
     }
     val actions = if (confirmingDiscard) {
         listOf(
@@ -152,11 +165,13 @@ internal fun ArrangeHomeScreen(back: () -> Unit) {
                 when (native.keyCode) {
                     KeyEvent.KEYCODE_DPAD_UP -> {
                         arranger.moveSelected(-1)
+                        refocusAfterKeyMove = true
                         true
                     }
 
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
                         arranger.moveSelected(+1)
+                        refocusAfterKeyMove = true
                         true
                     }
 
