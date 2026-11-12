@@ -30,7 +30,9 @@ class KeypadMappingUiTest {
     private val chrome = ChromeState()
     private lateinit var keypad: Keypad
 
-    @Before fun clear() { prefs.edit().clear().commit() }
+    @Before fun clear() {
+        prefs.edit().clear().commit()
+    }
 
     private fun show(module: KeypadModule = KeypadModule.T9, content: @Composable () -> Unit) {
         compose.setContent {
@@ -186,13 +188,36 @@ class KeypadMappingUiTest {
         compose.onRoot().captureRoboImage("screenshots/keypad_mapping_tester.png")
     }
 
-    @Test fun settingsLeadsToTheMapping() {
+    @Test fun settingsHasOneKeyboardEntry() {
         var opened = 0
-        show { SettingsHome({}, {}, onKeypadMapping = { opened++ }) }
-        compose.onNodeWithText("Keypad").assertIsDisplayed()
-        scrollTo("Keypad mapping")
-        compose.onRoot().captureRoboImage("screenshots/keypad_mapping_settings.png")
-        compose.onNodeWithText("Keypad mapping").performClick()
+        show { SettingsHome({}, {}, onKeyboard = { opened++ }) }
+        scrollTo("Keyboard")
+        // The old separate keypad rows are gone: one entry leads to the Keyboard page.
+        compose.onNodeWithText("Input mode").assertDoesNotExist()
+        compose.onNodeWithText("Keypad Back key").assertDoesNotExist()
+        compose.onNodeWithText("Keypad mapping").assertDoesNotExist()
+        compose.onRoot().captureRoboImage("screenshots/keyboard_settings_home.png")
+        compose.onNodeWithText("Keyboard").performClick()
         assertEquals(1, opened)
+    }
+
+    @Test fun keyboardPageShowsPreferencesAndDiagram() {
+        var mapping = 0
+        show(KeypadModule.T9) { KeyboardSettingsScreen({}, onKeypadMapping = { mapping++ }) }
+        compose.onNodeWithText("Keyboard").assertIsDisplayed()
+        compose.onNodeWithText("Keypad").assertIsDisplayed()
+        compose.onNodeWithText("Input mode").assertIsDisplayed()
+        compose.onNodeWithText("Keypad Back key").assertIsDisplayed()
+        compose.onNodeWithText("Mapping").assertIsDisplayed()
+        // Tapping the keypad row cycles the module, and the diagram follows it.
+        compose.onNodeWithText("Keypad").performClick()
+        compose.runOnIdle { assertEquals(KeypadModule.Qwerty, keypad.module) }
+        compose.onNodeWithText("Mini QWERTY").assertIsDisplayed()
+        // The diagram is below the preferences: scroll to it and check a key and its caption.
+        scrollTo("Tap a key to learn its action.")
+        compose.onNodeWithText("QW").assertIsDisplayed()
+        compose.onRoot().captureRoboImage("screenshots/keyboard_settings_page.png")
+        scrollTo("Mapping").performClick()
+        assertEquals(1, mapping)
     }
 }

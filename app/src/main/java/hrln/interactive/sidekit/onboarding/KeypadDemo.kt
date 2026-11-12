@@ -44,12 +44,12 @@ internal fun demoRows(module: KeypadModule): List<List<DemoKey>> {
 }
 
 @Composable
-internal fun KeypadDemo(module: KeypadModule) {
+internal fun KeypadDemo(module: KeypadModule, idleHint: String = "Tap a key to learn its action. This demo stays in setup.") {
     var selected by rememberSaveable(module) { mutableStateOf<String?>(null) }
     val rows = remember(module) { demoRows(module) }
     val caption = SidekitTheme.typography.label.copy(fontSize = 20.sp, lineHeight = 21.sp)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SidekitText(rows.flatten().firstOrNull { it.label == selected }?.action ?: "Tap a key to learn its action. This demo stays in setup.", style = caption, maxLines = 3, modifier = Modifier.height(64.dp))
+        SidekitText(rows.flatten().firstOrNull { it.label == selected }?.action ?: idleHint, style = caption, maxLines = 3, modifier = Modifier.height(64.dp))
         rows.forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { key ->
