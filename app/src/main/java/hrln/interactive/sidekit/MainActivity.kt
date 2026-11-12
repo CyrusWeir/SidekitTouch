@@ -3,6 +3,7 @@ package hrln.interactive.sidekit
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,7 +21,10 @@ import hrln.interactive.sidekit.apps.sidemessage.IncomingLinks
 import hrln.interactive.sidekit.apps.sideport.SideportLinks
 import hrln.interactive.sidekit.design.action.ChromeState
 import hrln.interactive.sidekit.design.canvas.SidekitCanvas
+import hrln.interactive.sidekit.design.input.HoldToAct
 import hrln.interactive.sidekit.design.input.Keypad
+import hrln.interactive.sidekit.design.input.KeypadModule
+import hrln.interactive.sidekit.design.input.NavControls
 import hrln.interactive.sidekit.design.input.SystemKeys
 import hrln.interactive.sidekit.design.theme.SidekitColors
 import hrln.interactive.sidekit.design.theme.SidekitSpacing
@@ -37,6 +41,9 @@ class MainActivity : ComponentActivity() {
 
     /** The shared title + action bar; held here so hardware keys (Options) can reach it. */
     private val chrome = ChromeState()
+
+    /** The Sundial has no Back/Options key: hold Tab / Enter, and hold Previous/Next for left/right. */
+    private val sundialHold = HoldToAct(onHold = { action, source -> performSundialHold(action, source) })
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,16 +83,81 @@ class MainActivity : ComponentActivity() {
         hrln.interactive.sidekit.apps.settings.SidekitPreferences(this).applyInputDefault(keypad)
     }
 
+    override fun onPause() {
+        sundialHold.reset()
+        super.onPause()
+    }
+
     // Overriding dispatchKeyEvent is the only way to see a keypad event before Compose or the
     // system consumes it; lint flags the override because ComponentActivity marks it @RestrictTo.
     @SuppressLint("RestrictedApi")
-    override fun dispatchKeyEvent(raw: KeyEvent): Boolean {
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Detect the module from the raw key before navigation rewrites it, so a first QWERTY press
         // on a letter that is also a navigator (T/D/B/J) still reveals the module.
-        keypad.observe(raw)
+        keypad.observe(event)
         // Keypad mapping first, plus each module's default navigation, so Options, Back, focus and
         // typing all see the mapped key.
-        val event = keypad.translateForUi(raw) ?: return true
+        val translated = keypad.translateForUi(event) ?: return true
+        // Holds belong to the Sundial ring only: Tab/Enter on a Bluetooth keyboard or Next on a headset
+        // keep their normal behaviour, as does a T9 OK if the remembered module is stale.
+        val fromSundial = event.device?.name in SUNDIAL_DEVICES || event.deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
+        when (val hold = sundialHold.handle(translated) { code -> if (fromSundial) sundialHoldAction(code) else null }) {
+            HoldToAct.Result.Pass -> Unit
+
+            HoldToAct.Result.Consume -> return true
+
+            is HoldToAct.Result.Deliver -> {
+                hold.events.forEach(::dispatchTranslated)
+                return true
+            }
+        }
+        return dispatchTranslated(translated)
+    }
+
+    /**
+     * Performs a Sundial hold after the timer fires or the key is released late.
+     *
+     * Back comes from holding a hardware key, not from a system back gesture, so the
+     * predictive-back lint does not apply; the dispatcher still routes through registered
+     * callbacks.
+     */
+    @SuppressLint("GestureBackNavigation")
+    private fun performSundialHold(action: Int, source: KeyEvent) {
+        when (action) {
+            KeyEvent.KEYCODE_BACK -> onBackPressedDispatcher.onBackPressed()
+
+            KeyEvent.KEYCODE_ENDCALL -> {
+                keypad.finishTyping()
+                chrome.toggleOptions()
+            }
+
+            else -> dispatchNav(action, source)
+        }
+    }
+
+    /** The Sundial keys that get a hold action, and only while its layout is auto-detected. */
+    private fun sundialHoldAction(code: Int): Int? {
+        if (keypad.module != KeypadModule.Sundial || keypad.mapper.customModule != null) return null
+        return NavControls.sundialHoldFor[code]
+    }
+
+    /** Sends a held Sundial key's navigation action as a normal press/release. */
+    private fun dispatchNav(code: Int, from: KeyEvent) {
+        val down = KeyEvent(
+            from.downTime, from.eventTime, KeyEvent.ACTION_DOWN, code, 0,
+            from.metaState, from.deviceId, from.scanCode, from.flags, from.source
+        )
+        val up = KeyEvent(
+            from.downTime, from.eventTime + 1, KeyEvent.ACTION_UP, code, 0,
+            from.metaState, from.deviceId, from.scanCode, from.flags, from.source
+        )
+        dispatchTranslated(down)
+        dispatchTranslated(up)
+    }
+
+    /** Routes an already-translated event; also used for the tap released by [sundialHold]. */
+    @SuppressLint("RestrictedApi")
+    private fun dispatchTranslated(event: KeyEvent): Boolean {
         when {
             // Keypad top-right: the universal Options key. Acts on release; the press is consumed
             // so the system's end-call handling never sees it.
@@ -113,5 +185,10 @@ class MainActivity : ComponentActivity() {
         } else if (!SideportLinks.handle(intent)) {
             IncomingLinks.handle(intent)
         }
+    }
+
+    private companion object {
+        /** Input devices that carry the Sundial ring (newer media module, older combined keyboard). */
+        val SUNDIAL_DEVICES = setOf("gxa535_media", "gxa535_keyboard")
     }
 }

@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,8 +65,13 @@ internal fun AppRow(
         ),
         secondary = secondary,
         showLinkArrow = true,
+        // The slot is always present, so a row doesn't shift sideways while its icon loads.
         leading = {
-            icon?.let { Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.size(SidekitTheme.spacing.iconSize)) }
+            if (icon != null) {
+                Image(icon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(SidekitTheme.spacing.iconSize))
+            } else {
+                Box(Modifier.size(SidekitTheme.spacing.iconSize))
+            }
         }
     )
 }

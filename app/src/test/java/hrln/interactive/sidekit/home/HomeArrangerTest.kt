@@ -2,8 +2,8 @@ package hrln.interactive.sidekit.home
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
 import hrln.interactive.sidekit.apps.settings.visibilityId
+import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
 import hrln.interactive.sidekit.navigation.SubApp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,7 +43,7 @@ class HomeArrangerTest {
     @Test
     fun `seeds from stored order, dock derived, freshly-seen apps appended`() {
         val home = HomePreferences(context)
-        home.move(photos, 2)                          // persisted order change
+        home.move(photos, 2) // persisted order change
         val arranger = HomeArranger(home, known)
 
         // home.homeOrder is the raw stored list; the arranger appends the freshly-seen ported id.
@@ -79,16 +79,16 @@ class HomeArrangerTest {
         val home = HomePreferences(context)
         val arranger = HomeArranger(home, known)
         val defaultDock = SubApp.dock.map { it.visibilityId() }
-        assertEquals(defaultDock, arranger.dock)       // defaults == first four (Photos at 4 is out)
+        assertEquals(defaultDock, arranger.dock) // defaults == first four (Photos at 4 is out)
         assertFalse(arranger.isInDock(photos))
         assertFalse(arranger.isInDock(matrix))
 
-        arranger.move(photos, -1)                      // photos 4 -> 3, enters the dock
+        arranger.move(photos, -1) // photos 4 -> 3, enters the dock
         assertTrue(arranger.isInDock(photos))
         assertEquals(HomePreferences.DOCK_MAX, arranger.dock.size)
         assertEquals(photos, arranger.dock.last())
 
-        arranger.move(photos, 1)                       // back out of the dock
+        arranger.move(photos, 1) // back out of the dock
         assertFalse(arranger.isInDock(photos))
         assertEquals(defaultDock, arranger.dock)
 
@@ -108,18 +108,45 @@ class HomeArrangerTest {
         assertEquals(photos, arranger.selected)
         assertTrue(arranger.isSelected(photos))
 
-        arranger.moveSelected(-1)                      // photos 4 -> 3
+        arranger.moveSelected(-1) // photos 4 -> 3
         assertEquals(3, arranger.order.indexOf(photos))
-        assertTrue(arranger.isSelected(photos))        // selection follows the app
+        assertTrue(arranger.isSelected(photos)) // selection follows the app
 
-        arranger.moveSelected(0)                       // no-op keeps selection and order
+        arranger.moveSelected(0) // no-op keeps selection and order
         assertEquals(3, arranger.order.indexOf(photos))
 
-        arranger.select(photos)                        // deselect
+        arranger.select(photos) // deselect
         assertNull(arranger.selected)
         val before = arranger.order.toList()
-        arranger.moveSelected(1)                       // nothing selected -> no-op
+        arranger.moveSelected(1) // nothing selected -> no-op
         assertEquals(before, arranger.order)
+    }
+
+    @Test
+    fun `pending changes track the buffer, not the selection`() {
+        val home = HomePreferences(context)
+        val arranger = HomeArranger(home, known)
+        assertFalse(arranger.hasPendingChanges)
+
+        arranger.select(photos)
+        assertFalse(arranger.hasPendingChanges) // selecting is not an edit
+
+        arranger.moveSelected(-1)
+        assertTrue(arranger.hasPendingChanges)
+
+        arranger.moveSelected(+1) // back to the seeded order
+        assertFalse(arranger.hasPendingChanges)
+    }
+
+    @Test
+    fun `reset is a pending change when it differs from the seeded order`() {
+        val home = HomePreferences(context)
+        home.move(photos, 2)
+        val arranger = HomeArranger(home, known)
+        assertFalse(arranger.hasPendingChanges)
+
+        arranger.reset()
+        assertTrue(arranger.hasPendingChanges)
     }
 
     @Test
@@ -151,7 +178,7 @@ class HomeArrangerTest {
     fun `commit persists the order and the dock follows the top four`() {
         val home = HomePreferences(context)
         val arranger = HomeArranger(home, known)
-        arranger.move(photos, -1)                      // bring Photos into the dock
+        arranger.move(photos, -1) // bring Photos into the dock
         arranger.commit()
 
         val stored = HomePreferences(context)

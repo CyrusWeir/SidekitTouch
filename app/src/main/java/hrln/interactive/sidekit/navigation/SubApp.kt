@@ -28,13 +28,13 @@ enum class SubApp(val label: String, val icon: SidekitIcon, val designed: Boolea
     Banking("Banking", SidekitIcon.AccountBalanceWallet),
     Settings("Settings", SidekitIcon.Settings),
     WebBrowser("Web browser", SidekitIcon.TravelExplore),
-    Apps("Apps", SidekitIcon.DeployedCode),
+    Apps("Apps", SidekitIcon.Apps),
     Camera("Camera", SidekitIcon.PhotoCamera),
     Sideweather("Sideweather", SidekitIcon.PartlyCloudyDay),
     Calendar("Calendar", SidekitIcon.CalendarMonth),
     Compass("Compass", SidekitIcon.Explore),
     Health("Health", SidekitIcon.EcgHeart),
-    Sideport("Sideport", SidekitIcon.DeployedCode),
+    Sideport("Sideport", SidekitIcon.DeployedCode)
     ;
 
     /** Root navigation route of the app. Nested screens use "$route/...". */

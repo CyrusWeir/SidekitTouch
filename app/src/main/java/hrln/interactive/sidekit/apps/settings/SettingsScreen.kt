@@ -3,7 +3,6 @@ package hrln.interactive.sidekit.apps.settings
 import android.app.ActivityManager
 import android.app.role.RoleManager
 import android.app.usage.StorageStatsManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -26,9 +25,6 @@ import hrln.interactive.sidekit.R
 import hrln.interactive.sidekit.apps.everyday.CompactRowHeight
 import hrln.interactive.sidekit.design.action.SideAction
 import hrln.interactive.sidekit.design.components.*
-import hrln.interactive.sidekit.design.input.KeypadModule
-import hrln.interactive.sidekit.design.input.LocalKeypad
-import hrln.interactive.sidekit.design.input.T9Mode
 import hrln.interactive.sidekit.design.theme.SidekitTheme
 import hrln.interactive.sidekit.navigation.SubApp
 import hrln.interactive.sidekit.onboarding.OnboardingScreen
@@ -44,10 +40,11 @@ fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
             onSetup = { nav.navigate("${SubApp.Settings.route}/setup") },
             onHiddenApps = { nav.navigate("${SubApp.Settings.route}/hidden-apps") },
             onSystem = { nav.navigate("${SubApp.Settings.route}/system") },
-            onKeypadMapping = { nav.navigate(keypadMappingRoute()) },
+            onKeyboard = { nav.navigate(keyboardSettingsRoute()) },
             onArrange = { nav.navigate("${SubApp.Settings.route}/arrange") }
         )
     }
+    keyboardSettingsGraph(nav)
     keypadMappingGraph(nav)
     composable("${SubApp.Settings.route}/hidden-apps") { HiddenAppsScreen { nav.popBackStack() } }
     composable("${SubApp.Settings.route}/system") { SystemSettingsScreen { nav.popBackStack() } }
@@ -58,20 +55,15 @@ fun NavGraphBuilder.settingsGraph(nav: NavHostController) {
 }
 
 @Composable
-internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}, onSystem: () -> Unit = {}, onKeypadMapping: () -> Unit = {}, onArrange: () -> Unit = {}) {
+internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour: () -> Unit = {}, onSetup: () -> Unit = {}, onHiddenApps: () -> Unit = {}, onSystem: () -> Unit = {}, onKeyboard: () -> Unit = {}, onArrange: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { SidekitPreferences(context) }
     val caseColour = rememberCaseColour(prefs)
-    val keypad = LocalKeypad.current
     var revision by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     LifecycleResumeEffect(Unit) {
         revision++
         onPauseOrDispose {}
-    }
-    val accessibility = remember(revision) {
-        val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
-        enabled.split(':').mapNotNull(ComponentName::unflattenFromString).any { it.packageName == context.packageName && it.className.endsWith("KeypadAccessibilityService") }
     }
     val home = remember(revision) { context.getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_HOME) }
     fun open(action: String) {
@@ -83,43 +75,33 @@ internal fun SettingsHome(onHome: () -> Unit, onAbout: () -> Unit, onCaseColour:
     }
     val listLayout = remember(revision) { prefs.listLayout }
     val compactLayout = remember(revision) { prefs.compactLayout }
-    val inputMode = remember(revision) { prefs.inputMode }
     val list = rememberLazyListState()
     SidekitScaffold("Settings", actions = listOf(SideAction.back("home", "Home", onHome), SideAction.forward("about", "About", onAbout))) { padding ->
         SidekitList(padding, state = list) {
+            // Toggles act in place: compact rows, no arrow.
             item {
-                SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", onClick = {
+                SidekitItem("Launcher default", Modifier.height(CompactRowHeight).listFade(list, 0), secondary = if (listLayout) "List" else "Grid", secondaryToEnd = true, onClick = {
                     prefs.listLayout = !prefs.listLayout
                     revision++
                 })
             }
-            item { SidekitItem("Arrange apps", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = "Home order & dock", onClick = onArrange) }
-            item { SidekitItem("Case colour", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = caseColour?.label ?: "Original blue", onClick = onCaseColour) }
             // Shorter header and action bar on every screen: more room for the body.
-            item { SidekitItem("Compact layout", Modifier.height(CompactRowHeight).listFade(list, 3), secondary = if (compactLayout) "On" else "Off", onClick = { prefs.compactLayout = !prefs.compactLayout; revision++ }) }
-            // Detected from the keys pressed; tapping overrides it until another module's key is seen.
-            // A custom mapping fixes the module, so then the row opens the mapping instead.
-            val custom = keypad?.mapper?.customModule
             item {
-                SidekitItem("Keypad", Modifier.height(CompactRowHeight).listFade(list, 4), secondary = custom?.let { "${it.label} · custom" } ?: keypad?.module?.label ?: "None", onClick = {
-                    if (custom != null) onKeypadMapping() else keypad?.let { it.useModule(KeypadModule.entries[(it.module.ordinal + 1) % KeypadModule.entries.size]) }
+                SidekitItem("Compact layout", Modifier.height(CompactRowHeight).listFade(list, 1), secondary = if (compactLayout) "On" else "Off", secondaryToEnd = true, onClick = {
+                    prefs.compactLayout = !prefs.compactLayout
                     revision++
                 })
             }
-            item {
-                SidekitItem("Input mode", Modifier.height(CompactRowHeight).listFade(list, 5), secondary = if (inputMode == T9Mode.Numeric) "Numbers" else "Letters", onClick = {
-                    prefs.inputMode = T9Mode.entries[(prefs.inputMode.ordinal + 1) % T9Mode.entries.size]
-                    keypad?.let { prefs.applyInputDefault(it) }
-                    revision++
-                })
-            }
-            item { SidekitItem("Keypad Back key", Modifier.height(CompactRowHeight).listFade(list, 6), secondary = if (accessibility) "Enabled" else "Enable", onClick = { open(Settings.ACTION_ACCESSIBILITY_SETTINGS) }) }
-            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 7), secondary = if (home) "Sidekit" else "Choose", onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
+            // Opens a floating system dialog rather than a Sidekit page, so it stays a compact row.
+            item { SidekitItem("Home app", Modifier.height(CompactRowHeight).listFade(list, 2), secondary = if (home) "Sidekit" else "Choose", secondaryToEnd = true, onClick = { open(Settings.ACTION_HOME_SETTINGS) }) }
+            // Everything below opens another page: full-height rows with a link arrow.
+            item { SidekitItem("Arrange apps", Modifier.listFade(list, 3), showLinkArrow = true, onClick = onArrange) }
+            item { SidekitItem("Case colour", Modifier.listFade(list, 4), secondary = caseColour?.label ?: "Original blue", showLinkArrow = true, onClick = onCaseColour) }
+            // All keypad preferences live together on the Keyboard page, with the key diagram.
+            item { SidekitItem("Keyboard", Modifier.listFade(list, 5), showLinkArrow = true, onClick = onKeyboard) }
             item { SidekitItem("Hide apps", showLinkArrow = true, onClick = onHiddenApps) }
             // Device settings live on their own page, so this screen stays Sidekit's own settings.
             item { SidekitItem("System settings", showLinkArrow = true, onClick = onSystem) }
-            // Advanced: custom mapping for keypads Sidekit doesn't recognise, or keys moved around.
-            item { SidekitItem("Keypad mapping", secondary = if (custom != null) "Custom" else null, showLinkArrow = custom == null, onClick = onKeypadMapping) }
             item { SidekitItem("Setup & keypad tour", showLinkArrow = true, onClick = onSetup) }
             message?.let { item { SidekitCard { SidekitText(it, style = SidekitTheme.typography.label, maxLines = Int.MAX_VALUE) } } }
         }

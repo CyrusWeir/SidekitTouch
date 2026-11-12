@@ -69,9 +69,13 @@ class ArrangeHomeTest {
     }
 
     @Test
-    fun `renders every app with the four pinned dock apps marked In dock`() {
+    fun `renders every app with the two-row keypad hint and dock labels`() {
         arrange()
-        compose.onNodeWithText("Select apps, then move them up or down. First 4 apps are also shown in the dock").assertIsDisplayed()
+        compose.onNodeWithText("Enter").assertIsDisplayed()
+        compose.onNodeWithText(": Select App").assertIsDisplayed()
+        compose.onNodeWithText("Up").assertIsDisplayed()
+        compose.onNodeWithText("Down").assertIsDisplayed()
+        compose.onNodeWithText(": Move App").assertIsDisplayed()
         compose.onAllNodesWithText("In dock").assertCountEquals(HomePreferences.DOCK_MAX)
         SubApp.dock.forEach { compose.onNodeWithText(it.label).assertIsDisplayed() }
         compose.onNodeWithText("Photos").assertExists()
@@ -115,6 +119,20 @@ class ArrangeHomeTest {
         compose.onRoot().performKeyInput { pressKey(Key.Enter) }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Move Sideticks up").assertDoesNotExist()
+    }
+
+    @Test
+    fun `keypad can reach the hint above the first app`() {
+        arrangeWithKeypad()
+        compose.onNodeWithText("Sidemessage").assertIsFocused()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.waitForIdle()
+        compose.onNode(hasText("Enter") and hasAnyAncestor(isFocused())).assertExists()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Sidemessage").assertIsFocused()
     }
 
     @Test

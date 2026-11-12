@@ -26,8 +26,13 @@ class HomeArranger(private val home: HomePreferences, known: Iterable<String>) {
     /** Ported (or otherwise freshly-seen) ids that aren't part of the built-in default list. */
     private val appendedDefaults: List<String> = knownIds.filter { it !in builtinIds }
 
-    var order by mutableStateOf(home.homeOrderFor(knownIds))
+    private val initialOrder = home.homeOrderFor(knownIds)
+
+    var order by mutableStateOf(initialOrder)
         private set
+
+    /** True when the buffer differs from the order it was seeded with (Reset counts as a change). */
+    val hasPendingChanges: Boolean get() = order != initialOrder
 
     /** The app currently selected for reordering, or null when not in selection mode. */
     var selected by mutableStateOf<String?>(null)
@@ -51,7 +56,10 @@ class HomeArranger(private val home: HomePreferences, known: Iterable<String>) {
         if (index < 0) return
         val target = (index + delta).coerceIn(0, order.lastIndex)
         if (target == index) return
-        order = order.toMutableList().apply { removeAt(index); add(target, id) }
+        order = order.toMutableList().apply {
+            removeAt(index)
+            add(target, id)
+        }
     }
 
     /** Moves the currently selected app by [delta]; no-op when nothing is selected. */

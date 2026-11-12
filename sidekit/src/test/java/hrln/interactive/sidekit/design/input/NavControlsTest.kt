@@ -15,9 +15,15 @@ class NavControlsTest {
 
     @Test fun t9AndSundialAlreadySendCanonicalKeys() {
         // T9's D-pad / OK are already what focus and select act on: nothing to rewrite.
-        for (code in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_ENTER,
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ENDCALL)) {
+        for (code in listOf(
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ENDCALL
+        )) {
             assertNull(mapped(KeypadModule.T9, code))
             assertNull(mapped(KeypadModule.Sundial, code))
         }
@@ -51,10 +57,26 @@ class NavControlsTest {
 
     @Test fun qwertyModifierKeysAndConfirmStayTyping() {
         // The modifier keys and Enter keep their jobs: only the letter cross navigates.
-        for (code in listOf(QwertyLayout.SUGGEST, QwertyLayout.SYM, QwertyLayout.CASE,
-                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_A)) {
+        for (code in listOf(
+            QwertyLayout.SUGGEST,
+            QwertyLayout.SYM,
+            QwertyLayout.CASE,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_A
+        )) {
             assertNull(mapped(KeypadModule.Qwerty, code))
         }
+    }
+
+    @Test fun sundialHoldTargetsAreCanonicalNavKeys() {
+        NavControls.sundialHoldFor.forEach { (_, target) ->
+            assertTrue("unexpected Sundial hold target $target", target in NavControls.all)
+        }
+        assertEquals(NavControls.Back, NavControls.sundialHoldFor[KeyEvent.KEYCODE_TAB])
+        assertEquals(NavControls.Options, NavControls.sundialHoldFor[KeyEvent.KEYCODE_ENTER])
+        assertEquals(NavControls.Left, NavControls.sundialHoldFor[KeyEvent.KEYCODE_MEDIA_PREVIOUS])
+        assertEquals(NavControls.Right, NavControls.sundialHoldFor[KeyEvent.KEYCODE_MEDIA_NEXT])
     }
 
     @Test fun everyDefaultTargetIsACanonicalNavKey() {

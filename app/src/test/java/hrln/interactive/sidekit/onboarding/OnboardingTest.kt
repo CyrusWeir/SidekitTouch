@@ -43,6 +43,7 @@ class OnboardingTest {
         compose.mainClock.advanceTimeBy(1000)
         compose.onRoot().captureRoboImage("screenshots/onboarding/$name.png")
     }
+
     @Test fun `setup saves choices and only completes on Finish`() {
         launch()
         shot("01-home")
@@ -71,6 +72,7 @@ class OnboardingTest {
         assertTrue(prefs.setupComplete)
         assertEquals(0, prefs.setupStep)
     }
+
     @Test fun `resumes at saved step and can go back`() {
         launch(2)
         compose.onNodeWithText("Your home screen").assertIsDisplayed()
@@ -78,6 +80,7 @@ class OnboardingTest {
         assertEquals(1, prefs.setupStep)
         compose.onNodeWithText("Make it yours").assertIsDisplayed()
     }
+
     @Test fun `current keypad is first and other demos do not change it`() {
         launch(6, KeypadModule.Qwerty)
         compose.onNodeWithText("1 / 4 · Mini QWERTY").assertIsDisplayed()
@@ -100,6 +103,18 @@ class OnboardingTest {
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Mini QWERTY is your current selection.", substring = true))
         compose.onNodeWithText("Mini QWERTY is your current selection.", substring = true).assertExists()
     }
+
+    @Test fun `Sundial demo follows the physical ring`() {
+        assertEquals(
+            listOf(
+                listOf("←", "↑", "→"),
+                listOf("Previous", "Play / pause", "Next"),
+                listOf("Tab", "↓", "Enter")
+            ),
+            demoRows(KeypadModule.Sundial).map { row -> row.map { it.label } }
+        )
+    }
+
     @Test fun `access status reflects grants and revocations`() {
         val camera = setupAccess().first { it.title == "Camera" }
         val app = org.robolectric.Shadows.shadowOf(context as android.app.Application)
@@ -110,6 +125,7 @@ class OnboardingTest {
         app.denyPermissions(android.Manifest.permission.CAMERA)
         assertFalse(camera.enabled(context))
     }
+
     @Test fun `each module appears once with the current one first`() {
         KeypadModule.entries.forEach { module ->
             assertEquals(module, orderedModules(module).first())
@@ -117,12 +133,16 @@ class OnboardingTest {
             assertEquals(4, orderedModules(module).size)
         }
     }
-    @Test @Config(sdk = [31]) fun `Android 12 uses storage access without newer permission prompts`() {
+
+    @Test
+    @Config(sdk = [31])
+    fun `Android 12 uses storage access without newer permission prompts`() {
         val permissions = setupAccess().flatMap { it.permissions }
         assertTrue(android.Manifest.permission.READ_EXTERNAL_STORAGE in permissions)
         assertFalse(android.Manifest.permission.POST_NOTIFICATIONS in permissions)
         assertFalse(android.Manifest.permission.READ_MEDIA_IMAGES in permissions)
     }
+
     @Test fun `Android 15 uses granular media access and full screen alarm settings`() {
         val entries = setupAccess()
         assertTrue(entries.any { it.title == "Full-screen alarms" })

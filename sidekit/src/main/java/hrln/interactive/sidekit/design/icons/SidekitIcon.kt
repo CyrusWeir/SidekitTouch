@@ -15,6 +15,7 @@ enum class SidekitIcon(@DrawableRes val drawable: Int) {
     Album(R.drawable.sk_ic_album),
     AndroidCell4Bar(R.drawable.sk_ic_android_cell_4_bar),
     AndroidWifi3Bar(R.drawable.sk_ic_android_wifi_3_bar),
+    Apps(R.drawable.sk_ic_apps),
     ArrowLeftAlt(R.drawable.sk_ic_arrow_left_alt),
     ArrowRightAlt(R.drawable.sk_ic_arrow_right_alt),
     ArrowUpward(R.drawable.sk_ic_arrow_upward),
@@ -68,5 +69,5 @@ enum class SidekitIcon(@DrawableRes val drawable: Int) {
     Undo(R.drawable.sk_ic_undo),
     Travel(R.drawable.sk_ic_travel),
     TravelExplore(R.drawable.sk_ic_travel_explore),
-    Videocam(R.drawable.sk_ic_videocam),
+    Videocam(R.drawable.sk_ic_videocam)
 }
