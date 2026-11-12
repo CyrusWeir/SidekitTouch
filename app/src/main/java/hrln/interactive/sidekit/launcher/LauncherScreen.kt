@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import hrln.interactive.sidekit.R
+import hrln.interactive.sidekit.apps.apps.matchesApp
 import hrln.interactive.sidekit.apps.settings.*
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApp
 import hrln.interactive.sidekit.apps.sideport.registry.PortedApps
@@ -173,7 +174,8 @@ fun LauncherScreen(
     LaunchedEffect(searching) { if (searching) runCatching { searchFocus.requestFocus() } }
     val clear = SideAction.square("search.clear", SidekitIcon.Close, "Clear app search", ::clearSearch)
     val entries = home.ifEmpty { defaultHome() }
-    val visible = entries.filter { it.id !in hiddenApps && it.label.contains(text, ignoreCase = true) }
+    // Same matcher as the Apps list, so a T9 query finds the same apps in both places.
+    val visible = entries.filter { it.id !in hiddenApps && matchesApp(it.label, text) }
     BackHandler { clearSearch() }
 
     SidekitScaffold(
